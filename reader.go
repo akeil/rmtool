@@ -149,7 +149,6 @@ func (r *reader) readStroke() (Stroke, error) {
 func (r *reader) readNumber() (uint32, error) {
 	var n uint32
 	err := binary.Read(r, endianess, &n)
-	fmt.Printf("Number: %v\n", n)
 	return n, err
 }
 
