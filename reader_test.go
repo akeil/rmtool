@@ -12,7 +12,7 @@ func TestRead(t *testing.T) {
 		t.Errorf("cannot read rm file %q. Error: %v", path, err)
 	}
 
-	p, err := Read(data)
+	p, err := ReadDrawing(data)
 	if err != nil {
 		t.Error(err)
 	}
