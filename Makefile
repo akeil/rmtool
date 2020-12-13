@@ -1,11 +1,10 @@
 NAMESPACE	= akeil.net/akeil
 NAME		= rmtool
 QNAME		= $(NAMESPACE)/$(NAME)
-BINDIR		= ./bin
 
 
 build:
-	mkdir -p $(BINDIR)
+	go build
 
 test:
 	go test $(QNAME) $(QNAME)
