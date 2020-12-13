@@ -58,6 +58,28 @@ func TestMarshalMetadata(t *testing.T) {
 	}
 }
 
+func TestReadContent(t *testing.T) {
+	path := "./testdata/faf24233-a397-409e-8993-914113af7d54.content"
+	c, err := ReadContent(path)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if c.FileType != "notebook" {
+		t.Errorf("unexpected file type")
+	}
+
+	if c.PageCount != 2 {
+		t.Errorf("unexpected page count")
+	}
+
+	if len(c.Pages) != 2 {
+		t.Errorf("unexpected number of page ids")
+	}
+}
+
+
 func TestReadPageMetadata(t *testing.T) {
 	path := "./testdata/faf24233-a397-409e-8993-914113af7d54/3ef76edb-f118-47f0-8e0c-d79ac63df4d6-metadata.json"
 	p, err := ReadPageMetadata(path)

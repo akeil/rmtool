@@ -8,9 +8,9 @@ import (
 
 var endianess = binary.LittleEndian
 
-// UnmarshalBinary reads a reMarkable page from the given bytes.
-func (p *Page) UnmarshalBinary(data []byte) error {
-	err := readInto(data, p)
+// UnmarshalBinary reads a reMarkable drawing from the given bytes.
+func (d *Drawing) UnmarshalBinary(data []byte) error {
+	err := readInto(data, d)
 	if err != nil {
 		return err
 	}
@@ -18,31 +18,32 @@ func (p *Page) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-// Read creates a new reMarkable Page from the given bytes.
-func Read(data []byte) (*Page, error) {
-	p := newPage()
-	err := p.UnmarshalBinary(data)
-	return p, err
+// Read creates a new reMarkable drawing from the given bytes.
+func ReadDrawing(data []byte) (*Drawing, error) {
+	d := newDrawing()
+	err := d.UnmarshalBinary(data)
+	return d, err
 }
 
-// readInto reads the given byte data into the given Page.
-func readInto(data []byte, p *Page) error {
+// readInto reads the given byte data into the given drawing.
+func readInto(data []byte, d *Drawing) error {
 	r := newReader(data)
 
 	err := r.readHeader()
 	if err != nil {
 		return err
 	}
+	d.Version = r.version
 
 	nLayers, err := r.readNumber()
 	if err != nil {
 		return err
 	}
 
-	p.Layers = make([]Layer, nLayers)
+	d.Layers = make([]Layer, nLayers)
 	for i := uint32(0); i < nLayers; i++ {
 		nStrokes, err := r.readNumber()
-		p.Layers[i].Strokes = make([]Stroke, nStrokes)
+		d.Layers[i].Strokes = make([]Stroke, nStrokes)
 		if err != nil {
 			return err
 		}
@@ -52,7 +53,7 @@ func readInto(data []byte, p *Page) error {
 			if err != nil {
 				return err
 			}
-			p.Layers[i].Strokes[j] = s
+			d.Layers[i].Strokes[j] = s
 		}
 	}
 

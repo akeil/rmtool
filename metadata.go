@@ -118,6 +118,23 @@ func (n NotebookType) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type Content struct {
+    FileType string `json:"filetype"`
+    PageCount int `json:"pageCount"`
+    Pages []string `json:"pages"`
+}
+
+func ReadContent(path string) (Content, error) {
+    var c Content
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return c, err
+	}
+
+	err = json.Unmarshal(data, &c)
+	return c, err
+}
+
 type PageMetadata struct {
 	Layers []LayerMetadata `json:"layers"`
 }
