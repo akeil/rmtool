@@ -54,29 +54,29 @@ const (
 	Large  BrushSize = 2.125
 )
 
-// Page represents a single page with drawings.
-type Page struct {
+// Drawing represents a single page with drawings.
+type Drawing struct {
 	Version Version
 	Layers  []Layer
 }
 
-// NewPage creates a new page.
-func newPage() *Page {
-	return &Page{Version: V5}
+// NewDrawing creates a new page.
+func newDrawing() *Drawing {
+	return &Drawing{Version: V5}
 }
 
-// NumLayers returns the number of layers in the page.
-func (p *Page) NumLayers() int {
-	return len(p.Layers)
+// NumLayers returns the number of layers in the drawing.
+func (d *Drawing) NumLayers() int {
+	return len(d.Layers)
 }
 
-// Layer is one layer in a page.
+// Layer is one layer in a drawing.
 type Layer struct {
 	Strokes []Stroke
 	// index?
 }
 
-// Stroke is a single continoous brush stroke.
+// Stroke is a single continous brush stroke.
 type Stroke struct {
 	BrushType  BrushType
 	BrushColor BrushColor
