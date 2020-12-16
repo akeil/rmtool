@@ -116,17 +116,17 @@ func (r *reader) readStroke() (Stroke, error) {
 		return s, fmt.Errorf("failed to read padding")
 	}
 
+	err = binary.Read(r, endianess, &s.BrushSize)
+	if err != nil {
+		return s, fmt.Errorf("failed to read brush size")
+	}
+
 	// additional attribute in v5 only
 	if r.version == V5 {
 		err := binary.Read(r, endianess, &s.Unknown)
 		if err != nil {
 			return s, fmt.Errorf("failed to read line")
 		}
-	}
-
-	err = binary.Read(r, endianess, &s.BrushSize)
-	if err != nil {
-		return s, fmt.Errorf("failed to read brush size")
 	}
 
 	nDots, err := r.readNumber()

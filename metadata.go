@@ -119,13 +119,13 @@ func (n NotebookType) MarshalJSON() ([]byte, error) {
 }
 
 type Content struct {
-    FileType string `json:"filetype"`
-    PageCount int `json:"pageCount"`
-    Pages []string `json:"pages"`
+	FileType  string   `json:"filetype"`
+	PageCount int      `json:"pageCount"`
+	Pages     []string `json:"pages"`
 }
 
 func ReadContent(path string) (Content, error) {
-    var c Content
+	var c Content
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return c, err

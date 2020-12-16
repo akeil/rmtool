@@ -78,30 +78,36 @@ type Layer struct {
 
 // Stroke is a single continous brush stroke.
 type Stroke struct {
-	BrushType  BrushType
+	// BrushType is one of the predefined pencil types, e.g. "Ballpoint" or "PaintBrush"
+	BrushType BrushType
+	// BrushColor is one of the three available colors.
 	BrushColor BrushColor
-	Padding    uint32
-	Unknown    float32
-	BrushSize  BrushSize
-	Dots       []Dot
+	// Padding - we do not know what this means and it seems to be "0" all the time.
+	Padding uint32
+	// BrushSize is the base size of the Brush (small, medium, large)
+	BrushSize BrushSize
+	// Unknown is ...well: unkown.
+	Unknown float32
+	// Dots are the coordionate points that make up this stroke.
+	Dots []Dot
 }
 
 // Dot is a single point from a stroke.
 type Dot struct {
 	// X is the x-coordinate for this dot.
-	X         float32
+	X float32
 	// Y is the -ycoordinate for this dot.
-	Y         float32
+	Y float32
 	// Speed is the speed with which the stylus moved across the screen.
-	Speed     float32
+	Speed float32
 	// Direction (tilt) is the angle at which the stylus is positioned against
 	// the screen. The angle is given in radians.
 	Direction float32
 	// Width is the effective width of the brush.
-	Width     float32
+	Width float32
 	// Pressure is the amount of pressure applied to the stylus.
 	// Value range is 0.0 trough 1.0
-	Pressure  float32
+	Pressure float32
 }
 
 // Header starting a .rm binary file. This can help recognizing a .rm file.

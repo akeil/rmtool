@@ -79,7 +79,6 @@ func TestReadContent(t *testing.T) {
 	}
 }
 
-
 func TestReadPageMetadata(t *testing.T) {
 	path := "./testdata/faf24233-a397-409e-8993-914113af7d54/3ef76edb-f118-47f0-8e0c-d79ac63df4d6-metadata.json"
 	p, err := ReadPageMetadata(path)
