@@ -88,11 +88,19 @@ type Stroke struct {
 
 // Dot is a single point from a stroke.
 type Dot struct {
+	// X is the x-coordinate for this dot.
 	X         float32
+	// Y is the -ycoordinate for this dot.
 	Y         float32
+	// Speed is the speed with which the stylus moved across the screen.
 	Speed     float32
+	// Direction (tilt) is the angle at which the stylus is positioned against
+	// the screen. The angle is given in radians.
 	Direction float32
+	// Width is the effective width of the brush.
 	Width     float32
+	// Pressure is the amount of pressure applied to the stylus.
+	// Value range is 0.0 trough 1.0
 	Pressure  float32
 }
 
