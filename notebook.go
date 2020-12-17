@@ -2,7 +2,7 @@ package rmtool
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 )
 
@@ -58,11 +58,13 @@ func NewPage(baseDir, notebookID, pageID string) *Page {
 
 func (p *Page) ReadDrawing() error {
 	src := filepath.Join(p.Base, p.ID+".rm")
-	data, err := ioutil.ReadFile(src)
+	r, err := os.Open(src)
 	if err != nil {
 		return fmt.Errorf("cannot read rm file %q. Error: %v", src, err)
 	}
-	d, err := ReadDrawing(data)
+	defer r.Close()
+
+	d, err := ReadDrawing(r)
 	if err != nil {
 		return fmt.Errorf("cannot read rm file %q. Error: %v", src, err)
 	}
