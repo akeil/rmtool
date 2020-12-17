@@ -172,9 +172,9 @@ func (r *reader) readDot() (Dot, error) {
 		return d, fmt.Errorf("failed to read speed")
 	}
 
-	err = binary.Read(r, endianess, &d.Direction)
+	err = binary.Read(r, endianess, &d.Tilt)
 	if err != nil {
-		return d, fmt.Errorf("failed to read direction")
+		return d, fmt.Errorf("failed to read tilt")
 	}
 
 	err = binary.Read(r, endianess, &d.Width)

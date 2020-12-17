@@ -100,9 +100,9 @@ type Dot struct {
 	Y float32
 	// Speed is the speed with which the stylus moved across the screen.
 	Speed float32
-	// Direction (tilt) is the angle at which the stylus is positioned against
+	// Tilt is the angle at which the stylus is positioned against
 	// the screen. The angle is given in radians.
-	Direction float32
+	Tilt float32
 	// Width is the effective width of the brush.
 	Width float32
 	// Pressure is the amount of pressure applied to the stylus.
