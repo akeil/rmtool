@@ -95,6 +95,9 @@ func (d *Dot) Validate() error {
         return fmt.Errorf("invalid speed value: %v", d.Speed)
     }
 
+    // TODO: Encountered tilt values outside of the intervals
+    // So thie below validations rules seem to be wrong?
+
     // 0..90 degrees
     max0 := rad(90)
     interval0 := d.Tilt >= 0 && d.Tilt <= max0
