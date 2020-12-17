@@ -1,18 +1,19 @@
 package rmtool
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 )
 
 func TestRead(t *testing.T) {
 	path := "./testdata/faf24233-a397-409e-8993-914113af7d54/3ef76edb-f118-47f0-8e0c-d79ac63df4d6.rm"
-	data, err := ioutil.ReadFile(path)
+	r, err := os.Open(path)
 	if err != nil {
 		t.Errorf("cannot read rm file %q. Error: %v", path, err)
 	}
+	defer r.Close()
 
-	p, err := ReadDrawing(data)
+	p, err := ReadDrawing(r)
 	if err != nil {
 		t.Error(err)
 	}

@@ -4,13 +4,15 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 )
 
 var endianess = binary.LittleEndian
 
 // UnmarshalBinary reads a reMarkable drawing from the given bytes.
 func (d *Drawing) UnmarshalBinary(data []byte) error {
-	err := readInto(data, d)
+	r := bytes.NewReader(data)
+	err := read(r, d)
 	if err != nil {
 		return err
 	}
@@ -19,37 +21,35 @@ func (d *Drawing) UnmarshalBinary(data []byte) error {
 }
 
 // Read creates a new reMarkable drawing from the given bytes.
-func ReadDrawing(data []byte) (*Drawing, error) {
-	d := newDrawing()
-	err := d.UnmarshalBinary(data)
+func ReadDrawing(r io.Reader) (*Drawing, error) {
+	d := &Drawing{}
+	err := read(r, d)
 	return d, err
 }
 
-// readInto reads the given byte data into the given drawing.
-func readInto(data []byte, d *Drawing) error {
-	r := newReader(data)
-
-	err := r.readHeader()
+// read reads the given byte data into the given drawing.
+func read(r io.Reader, d *Drawing) error {
+	version, err := readHeader(r)
 	if err != nil {
 		return err
 	}
-	d.Version = r.version
+	d.Version = version
 
-	nLayers, err := r.readNumber()
+	nLayers, err := readNumber(r)
 	if err != nil {
 		return err
 	}
 
 	d.Layers = make([]Layer, nLayers)
 	for i := uint32(0); i < nLayers; i++ {
-		nStrokes, err := r.readNumber()
+		nStrokes, err := readNumber(r)
 		d.Layers[i].Strokes = make([]Stroke, nStrokes)
 		if err != nil {
 			return err
 		}
 
 		for j := uint32(0); j < nStrokes; j++ {
-			s, err := r.readStroke()
+			s, err := readStroke(r, version)
 			if err != nil {
 				return err
 			}
@@ -60,45 +60,33 @@ func readInto(data []byte, d *Drawing) error {
 	return nil
 }
 
-type reader struct {
-	bytes.Reader
-	version Version
-}
-
-// newReader creates a new page reader.
-func newReader(data []byte) reader {
-	r := bytes.NewReader(data)
-
-	// V5 will be replaced after reading the header
-	return reader{*r, V5}
-}
-
 // readHeader and check if it is one of the supported headers.
-func (r *reader) readHeader() error {
+func readHeader(r io.Reader) (Version, error) {
+	var v Version
 	buf := make([]byte, headerLen)
 
 	n, err := r.Read(buf)
 	if err != nil {
-		return err
+		return v, err
 	}
 	if n != headerLen {
-		return fmt.Errorf("unexpected header size")
+		return v, fmt.Errorf("unexpected header size")
 	}
 
 	switch string(buf) {
 	case headerV3:
-		r.version = V3
+		v = V3
 	case headerV5:
-		r.version = V5
+		v = V5
 	default:
-		return fmt.Errorf("unsupported header")
+		return v, fmt.Errorf("unsupported header")
 	}
 
-	return nil
+	return v, nil
 }
 
-// readLine reads a Stroke (incl. Dots) from the reader.
-func (r *reader) readStroke() (Stroke, error) {
+// readStroke reads a Stroke (incl. Dots) from the reader.
+func readStroke(r io.Reader, v Version) (Stroke, error) {
 	var s Stroke
 
 	err := binary.Read(r, endianess, &s.BrushType)
@@ -122,21 +110,21 @@ func (r *reader) readStroke() (Stroke, error) {
 	}
 
 	// additional attribute in v5 only
-	if r.version == V5 {
+	if v == V5 {
 		err := binary.Read(r, endianess, &s.Unknown)
 		if err != nil {
 			return s, fmt.Errorf("failed to read line")
 		}
 	}
 
-	nDots, err := r.readNumber()
+	nDots, err := readNumber(r)
 	if err != nil {
 		return s, fmt.Errorf("failed to read number of dots")
 	}
 
 	s.Dots = make([]Dot, nDots)
 	for i := uint32(0); i < nDots; i++ {
-		d, err := r.readDot()
+		d, err := readDot(r)
 		if err != nil {
 			return s, err
 		}
@@ -147,14 +135,14 @@ func (r *reader) readStroke() (Stroke, error) {
 }
 
 // readNumber reads a uint32 from the reader.
-func (r *reader) readNumber() (uint32, error) {
+func readNumber(r io.Reader) (uint32, error) {
 	var n uint32
 	err := binary.Read(r, endianess, &n)
 	return n, err
 }
 
 // readDot reads a Dot struct from the reader.
-func (r *reader) readDot() (Dot, error) {
+func readDot(r io.Reader) (Dot, error) {
 	var d Dot
 
 	err := binary.Read(r, endianess, &d.X)
