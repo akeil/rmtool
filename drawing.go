@@ -54,6 +54,11 @@ const (
 	Large  BrushSize = 2.125
 )
 
+const (
+	MaxWidth = 1404
+	MaxHeight = 1872
+)
+
 // Drawing represents a single page with drawings.
 type Drawing struct {
 	Version Version
@@ -73,7 +78,6 @@ func (d *Drawing) NumLayers() int {
 // Layer is one layer in a drawing.
 type Layer struct {
 	Strokes []Stroke
-	// index?
 }
 
 // Stroke is a single continous brush stroke.
