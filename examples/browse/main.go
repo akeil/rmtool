@@ -39,6 +39,10 @@ func show(n *rm.Node, level int) {
 		fmt.Print("+ ")
 	}
 	fmt.Print(n.Name())
+
+    if n.Pinned() {
+        fmt.Print(" *")
+    }
 	fmt.Println()
 
 	if !n.Leaf() {

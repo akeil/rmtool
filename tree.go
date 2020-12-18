@@ -37,6 +37,10 @@ func (n *Node) Leaf() bool {
 	return n.Type() != CollectionType && !n.Root()
 }
 
+func (n *Node) Pinned() bool {
+    return n.meta.Pinned
+}
+
 // addChild adds a child node to this node and sets the Parent field
 // of the child.
 func (n *Node) addChild(child *Node) {

@@ -29,7 +29,7 @@ type Metadata struct {
 	Metadatamodified bool         `json:"metadatamodified"`
 	Modified         bool         `json:"modified"`
 	Parent           string       `json:"parent"`
-	Pinned           bool         `json:"bool"`
+	Pinned           bool         `json:"pinned"`
 	Synced           bool         `json:"synced"`
 	Type             NotebookType `json:"type"`
 	Version          uint         `json:"version"`
