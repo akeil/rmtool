@@ -12,10 +12,9 @@ import (
 )
 
 func main() {
-	base := "testdata"
+	storage := rm.NewFilesystemStorage("testdata")
 	id := "25e3a0ce-080a-4389-be2a-f6aa45ce0207"
-	n := rm.NewNotebook(base, id)
-	err := n.Read()
+	n, err := rm.ReadNotebook(storage, id)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -26,12 +25,12 @@ func main() {
 		go func(i int, p *rm.Page) {
 			defer wg.Done()
 			log.Printf("Read page %v", i)
-			err := p.ReadDrawing()
+			d, err := storage.ReadDrawing(n.ID, p.ID)
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			err = p.Drawing.Validate()
+			err = d.Validate()
 			if err != nil {
 				log.Printf("Found validation error: %v", err)
 			}
@@ -44,7 +43,7 @@ func main() {
 			defer f.Close()
 
 			w := bufio.NewWriter(f)
-			err = render.RenderDrawing(p.Drawing, w)
+			err = render.RenderDrawing(d, w)
 			if err != nil {
 				log.Fatal(err)
 			}
