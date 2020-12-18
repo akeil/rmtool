@@ -2,6 +2,8 @@ package rm
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 )
 
 // Node is the representation for an entry in the content tree.
@@ -39,6 +41,21 @@ func (n *Node) Leaf() bool {
 
 func (n *Node) Pinned() bool {
 	return n.meta.Pinned
+}
+
+// Sort sorts the subtree starting at this node by the given sort rule.
+// Sorting is in-place.
+func (n *Node) Sort(compare func(*Node, *Node) bool) {
+	f := func(i, j int) bool {
+		one := n.Children[i]
+		other := n.Children[j]
+		return compare(one, other)
+	}
+	sort.Slice(n.Children, f)
+
+	for _, c := range n.Children {
+		c.Sort(compare)
+	}
 }
 
 // addChild adds a child node to this node and sets the Parent field
@@ -114,4 +131,41 @@ func BuildTree(s Storage) (*Node, error) {
 	}
 
 	return root, nil
+}
+
+// DefaultSort is the comparsion function to sort nodes in the content tree
+// with folders before documents and by name (case-insensitive).
+// Pinned notes come before unpinned ones within a folder.
+// The "Trash" folder comes last.
+func DefaultSort(one, other *Node) bool {
+	// tell if  one <  other
+	// special case - Trash goes last
+	if one.ID == "trash" {
+		return false
+	} else if other.ID == "trash" {
+		return true
+	}
+
+	// collections before content
+	if one.Leaf() && !other.Leaf() {
+		return false
+	} else if other.Leaf() && !one.Leaf() {
+		return true
+	}
+
+	// pinned before unpinned
+	if one.Pinned() && !other.Pinned() {
+		return true
+	} else if other.Pinned() && !one.Pinned() {
+		return false
+	}
+
+	// special case, equal display names, fall back on ID
+	if one.Name() == other.Name() {
+		return one.ID < other.ID
+	}
+
+	// by name, case-insensitive
+	return strings.ToLower(one.Name()) < strings.ToLower(other.Name())
+
 }

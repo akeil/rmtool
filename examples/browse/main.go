@@ -21,6 +21,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	root.Sort(rm.DefaultSort)
+
 	for _, c := range root.Children {
 		show(c, 0)
 	}
