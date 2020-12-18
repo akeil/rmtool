@@ -16,10 +16,18 @@ const (
 	TemplateLarge
 )
 
+type PageLayout int
+
+const (
+	Portrait PageLayout = iota
+	Landscape
+)
+
 type Pagedata struct {
-	Prefix   string
+	Layout   PageLayout
 	Template string
 	Size     TemplateSize
+	Text     string
 }
 
 func ReadPagedata(r io.Reader) ([]Pagedata, error) {
@@ -29,6 +37,7 @@ func ReadPagedata(r io.Reader) ([]Pagedata, error) {
 	var text string
 	var err error
 	var size TemplateSize
+	var layout PageLayout
 	var parts []string
 	for s.Scan() {
 		text = s.Text()
@@ -41,18 +50,33 @@ func ReadPagedata(r io.Reader) ([]Pagedata, error) {
 			continue
 		}
 
-		// Special case: no template selected
-		if text == "Blank" {
-			pd = append(pd, Pagedata{Template: "Blank"})
-			continue
+		// Special case: some templates do not have the orientation prefix
+		switch text {
+		case "Blank",
+			"Isometric",
+			"Perspective1",
+			"Perspective2":
+			pd = append(pd, Pagedata{
+				Layout:   Portrait,
+				Template: text,
+				Size:     TemplateMedium,
+				Text:     text,
+			})
+		default:
+			// TODO some templates have no size
+			parts = strings.SplitN(text, " ", 3)
+			if len(parts) != 3 {
+				return pd, fmt.Errorf("invalid pagedata line: %q", text)
+			}
+			size = size.FromString(parts[2])
+			layout = layout.FromString(parts[0])
+			pd = append(pd, Pagedata{
+				Layout:   layout,
+				Template: parts[1],
+				Size:     size,
+				Text:     text,
+			})
 		}
-
-		parts = strings.SplitN(text, " ", 3)
-		if len(parts) != 3 {
-			return pd, fmt.Errorf("invalid pagedata line: %q", text)
-		}
-		size = size.FromString(parts[2])
-		pd = append(pd, Pagedata{Prefix: parts[0], Template: parts[1], Size: size})
 	}
 
 	return pd, nil
@@ -62,10 +86,21 @@ func (t TemplateSize) FromString(s string) TemplateSize {
 	switch s {
 	case "S", "small":
 		return TemplateSmall
-	case "M", "medium":
+	case "M", "medium", "med":
 		return TemplateMedium
 	case "L", "large":
 		return TemplateLarge
 	}
 	return TemplateNoSize
+}
+
+func (p PageLayout) FromString(s string) PageLayout {
+	switch s {
+	case "P":
+		return Portrait
+	case "LS":
+		return Landscape
+	default:
+		return Portrait
+	}
 }

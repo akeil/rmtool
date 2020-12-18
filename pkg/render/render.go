@@ -33,7 +33,29 @@ func RenderDrawing(d *rm.Drawing, w io.Writer) error {
 	return nil
 }
 
-// RenderPNG dapints the given drawing to a PNG file and writes the PNG data
+func RenderPage(p *rm.Page, w io.Writer) error {
+	r := image.Rect(0, 0, 1404, 1872)
+	dst := image.NewRGBA(r)
+
+	err := renderTemplate(dst, p.Pagedata.Text, p.Pagedata.Layout)
+	if err != nil {
+		return err
+	}
+
+	err = renderLayers(dst, p.Drawing)
+	if err != nil {
+		return err
+	}
+
+	err = png.Encode(w, dst)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// RenderPNG paints the given drawing to a PNG file and writes the PNG data
 // to the given writer.
 func RenderPNG(d *rm.Drawing, w io.Writer) error {
 	// TODO: use width/height from Drawing/Metadata
@@ -42,14 +64,12 @@ func RenderPNG(d *rm.Drawing, w io.Writer) error {
 
 	renderBackground(dst)
 
-	for _, l := range d.Layers {
-		err := renderLayer(dst, l)
-		if err != nil {
-			return err
-		}
+	err := renderLayers(dst, d)
+	if err != nil {
+		return err
 	}
 
-	err := png.Encode(w, dst)
+	err = png.Encode(w, dst)
 	if err != nil {
 		return err
 	}
@@ -57,19 +77,37 @@ func RenderPNG(d *rm.Drawing, w io.Writer) error {
 	return nil
 }
 
-// renderBackground fills the complete destination image with the background color (white).
-func renderBackground(dst draw.Image) {
-	b := dst.Bounds()
-	x0 := b.Min.X
-	x1 := b.Max.X
-	y0 := b.Min.Y
-	y1 := b.Max.Y
-
-	for x := x0; x < x1; x++ {
-		for y := y0; y < y1; y++ {
-			dst.Set(x, y, bgColor)
+func renderLayers(dst draw.Image, d *rm.Drawing) error {
+	for _, l := range d.Layers {
+		err := renderLayer(dst, l)
+		if err != nil {
+			return err
 		}
 	}
+	return nil
+}
+
+func renderTemplate(dst draw.Image, tpl string, layout rm.PageLayout) error {
+	i, err := readPNG("templates", tpl)
+	if err != nil {
+		return err
+	}
+
+	if layout == rm.Landscape {
+		i = rotate(rad(90), i)
+	}
+
+	p := image.ZP
+	draw.Draw(dst, dst.Bounds(), i, p, draw.Over)
+
+	return nil
+}
+
+// renderBackground fills the complete destination image with the background color (white).
+func renderBackground(dst draw.Image) {
+	bg := image.NewUniform(bgColor)
+	p := image.ZP
+	draw.Draw(dst, dst.Bounds(), bg, p, draw.Over)
 }
 
 // renderLayer paints all strokes from the given layer onto the destination image.
@@ -173,21 +211,34 @@ func renderSegment(dst draw.Image, mask image.Image, color image.Image, pen Brus
 	}
 }
 
-var brushCache = make(map[string]image.Image)
-
 // loadBrushMask loads the brush stamp from the file system,
 // converts it to a mask image (gray value converted to alpha channel)
 // and returns an image.
 func loadBrushMask(b Brush) (image.Image, error) {
-	cached := brushCache[b.Name()]
+	i, err := readPNG("brushes", b.Name())
+	if err != nil {
+		return nil, err
+	}
+
+	mask := createMask(i)
+
+	return mask, nil
+}
+
+var cache = make(map[string]image.Image)
+
+func readPNG(subdir, name string) (image.Image, error) {
+	key := subdir + "/" + name
+	cached := cache[key]
 	if cached != nil {
 		return cached, nil
 	}
-	// TODO: from config
-	d := "./data/brushes"
-	n := b.Name() + ".png"
-	p := filepath.Join(d, n)
-	fmt.Printf("Load brush %q\n", p)
+
+	// TODO: data-dir from config
+	d := "./data"
+	n := name + ".png"
+	p := filepath.Join(d, subdir, n)
+	fmt.Printf("Load PNG %q\n", p)
 
 	f, err := os.Open(p)
 	if err != nil {
@@ -201,8 +252,11 @@ func loadBrushMask(b Brush) (image.Image, error) {
 		return nil, err
 	}
 
-	mask := createMask(i)
-	brushCache[b.Name()] = mask
+	cache[key] = i
 
-	return mask, nil
+	return i, nil
+}
+
+func rad(deg float64) float64 {
+	return deg * (math.Pi / 180)
 }

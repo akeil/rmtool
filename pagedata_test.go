@@ -18,8 +18,8 @@ func TestReadPagedata(t *testing.T) {
 		t.Errorf("Unexpected number of pagedata entries")
 	}
 
-	if pd[1].Prefix != "P" {
-		t.Errorf("unexpected prefix: %q", pd[1].Prefix)
+	if pd[1].Layout != Portrait {
+		t.Errorf("unexpected prefix: %q", pd[1].Layout)
 	}
 
 	if pd[1].Template != "Lines" {
@@ -44,15 +44,15 @@ func TestReadPagedataBlank(t *testing.T) {
 		t.Errorf("Unexpected number of pagedata entries")
 	}
 
-	if pd[1].Prefix != "" {
-		t.Errorf("unexpected prefix: %q", pd[1].Prefix)
+	if pd[1].Layout != Portrait {
+		t.Errorf("unexpected prefix: %q", pd[1].Layout)
 	}
 
 	if pd[1].Template != "Blank" {
 		t.Errorf("unexpected template: %q", pd[1].Template)
 	}
 
-	if pd[1].Size != TemplateNoSize {
+	if pd[1].Size != TemplateMedium {
 		t.Errorf("unexpected size: %q", pd[1].Size)
 	}
 }
