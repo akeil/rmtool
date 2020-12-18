@@ -5,11 +5,10 @@ import (
 )
 
 func TestReadNotebook(t *testing.T) {
-	base := "./testdata"
+	s := NewFilesystemStorage("testdata")
 	id := "25e3a0ce-080a-4389-be2a-f6aa45ce0207"
 
-	n := NewNotebook(base, id)
-	err := n.Read()
+	n, err := ReadNotebook(s, id)
 	if err != nil {
 		t.Error(err)
 	}
@@ -19,7 +18,7 @@ func TestReadNotebook(t *testing.T) {
 	}
 
 	for _, p := range n.Pages {
-		err = p.ReadDrawing()
+		_, err = s.ReadDrawing(n.ID, p.ID)
 		if err != nil {
 			t.Error(err)
 		}
