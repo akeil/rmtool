@@ -6,6 +6,8 @@ import (
 
 // Storage is the interface for a storage backend that holds notebooks.
 type Storage interface {
+	// List retrieves a list of IDs from the storage.
+	List() ([]string, error)
 	// ReadMetadata reads the metadata for a notebook with the given ID.
 	ReadMetadata(id string) (Metadata, error)
 	// ReadContent reads the content for a notebook.

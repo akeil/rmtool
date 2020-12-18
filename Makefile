@@ -9,9 +9,10 @@ EXAMPLESDIR = $(BINDIR)/examples
 build:
 	go build
 
-examples:
+examples: ${samples}
 	mkdir -p $(EXAMPLESDIR)
 	go build -o $(EXAMPLESDIR)/render examples/render/main.go
+	go build -o $(EXAMPLESDIR)/browse examples/browse/main.go
 
 test:
 	go test $(QNAME) $(QNAME)

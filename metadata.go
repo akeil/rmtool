@@ -18,6 +18,7 @@ type NotebookType int
 
 const (
 	DocumentType = iota
+	CollectionType
 )
 
 // Metadata holds the metadata for a notebook.
@@ -28,7 +29,7 @@ type Metadata struct {
 	Metadatamodified bool         `json:"metadatamodified"`
 	Modified         bool         `json:"modified"`
 	Parent           string       `json:"parent"`
-	Pinned           bool         `json:"bool"`
+	Pinned           bool         `json:"pinned"`
 	Synced           bool         `json:"synced"`
 	Type             NotebookType `json:"type"`
 	Version          uint         `json:"version"`
@@ -94,6 +95,8 @@ func (n *NotebookType) UnmarshalJSON(b []byte) error {
 	switch s {
 	case "DocumentType":
 		nt = DocumentType
+	case "CollectionType":
+		nt = CollectionType
 	default:
 		return fmt.Errorf("invalid notebook type %q", s)
 	}
@@ -107,6 +110,8 @@ func (n NotebookType) MarshalJSON() ([]byte, error) {
 	switch n {
 	case DocumentType:
 		s = "DocumentType"
+	case CollectionType:
+		s = "CollectionType"
 	default:
 		return nil, fmt.Errorf("invalid notebook type %v", n)
 	}
