@@ -43,6 +43,24 @@ func (n *Node) Pinned() bool {
 	return n.meta.Pinned
 }
 
+// Walk applies the given function to the subtree starting at this node,
+// (including this node). Returns the first error that is encountered or nil.
+func (n *Node) Walk(f func(n *Node) error) error {
+	err := f(n)
+	if err != nil {
+		return err
+	}
+
+	for _, c := range n.Children {
+		err = c.Walk(f)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Sort sorts the subtree starting at this node by the given sort rule.
 // Sorting is in-place.
 func (n *Node) Sort(compare func(*Node, *Node) bool) {

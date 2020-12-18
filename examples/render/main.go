@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 
 	"akeil.net/akeil/rm"
@@ -12,15 +14,58 @@ import (
 )
 
 func main() {
-	storage := rm.NewFilesystemStorage("testdata")
-	id := "25e3a0ce-080a-4389-be2a-f6aa45ce0207"
-	n, err := rm.ReadFull(storage, id)
+	var dir string
+	var match rm.NodeFilter
+	if len(os.Args) == 2 {
+		dir = os.Args[1]
+		match = func(n *rm.Node) bool {
+			return true
+		}
+	} else if len(os.Args) == 3 {
+		dir = os.Args[1]
+		s := strings.ToLower(os.Args[2])
+		match = func(n *rm.Node) bool {
+			return strings.Contains(strings.ToLower(n.Name()), s)
+		}
+	} else {
+		fmt.Println("wrong number of arguments")
+		os.Exit(1)
+	}
+
+	storage := rm.NewFilesystemStorage(dir)
+	root, err := rm.BuildTree(storage)
 	if err != nil {
 		log.Fatal(err)
 	}
+	root = root.Filtered(match)
 
-	//pngs(storage, n)
-	pdf(n)
+	f := func(node *rm.Node) error {
+		if !node.Leaf() {
+			return nil
+		}
+
+		if node.Parent.ID == "trash" {
+			return nil
+		}
+
+		n, err := rm.ReadFull(storage, node.ID)
+		if err != nil {
+			log.Printf("Failed to read notebook %q", node.Name())
+			return err
+		}
+
+		//pngs(storage, n)
+		err = pdf(n)
+		if err != nil {
+			log.Printf("Failed to render PDF for notebook %q", n.Meta.VisibleName)
+		}
+		return err
+	}
+	err = root.Walk(f)
+
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	log.Println("exit ok")
 }
@@ -62,14 +107,15 @@ func pngs(storage rm.Storage, n *rm.Notebook) {
 	wg.Wait()
 }
 
-func pdf(n *rm.Notebook) {
+func pdf(n *rm.Notebook) error {
 	// render to pdf
-	f, err := os.Create("./out/notebook.pdf")
+	p := filepath.Join("./out", n.Meta.VisibleName+".pdf")
+	f, err := os.Create(p)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer f.Close()
 
 	w := bufio.NewWriter(f)
-	render.RenderPDF(n, w)
+	return render.RenderPDF(n, w)
 }
