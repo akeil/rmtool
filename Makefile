@@ -9,7 +9,7 @@ build:
 test:
 	go test $(QNAME) $(QNAME)
 
-src = $(wildcard *.go) $(wildcard ./*/*/*.go)
+src = $(wildcard *.go) $(wildcard ./*/*.go) $(wildcard ./*/*/*.go)
 
 fmt: ${src}
 	for file in $^ ; do\

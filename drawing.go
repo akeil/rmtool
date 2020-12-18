@@ -55,7 +55,7 @@ const (
 )
 
 const (
-	MaxWidth = 1404
+	MaxWidth  = 1404
 	MaxHeight = 1872
 )
 

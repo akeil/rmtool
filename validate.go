@@ -2,7 +2,7 @@ package rm
 
 import (
 	"fmt"
-    "math"
+	"math"
 )
 
 // Validate checks this drawing and all layers, strokes and dots for valid data.
@@ -46,35 +46,35 @@ func (l *Layer) Validate() error {
 // Validate checks a stroke and the associated dots for valid data.
 // Returns an error if invalid data is found, nil if everything is fine.
 func (s *Stroke) Validate() error {
-    err := validateBrushType(s.BrushType)
-    if err != nil {
-        return err
-    }
+	err := validateBrushType(s.BrushType)
+	if err != nil {
+		return err
+	}
 
-    switch(s.BrushColor) {
-    case Black, Gray, White:
-        // valid
-    default:
-        return fmt.Errorf("invalid color: %v", s.BrushColor)
-    }
+	switch s.BrushColor {
+	case Black, Gray, White:
+		// valid
+	default:
+		return fmt.Errorf("invalid color: %v", s.BrushColor)
+	}
 
-    switch(s.BrushSize) {
-    case Small, Medium, Large:
-        // valid
-    default:
-        return fmt.Errorf("invalid brush size: %v", s.BrushSize)
-    }
+	switch s.BrushSize {
+	case Small, Medium, Large:
+		// valid
+	default:
+		return fmt.Errorf("invalid brush size: %v", s.BrushSize)
+	}
 
-    if s.Dots == nil {
-        return nil
-    }
+	if s.Dots == nil {
+		return nil
+	}
 
-    for _, d := range s.Dots {
-        err = d.Validate()
-        if err != nil {
-            return err
-        }
-    }
+	for _, d := range s.Dots {
+		err = d.Validate()
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -82,47 +82,47 @@ func (s *Stroke) Validate() error {
 // Validate checks a dot for valid data.
 // Returns an error if invalid data is found, nil if everything is fine.
 func (d *Dot) Validate() error {
-    if d.X < 0 || d.X > MaxWidth {
-        return fmt.Errorf("invalid x-coordinate: %v", d.X)
-    }
+	if d.X < 0 || d.X > MaxWidth {
+		return fmt.Errorf("invalid x-coordinate: %v", d.X)
+	}
 
-    if d.Y < 0 || d.Y > MaxHeight {
-        return fmt.Errorf("invalid y-coordinate: %v", d.Y)
-    }
+	if d.Y < 0 || d.Y > MaxHeight {
+		return fmt.Errorf("invalid y-coordinate: %v", d.Y)
+	}
 
-    // TODO: not sure what the MAX value for Speed should be
-    if d.Speed < 0 {
-        return fmt.Errorf("invalid speed value: %v", d.Speed)
-    }
+	// TODO: not sure what the MAX value for Speed should be
+	if d.Speed < 0 {
+		return fmt.Errorf("invalid speed value: %v", d.Speed)
+	}
 
-    // TODO: Encountered tilt values outside of the intervals
-    // So thie below validations rules seem to be wrong?
+	// TODO: Encountered tilt values outside of the intervals
+	// So thie below validations rules seem to be wrong?
 
-    // 0..90 degrees
-    max0 := rad(90)
-    interval0 := d.Tilt >= 0 && d.Tilt <= max0
-    // 270..360 degrees
-    min1 := rad(270)
-    max1 := rad(360)
-    interval1 := d.Tilt >= min1 && d.Tilt <= max1
-    if !(interval0 || interval1) {
-        return fmt.Errorf("invalid tilt value: %v", d.Tilt)
-    }
+	// 0..90 degrees
+	max0 := rad(90)
+	interval0 := d.Tilt >= 0 && d.Tilt <= max0
+	// 270..360 degrees
+	min1 := rad(270)
+	max1 := rad(360)
+	interval1 := d.Tilt >= min1 && d.Tilt <= max1
+	if !(interval0 || interval1) {
+		return fmt.Errorf("invalid tilt value: %v", d.Tilt)
+	}
 
-    // TODO: not sure what the MAX value for width should be
-    if d.Width < 0 {
-        return fmt.Errorf("invalid width value: %v", d.Width)
-    }
+	// TODO: not sure what the MAX value for width should be
+	if d.Width < 0 {
+		return fmt.Errorf("invalid width value: %v", d.Width)
+	}
 
-    if d.Pressure < 0 || d.Pressure > 1 {
-        return fmt.Errorf("invalid pressure value: %v", d.Pressure)
-    }
+	if d.Pressure < 0 || d.Pressure > 1 {
+		return fmt.Errorf("invalid pressure value: %v", d.Pressure)
+	}
 
-    return nil
+	return nil
 }
 
 func rad(deg float32) float32 {
-    return deg * (math.Pi / 180)
+	return deg * (math.Pi / 180)
 }
 
 func validateBrushType(b BrushType) error {
