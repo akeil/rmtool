@@ -38,7 +38,7 @@ func (n *Node) Leaf() bool {
 }
 
 func (n *Node) Pinned() bool {
-    return n.meta.Pinned
+	return n.meta.Pinned
 }
 
 // addChild adds a child node to this node and sets the Parent field
@@ -87,7 +87,9 @@ func BuildTree(s Storage) (*Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		nodes = append(nodes, newNode(id, m))
+		if !m.Deleted {
+			nodes = append(nodes, newNode(id, m))
+		}
 	}
 
 	change := false
