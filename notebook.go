@@ -17,6 +17,7 @@ func NewNotebook(id string) *Notebook {
 type Page struct {
 	NotebookID string
 	ID         string
+	Pagedata   Pagedata
 	Meta       PageMetadata
 	Drawing    *Drawing
 }

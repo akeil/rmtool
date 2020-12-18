@@ -1,5 +1,9 @@
 package rm
 
+import (
+	"fmt"
+)
+
 // Storage is the interface for a storage backend that holds notebooks.
 type Storage interface {
 	// ReadMetadata reads the metadata for a notebook with the given ID.
@@ -8,6 +12,8 @@ type Storage interface {
 	ReadContent(id string) (Content, error)
 	// ReadDrawing reads a drawing for the given notebook and page ID.
 	ReadDrawing(id, pageId string) (*Drawing, error)
+	// ReadPagedata reads pagedata (templates) for a notebook id
+	ReadPagedata(id string) ([]Pagedata, error)
 }
 
 // ReadNotebook reads a notebook with all metadata from the given storage.
@@ -23,9 +29,22 @@ func ReadNotebook(s Storage, id string) (*Notebook, error) {
 		return nil, err
 	}
 
+	pagedata, err := s.ReadPagedata(id)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(content.Pages) != len(pagedata) {
+		return nil, fmt.Errorf("inconsistent data: %v pages vs. %v pagedata entries", len(content.Pages), len(pagedata))
+	}
+
 	pages := make([]*Page, len(content.Pages))
 	for i, pageId := range content.Pages {
-		pages[i] = &Page{NotebookID: id, ID: pageId}
+		pages[i] = &Page{
+			NotebookID: id,
+			ID:         pageId,
+			Pagedata:   pagedata[i],
+		}
 	}
 
 	// TODO: Read pagedata

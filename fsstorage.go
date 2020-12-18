@@ -28,6 +28,17 @@ func (f *fsStorage) ReadContent(id string) (Content, error) {
 	return c, err
 }
 
+func (f *fsStorage) ReadPagedata(id string) ([]Pagedata, error) {
+	path := filepath.Join(f.Base, id+".pagedata")
+	r, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+
+	return ReadPagedata(r)
+}
+
 func (f *fsStorage) ReadDrawing(id, pageId string) (*Drawing, error) {
 	path := filepath.Join(f.Base, id, pageId+".rm")
 	r, err := os.Open(path)
