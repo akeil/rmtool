@@ -25,12 +25,12 @@ func main() {
 		go func(i int, p *rm.Page) {
 			defer wg.Done()
 			log.Printf("Read page %v", i)
-			d, err := storage.ReadDrawing(n.ID, p.ID)
+			err := rm.ReadPage(storage, p)
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			err = d.Validate()
+			err = p.Drawing.Validate()
 			if err != nil {
 				log.Printf("Found validation error: %v", err)
 			}
@@ -43,7 +43,7 @@ func main() {
 			defer f.Close()
 
 			w := bufio.NewWriter(f)
-			err = render.RenderDrawing(d, w)
+			err = render.RenderPage(p, w)
 			if err != nil {
 				log.Fatal(err)
 			}

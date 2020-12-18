@@ -33,6 +33,28 @@ func RenderDrawing(d *rm.Drawing, w io.Writer) error {
 	return nil
 }
 
+func RenderPage(p *rm.Page, w io.Writer) error {
+	r := image.Rect(0, 0, 1404, 1872)
+	dst := image.NewRGBA(r)
+
+	err := renderTemplate(dst, p.Pagedata.Text, p.Pagedata.Layout)
+	if err != nil {
+		return err
+	}
+
+	err = renderLayers(dst, p.Drawing)
+	if err != nil {
+		return err
+	}
+
+	err = png.Encode(w, dst)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // RenderPNG dapints the given drawing to a PNG file and writes the PNG data
 // to the given writer.
 func RenderPNG(d *rm.Drawing, w io.Writer) error {
@@ -42,17 +64,41 @@ func RenderPNG(d *rm.Drawing, w io.Writer) error {
 
 	renderBackground(dst)
 
+	err := renderLayers(dst, d)
+	if err != nil {
+		return err
+	}
+
+	err = png.Encode(w, dst)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func renderLayers(dst draw.Image, d *rm.Drawing) error {
 	for _, l := range d.Layers {
 		err := renderLayer(dst, l)
 		if err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
-	err := png.Encode(w, dst)
+func renderTemplate(dst draw.Image, tpl string, layout rm.PageLayout) error {
+	i, err := readPNG("templates", tpl)
 	if err != nil {
 		return err
 	}
+
+	if layout == rm.Landscape {
+		i = rotate(rad(90), i)
+	}
+
+	p := image.ZP
+	draw.Draw(dst, dst.Bounds(), i, p, draw.Over)
 
 	return nil
 }
@@ -173,21 +219,34 @@ func renderSegment(dst draw.Image, mask image.Image, color image.Image, pen Brus
 	}
 }
 
-var brushCache = make(map[string]image.Image)
-
 // loadBrushMask loads the brush stamp from the file system,
 // converts it to a mask image (gray value converted to alpha channel)
 // and returns an image.
 func loadBrushMask(b Brush) (image.Image, error) {
-	cached := brushCache[b.Name()]
+	i, err := readPNG("brushes", b.Name())
+	if err != nil {
+		return nil, err
+	}
+
+	mask := createMask(i)
+
+	return mask, nil
+}
+
+var cache = make(map[string]image.Image)
+
+func readPNG(subdir, name string) (image.Image, error) {
+	key := subdir + "/" + name
+	cached := cache[key]
 	if cached != nil {
 		return cached, nil
 	}
-	// TODO: from config
-	d := "./data/brushes"
-	n := b.Name() + ".png"
-	p := filepath.Join(d, n)
-	fmt.Printf("Load brush %q\n", p)
+
+	// TODO: data-dir from config
+	d := "./data"
+	n := name + ".png"
+	p := filepath.Join(d, subdir, n)
+	fmt.Printf("Load PNG %q\n", p)
 
 	f, err := os.Open(p)
 	if err != nil {
@@ -201,8 +260,11 @@ func loadBrushMask(b Brush) (image.Image, error) {
 		return nil, err
 	}
 
-	mask := createMask(i)
-	brushCache[b.Name()] = mask
+	cache[key] = i
 
-	return mask, nil
+	return i, nil
+}
+
+func rad(deg float64) float64 {
+	return deg * (math.Pi / 180)
 }
