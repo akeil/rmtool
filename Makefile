@@ -1,15 +1,22 @@
 NAMESPACE	= akeil.net/akeil
 NAME		= rm
 QNAME		= $(NAMESPACE)/$(NAME)
+BINDIR		= ./bin
+EXAMPLESDIR = $(BINDIR)/examples
 
+.PHONY: examples
 
 build:
 	go build
 
+examples:
+	mkdir -p $(EXAMPLESDIR)
+	go build -o $(EXAMPLESDIR)/render examples/render/main.go
+
 test:
 	go test $(QNAME) $(QNAME)
 
-src = $(wildcard *.go) $(wildcard ./*/*.go) $(wildcard ./*/*/*.go)
+src = $(wildcard *.go) $(wildcard ./*/*/*.go)
 
 fmt: ${src}
 	for file in $^ ; do\
