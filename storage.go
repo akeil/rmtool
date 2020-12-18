@@ -1,5 +1,6 @@
 package rm
 
+// Storage is the interface for a storage backend that holds notebooks.
 type Storage interface {
 	// ReadMetadata reads the metadata for a notebook with the given ID.
 	ReadMetadata(id string) (Metadata, error)
@@ -9,6 +10,8 @@ type Storage interface {
 	ReadDrawing(id, pageId string) (*Drawing, error)
 }
 
+// ReadNotebook reads a notebook with all metadata from the given storage.
+// It initializes the pages but does not read the individual page data.
 func ReadNotebook(s Storage, id string) (*Notebook, error) {
 	meta, err := s.ReadMetadata(id)
 	if err != nil {
@@ -36,6 +39,9 @@ func ReadNotebook(s Storage, id string) (*Notebook, error) {
 	return n, nil
 }
 
+// ReadPage reads the data for a single page from storage.
+// This includes the drawing and the metadata.
+// It sets the Drawing and MEta fields of the given page.
 func ReadPage(s Storage, p *Page) error {
 	d, err := s.ReadDrawing(p.NotebookID, p.ID)
 	if err != nil {
@@ -48,6 +54,7 @@ func ReadPage(s Storage, p *Page) error {
 	return nil
 }
 
+// ReadFull reads a notebook and all its pages from storage.
 func ReadFull(s Storage, id string) (*Notebook, error) {
 	n, err := ReadNotebook(s, id)
 	if err != nil {

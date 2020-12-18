@@ -10,6 +10,8 @@ type fsStorage struct {
 	Base string
 }
 
+// Creates a storage that is based on the directory structure as found on the
+// tablet itself.
 func NewFilesystemStorage(base string) Storage {
 	return &fsStorage{base}
 }
