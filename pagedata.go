@@ -16,8 +16,15 @@ const (
 	TemplateLarge
 )
 
+type PageLayout int
+
+const (
+	Portrait PageLayout = iota
+	Landscape
+)
+
 type Pagedata struct {
-	Prefix   string
+	Layout   PageLayout
 	Template string
 	Size     TemplateSize
 }
@@ -29,6 +36,7 @@ func ReadPagedata(r io.Reader) ([]Pagedata, error) {
 	var text string
 	var err error
 	var size TemplateSize
+	var layout PageLayout
 	var parts []string
 	for s.Scan() {
 		text = s.Text()
@@ -43,7 +51,7 @@ func ReadPagedata(r io.Reader) ([]Pagedata, error) {
 
 		// Special case: no template selected
 		if text == "Blank" {
-			pd = append(pd, Pagedata{Template: "Blank"})
+			pd = append(pd, Pagedata{Layout: Portrait, Template: "Blank"})
 			continue
 		}
 
@@ -52,7 +60,8 @@ func ReadPagedata(r io.Reader) ([]Pagedata, error) {
 			return pd, fmt.Errorf("invalid pagedata line: %q", text)
 		}
 		size = size.FromString(parts[2])
-		pd = append(pd, Pagedata{Prefix: parts[0], Template: parts[1], Size: size})
+		layout = layout.FromString(parts[0])
+		pd = append(pd, Pagedata{Layout: layout, Template: parts[1], Size: size})
 	}
 
 	return pd, nil
@@ -68,4 +77,15 @@ func (t TemplateSize) FromString(s string) TemplateSize {
 		return TemplateLarge
 	}
 	return TemplateNoSize
+}
+
+func (p PageLayout) FromString(s string) PageLayout {
+	switch s {
+	case "P":
+		return Portrait
+	case "LS":
+		return Landscape
+	default:
+		return Portrait
+	}
 }
