@@ -2,8 +2,10 @@ package rm
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type fsStorage struct {
@@ -14,6 +16,22 @@ type fsStorage struct {
 // tablet itself.
 func NewFilesystemStorage(base string) Storage {
 	return &fsStorage{base}
+}
+
+func (f *fsStorage) List() ([]string, error) {
+	files, err := ioutil.ReadDir(f.Base)
+	if err != nil {
+		return nil, err
+	}
+
+	l := make([]string, 0)
+	for _, file := range files {
+		if filepath.Ext(file.Name()) == ".metadata" {
+			l = append(l, strings.TrimSuffix(file.Name(), ".metadata"))
+		}
+	}
+
+	return l, err
 }
 
 func (f *fsStorage) ReadMetadata(id string) (Metadata, error) {
