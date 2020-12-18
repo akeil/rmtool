@@ -27,6 +27,7 @@ type Pagedata struct {
 	Layout   PageLayout
 	Template string
 	Size     TemplateSize
+	Text     string
 }
 
 func ReadPagedata(r io.Reader) ([]Pagedata, error) {
@@ -59,6 +60,7 @@ func ReadPagedata(r io.Reader) ([]Pagedata, error) {
 				Layout:   Portrait,
 				Template: text,
 				Size:     TemplateMedium,
+				Text:     text,
 			})
 		default:
 			// TODO some templates have no size
@@ -68,7 +70,12 @@ func ReadPagedata(r io.Reader) ([]Pagedata, error) {
 			}
 			size = size.FromString(parts[2])
 			layout = layout.FromString(parts[0])
-			pd = append(pd, Pagedata{Layout: layout, Template: parts[1], Size: size})
+			pd = append(pd, Pagedata{
+				Layout:   layout,
+				Template: parts[1],
+				Size:     size,
+				Text:     text,
+			})
 		}
 	}
 
