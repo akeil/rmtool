@@ -1,5 +1,5 @@
 NAMESPACE	= akeil.net/akeil
-NAME		= rmtool
+NAME		= rm
 QNAME		= $(NAMESPACE)/$(NAME)
 
 

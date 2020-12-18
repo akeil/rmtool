@@ -1,4 +1,4 @@
-package rmtool
+package rm
 
 import (
 	"fmt"

@@ -1,4 +1,4 @@
-package rmtool
+package rm
 
 // Version defines the version number of a remarkable note.
 type Version int
