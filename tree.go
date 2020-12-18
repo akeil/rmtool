@@ -29,8 +29,12 @@ func (n *Node) Name() string {
 	return n.meta.VisibleName
 }
 
+func (n *Node) IsRoot() bool {
+    return n.ID == ""
+}
+
 func (n *Node) IsLeaf() bool {
-	return n.Type() != CollectionType
+	return n.Type() != CollectionType && !n.IsRoot()
 }
 
 // addChild adds a child node to this node and sets the Parent field
