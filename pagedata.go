@@ -30,6 +30,12 @@ func ReadPagedata(r io.Reader) ([]Pagedata, error) {
 			continue
 		}
 
+		// Special case: no template selected
+		if text == "Blank" {
+			pd = append(pd, Pagedata{Template: "Blank"})
+			continue
+		}
+
 		parts = strings.SplitN(text, " ", 2)
 		if len(parts) != 2 {
 			return pd, fmt.Errorf("invalid pagedata line: %q", text)
