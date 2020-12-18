@@ -10,7 +10,7 @@ import (
 )
 
 func RenderPDF(n *rm.Notebook, w io.Writer) error {
-	pdf := setupPDF()
+	pdf := setupPDF("A4", n)
 
 	for i, p := range n.Pages {
 		err := doRenderPDFPage(pdf, p, i)
@@ -23,7 +23,7 @@ func RenderPDF(n *rm.Notebook, w io.Writer) error {
 }
 
 func RenderPDFPage(p *rm.Page, w io.Writer) error {
-	pdf := setupPDF()
+	pdf := setupPDF("A4", nil)
 
 	err := doRenderPDFPage(pdf, p, 0)
 	if err != nil {
@@ -33,21 +33,39 @@ func RenderPDFPage(p *rm.Page, w io.Writer) error {
 	return pdf.Output(w)
 }
 
-func setupPDF() *gofpdf.Fpdf {
+const tsFormat = "2006-01-02 15:04:05"
+
+func setupPDF(pageSize string, n *rm.Notebook) *gofpdf.Fpdf {
 	orientation := "P" // [P]ortrait or [L]andscape
 	sizeUnit := "pt"
-	pageSize := "A4" // or Letter
 	fontDir := ""
-
 	pdf := gofpdf.New(orientation, sizeUnit, pageSize, fontDir)
 
-	pdf.SetTopMargin(24)
+	pdf.SetMargins(0, 8, 0) // left, top, right
 	pdf.AliasNbPages("{totalPages}")
-	pdf.SetFont("helvetica", "", 10)
+	pdf.SetFont("helvetica", "", 8)
+	pdf.SetTextColor(127, 127, 127)
+	pdf.SetProducer("rmtool", true)
 
-	pdf.SetFooterFunc(func() {
-		pdf.Cellf(0, 10, "%d / {totalPages}", pdf.PageNo())
-	})
+	// If we are rendering a complete notebook, add metadata
+	if n != nil {
+		title := n.Meta.VisibleName
+		pdf.SetTitle(title, true)
+		// TODO: set from metadata?
+		modified := n.Meta.LastModified.UTC()
+		pdf.SetModificationDate(modified)
+		pdf.SetCreationDate(modified)
+
+		pdf.SetFooterFunc(func() {
+			pdf.SetY(-20)
+			pdf.SetX(24)
+			pdf.Cellf(0, 10, "%d / {totalPages}  |  %v (v%d, %v)",
+				pdf.PageNo(),
+				title,
+				n.Meta.Version,
+				n.Meta.LastModified.Local().Format(tsFormat))
+		})
+	}
 
 	return pdf
 }
@@ -56,6 +74,8 @@ func doRenderPDFPage(pdf *gofpdf.Fpdf, p *rm.Page, i int) error {
 	// TODO: determine orientation, rotate image if neccessary
 	// and set the page to Landscape
 	pdf.AddPage()
+
+	// TODO: add the background template
 
 	name := fmt.Sprintf("drawing-%d", i)
 	opts := gofpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}
