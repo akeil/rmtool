@@ -22,8 +22,12 @@ func TestReadPagedata(t *testing.T) {
 		t.Errorf("unexpected prefix: %q", pd[1].Prefix)
 	}
 
-	if pd[1].Template != "Lines medium" {
+	if pd[1].Template != "Lines" {
 		t.Errorf("unexpected template: %q", pd[1].Template)
+	}
+
+	if pd[1].Size != TemplateMedium {
+		t.Errorf("unexpected size: %q", pd[1].Size)
 	}
 }
 
@@ -46,5 +50,9 @@ func TestReadPagedataBlank(t *testing.T) {
 
 	if pd[1].Template != "Blank" {
 		t.Errorf("unexpected template: %q", pd[1].Template)
+	}
+
+	if pd[1].Size != TemplateNoSize {
+		t.Errorf("unexpected size: %q", pd[1].Size)
 	}
 }

@@ -7,9 +7,19 @@ import (
 	"strings"
 )
 
+type TemplateSize int
+
+const (
+	TemplateNoSize TemplateSize = iota
+	TemplateSmall
+	TemplateMedium
+	TemplateLarge
+)
+
 type Pagedata struct {
 	Prefix   string
 	Template string
+	Size     TemplateSize
 }
 
 func ReadPagedata(r io.Reader) ([]Pagedata, error) {
@@ -18,6 +28,7 @@ func ReadPagedata(r io.Reader) ([]Pagedata, error) {
 
 	var text string
 	var err error
+	var size TemplateSize
 	var parts []string
 	for s.Scan() {
 		text = s.Text()
@@ -36,12 +47,25 @@ func ReadPagedata(r io.Reader) ([]Pagedata, error) {
 			continue
 		}
 
-		parts = strings.SplitN(text, " ", 2)
-		if len(parts) != 2 {
+		parts = strings.SplitN(text, " ", 3)
+		if len(parts) != 3 {
 			return pd, fmt.Errorf("invalid pagedata line: %q", text)
 		}
-		pd = append(pd, Pagedata{Prefix: parts[0], Template: parts[1]})
+		size = size.FromString(parts[2])
+		pd = append(pd, Pagedata{Prefix: parts[0], Template: parts[1], Size: size})
 	}
 
 	return pd, nil
+}
+
+func (t TemplateSize) FromString(s string) TemplateSize {
+	switch s {
+	case "S", "small":
+		return TemplateSmall
+	case "M", "medium":
+		return TemplateMedium
+	case "L", "large":
+		return TemplateLarge
+	}
+	return TemplateNoSize
 }
