@@ -2,3 +2,5 @@ todo
 bin/*
 testdata
 notes.md
+data/*
+out/*
