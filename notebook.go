@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 )
 
+// Notebook holds data for a complete notebook, including the drawings for all
+// pages and metadata.
 type Notebook struct {
 	Base    string
 	ID      string
@@ -14,6 +16,7 @@ type Notebook struct {
 	Pages   []*Page
 }
 
+// NewNotebook creates a new Notebook with the given ID.
 func NewNotebook(baseDir, id string) *Notebook {
 	return &Notebook{Base: baseDir, ID: id}
 }
@@ -43,10 +46,11 @@ func (n *Notebook) Read() error {
 }
 
 type Page struct {
-	Base    string
-	ID      string
-	Meta    PageMetadata
-	Drawing *Drawing
+	Base       string
+	NotebookID string
+	ID         string
+	Meta       PageMetadata
+	Drawing    *Drawing
 }
 
 func NewPage(baseDir, notebookID, pageID string) *Page {

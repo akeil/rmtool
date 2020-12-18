@@ -11,6 +11,7 @@ import (
 // separate file because  we want to import x/image/draw
 // instead of image/draw.
 
+// Resize creates a copy of the given image, scaled to the given rectangle.
 func resize(i image.Image, r image.Rectangle) image.Image {
 	dst := image.NewRGBA(r)
 	s := draw.BiLinear
