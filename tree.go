@@ -169,3 +169,41 @@ func DefaultSort(one, other *Node) bool {
 	return strings.ToLower(one.Name()) < strings.ToLower(other.Name())
 
 }
+
+// A NodeFilter is a function that can be used to test whether a node should
+// be included in a filtered subset or not.
+type NodeFilter func(n *Node) bool
+
+// Filtered returns a new node that is the root of a subtree starting at this node.
+// The subtree cill contain only nodes that match the given NodeFilter
+// and the parent folders of the matched nodes.
+func (n *Node) Filtered(accept NodeFilter) *Node {
+	root := newNode(n.ID, n.meta)
+	for _, c := range n.Children {
+		if c.Leaf() {
+			if accept(c) {
+				root.addChild(newNode(c.ID, c.meta))
+			}
+		} else {
+			x := c.Filtered(accept)
+			if x.hasContent() {
+				root.addChild(x)
+			}
+		}
+	}
+	return root
+}
+
+func (n *Node) hasContent() bool {
+	for _, c := range n.Children {
+		if c.Leaf() {
+			return true
+		} else {
+			if c.hasContent() {
+				return true
+			}
+		}
+	}
+
+	return false
+}

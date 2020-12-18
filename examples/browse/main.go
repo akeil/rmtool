@@ -4,16 +4,29 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"akeil.net/akeil/rm"
 )
 
 func main() {
-	if len(os.Args) != 2 {
+	var dir string
+	var match rm.NodeFilter
+	if len(os.Args) == 2 {
+		dir = os.Args[1]
+		match = func(n *rm.Node) bool {
+			return true
+		}
+	} else if len(os.Args) == 3 {
+		dir = os.Args[1]
+		s := strings.ToLower(os.Args[2])
+		match = func(n *rm.Node) bool {
+			return strings.Contains(strings.ToLower(n.Name()), s)
+		}
+	} else {
 		fmt.Println("wrong number of arguments")
 		os.Exit(1)
 	}
-	dir := os.Args[1]
 
 	s := rm.NewFilesystemStorage(dir)
 	root, err := rm.BuildTree(s)
@@ -21,6 +34,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	root = root.Filtered(match)
 	root.Sort(rm.DefaultSort)
 
 	for _, c := range root.Children {
