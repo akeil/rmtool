@@ -55,7 +55,7 @@ func RenderPage(p *rm.Page, w io.Writer) error {
 	return nil
 }
 
-// RenderPNG dapints the given drawing to a PNG file and writes the PNG data
+// RenderPNG paints the given drawing to a PNG file and writes the PNG data
 // to the given writer.
 func RenderPNG(d *rm.Drawing, w io.Writer) error {
 	// TODO: use width/height from Drawing/Metadata
@@ -105,17 +105,9 @@ func renderTemplate(dst draw.Image, tpl string, layout rm.PageLayout) error {
 
 // renderBackground fills the complete destination image with the background color (white).
 func renderBackground(dst draw.Image) {
-	b := dst.Bounds()
-	x0 := b.Min.X
-	x1 := b.Max.X
-	y0 := b.Min.Y
-	y1 := b.Max.Y
-
-	for x := x0; x < x1; x++ {
-		for y := y0; y < y1; y++ {
-			dst.Set(x, y, bgColor)
-		}
-	}
+	bg := image.NewUniform(bgColor)
+	p := image.ZP
+	draw.Draw(dst, dst.Bounds(), bg, p, draw.Over)
 }
 
 // renderLayer paints all strokes from the given layer onto the destination image.
