@@ -6,7 +6,7 @@ import (
 )
 
 func TestRead(t *testing.T) {
-	path := "./testdata/faf24233-a397-409e-8993-914113af7d54/3ef76edb-f118-47f0-8e0c-d79ac63df4d6.rm"
+	path := "./testdata/25e3a0ce-080a-4389-be2a-f6aa45ce0207/0408f802-a07c-45c7-8382-7f8a36645fda.rm"
 	r, err := os.Open(path)
 	if err != nil {
 		t.Errorf("cannot read rm file %q. Error: %v", path, err)
