@@ -52,7 +52,7 @@ func TestReadPagedataBlank(t *testing.T) {
 		t.Errorf("unexpected template: %q", pd[1].Template)
 	}
 
-	if pd[1].Size != TemplateNoSize {
+	if pd[1].Size != TemplateMedium {
 		t.Errorf("unexpected size: %q", pd[1].Size)
 	}
 }

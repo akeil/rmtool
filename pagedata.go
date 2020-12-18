@@ -49,19 +49,27 @@ func ReadPagedata(r io.Reader) ([]Pagedata, error) {
 			continue
 		}
 
-		// Special case: no template selected
-		if text == "Blank" {
-			pd = append(pd, Pagedata{Layout: Portrait, Template: "Blank"})
-			continue
+		// Special case: some templates do not have the orientation prefix
+		switch text {
+		case "Blank",
+			"Isometric",
+			"Perspective1",
+			"Perspective2":
+			pd = append(pd, Pagedata{
+				Layout:   Portrait,
+				Template: text,
+				Size:     TemplateMedium,
+			})
+		default:
+			// TODO some templates have no size
+			parts = strings.SplitN(text, " ", 3)
+			if len(parts) != 3 {
+				return pd, fmt.Errorf("invalid pagedata line: %q", text)
+			}
+			size = size.FromString(parts[2])
+			layout = layout.FromString(parts[0])
+			pd = append(pd, Pagedata{Layout: layout, Template: parts[1], Size: size})
 		}
-
-		parts = strings.SplitN(text, " ", 3)
-		if len(parts) != 3 {
-			return pd, fmt.Errorf("invalid pagedata line: %q", text)
-		}
-		size = size.FromString(parts[2])
-		layout = layout.FromString(parts[0])
-		pd = append(pd, Pagedata{Layout: layout, Template: parts[1], Size: size})
 	}
 
 	return pd, nil
@@ -71,7 +79,7 @@ func (t TemplateSize) FromString(s string) TemplateSize {
 	switch s {
 	case "S", "small":
 		return TemplateSmall
-	case "M", "medium":
+	case "M", "medium", "med":
 		return TemplateMedium
 	case "L", "large":
 		return TemplateLarge
