@@ -123,10 +123,14 @@ func (n NotebookType) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// Content holds the data from the remarkable `.content` file.
+// Collections have an empty content object.
 type Content struct {
-	FileType  string   `json:"filetype"`
-	PageCount int      `json:"pageCount"`
-	Pages     []string `json:"pages"`
+	// notebook, pdf, epub
+	FileType    string   `json:"fileType"`
+	Orientation string   `json:"orientation"`
+	PageCount   int      `json:"pageCount"`
+	Pages       []string `json:"pages"`
 }
 
 func ReadContent(path string) (Content, error) {

@@ -13,9 +13,12 @@ func RenderPDF(n *rm.Notebook, w io.Writer) error {
 	pdf := setupPDF("A4", n)
 
 	for i, p := range n.Pages {
-		err := doRenderPDFPage(pdf, p, i)
-		if err != nil {
-			return err
+		// TODO: insert a blank page if there is no drawing
+		if p.HasDrawing() {
+			err := doRenderPDFPage(pdf, p, i)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

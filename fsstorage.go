@@ -57,6 +57,20 @@ func (f *fsStorage) ReadPagedata(id string) ([]Pagedata, error) {
 	return ReadPagedata(r)
 }
 
+func (f *fsStorage) HasDrawing(id, pageId string) (bool, error) {
+	path := filepath.Join(f.Base, id, pageId+".rm")
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		} else {
+			return false, err
+		}
+	}
+
+	return true, nil
+}
+
 func (f *fsStorage) ReadDrawing(id, pageId string) (*Drawing, error) {
 	path := filepath.Join(f.Base, id, pageId+".rm")
 	r, err := os.Open(path)

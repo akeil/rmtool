@@ -21,3 +21,8 @@ type Page struct {
 	Meta       PageMetadata
 	Drawing    *Drawing
 }
+
+// HasDrawing checks if the page has an associated drawing.
+func (p *Page) HasDrawing() bool {
+	return p.Drawing != nil
+}

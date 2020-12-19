@@ -8,12 +8,20 @@ import (
 type Storage interface {
 	// List retrieves a list of IDs from the storage.
 	List() ([]string, error)
+
 	// ReadMetadata reads the metadata for a notebook with the given ID.
 	ReadMetadata(id string) (Metadata, error)
+
 	// ReadContent reads the content for a notebook.
 	ReadContent(id string) (Content, error)
+
 	// ReadDrawing reads a drawing for the given notebook and page ID.
 	ReadDrawing(id, pageId string) (*Drawing, error)
+
+	// HasDrawing tells if we have a drawing for a given page in a notebook.
+	// For PDF and EPUB documents, some pages might not have associated drawings.
+	HasDrawing(id, pageId string) (bool, error)
+
 	// ReadPagedata reads pagedata (templates) for a notebook id
 	ReadPagedata(id string) ([]Pagedata, error)
 }
@@ -62,13 +70,23 @@ func ReadNotebook(s Storage, id string) (*Notebook, error) {
 
 // ReadPage reads the data for a single page from storage.
 // This includes the drawing and the metadata.
-// It sets the Drawing and MEta fields of the given page.
+// It sets the Drawing and Meta fields of the given page.
+//
+// Both, Metadata and the Drawing are optional.
 func ReadPage(s Storage, p *Page) error {
-	d, err := s.ReadDrawing(p.NotebookID, p.ID)
+	hasDrawing, err := s.HasDrawing(p.NotebookID, p.ID)
 	if err != nil {
 		return err
 	}
-	p.Drawing = d
+	if hasDrawing {
+		d, err := s.ReadDrawing(p.NotebookID, p.ID)
+		if err != nil {
+			return err
+		}
+		p.Drawing = d
+	} else {
+		p.Drawing = nil // in case it was set before
+	}
 
 	// TODO: Read page meta
 
