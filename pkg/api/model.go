@@ -15,7 +15,7 @@ type Item struct {
 	BlobURLPutExpires string // datetime, 2018-01-24T21:02:59.624624Z
 	ModifiedClient    string // datetime, 2018-01-24T21:02:59.624624Z
 	Type              string // DocumentType or CollectionType
-	VisibleName       string // key: VissibleName w/ typo
+	VisibleName       string `json:"VissibleName"` // yes, has typo "ss"
 	CurrentPage       int
 	Bookmarked        bool /// "pinned"
 	Parent            string

@@ -50,8 +50,41 @@ func NewClient(discoveryURL, authBase, deviceToken string) *Client {
 }
 
 func (c *Client) List() ([]Item, error) {
-	// fetches a list of Item's
-	return nil, nil
+	items := make([]Item, 0)
+
+	err := c.storageRequest("GET", epList, nil, &items)
+	if err != nil {
+		return nil, err
+	}
+
+	return items, nil
+}
+
+func (c *Client) storageRequest(method, endpoint string, payload, dst interface{}) error {
+	req, err := newRequest(method, c.storageBase, endpoint, c.userToken, payload)
+	if err != nil {
+		return err
+	}
+
+	res, err := c.client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("storage request failed with status %d", res.StatusCode)
+	}
+
+	defer res.Body.Close()
+	if dst != nil {
+		dec := json.NewDecoder(res.Body)
+		err = dec.Decode(dst)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (c *Client) Fetch(id string) (Item, error) {
@@ -242,7 +275,7 @@ func (c *Client) Discover() error {
 		return err
 	}
 
-	c.storageBase = dis.Host
+	c.storageBase = "https://" + dis.Host
 
 	return nil
 }
