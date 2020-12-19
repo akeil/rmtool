@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	AuthURL = "https://my.remarkable.com"
+	AuthURL      = "https://my.remarkable.com"
+	DiscoveryURL = "https://service-manager-production-dot-remarkable-production.appspot.com/service/json/1/document-storage?environment=production&group=auth0%7C5a68dc51cb30df3877a1d7c4&apiVer=2"
 )
 
 // API endpoints
@@ -31,19 +32,20 @@ const (
 )
 
 type Client struct {
-	// discoveryHost
-	authBase string
-	// storageHost
-	deviceToken string
-	userToken   string
-	client      *http.Client
+	discoveryURL string
+	authBase     string
+	storageBase  string
+	deviceToken  string
+	userToken    string
+	client       *http.Client
 }
 
-func NewClient(authBase, deviceToken string) *Client {
+func NewClient(discoveryURL, authBase, deviceToken string) *Client {
 	return &Client{
-		authBase:    authBase,
-		deviceToken: deviceToken,
-		client:      &http.Client{},
+		discoveryURL: discoveryURL,
+		authBase:     authBase,
+		deviceToken:  deviceToken,
+		client:       &http.Client{},
 	}
 }
 
@@ -212,18 +214,35 @@ func (c *Client) requestToken(endpoint, token string, payload interface{}) (stri
 	return string(data), nil
 }
 
-// discover is used to determine the endpoints that should be used for Storage
+// Discover is used to determine the endpoints that should be used for Storage
 // and Notifications.
 // Call this once to initialize the client.
-func (c *Client) discover() error {
-	// GET
-	// ?environment=production&group=<MAGIC>&apiVer=<VERSION>
-	//
-	// MAGIC: auth0|5a68dc51cb30df3877a1d7c4
-	//
-	// Version:
-	// - Storage: 2
-	// - Notifications: 1
+// The call is unauthenticated and can be made before authenticaion.
+func (c *Client) Discover() error {
+	req, err := http.NewRequest("GET", c.discoveryURL, nil)
+	if err != nil {
+		return err
+	}
+
+	res, err := c.client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("service discovery failed with status %d", res.StatusCode)
+	}
+
+	defer res.Body.Close()
+
+	dis := &Discovery{}
+	dec := json.NewDecoder(res.Body)
+	err = dec.Decode(dis)
+	if err != nil {
+		return err
+	}
+
+	c.storageBase = dis.Host
 
 	return nil
 }

@@ -33,3 +33,8 @@ type Registration struct {
 	Description string `json:"deviceDesc"`
 	DeviceID    string `json:"deviceID"`
 }
+
+type Discovery struct {
+	Status string
+	Host   string
+}

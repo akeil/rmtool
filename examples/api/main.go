@@ -27,13 +27,18 @@ func register() error {
 	}
 
 	code := os.Args[1]
-	client := api.NewClient(api.AuthURL, token)
+	client := api.NewClient(api.DiscoveryURL, api.AuthURL, token)
 
 	if !client.Registered() {
 		token, err = client.Register(code)
 		if err != nil {
 			return err
 		}
+	}
+
+	err = client.Discover()
+	if err != nil {
+		return err
 	}
 
 	// fetch a (new) user token. This must be done once per session
