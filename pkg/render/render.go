@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 
 	"akeil.net/akeil/rm"
+	"akeil.net/akeil/rm/internal/imaging"
 )
 
 var colors = map[rm.BrushColor]color.Color{
@@ -52,7 +53,7 @@ func RenderPage(p *rm.Page, w io.Writer) error {
 	}
 
 	// Now that we are done with transparency...
-	grayscale := toGray(dst)
+	grayscale := imaging.ToGray(dst)
 
 	err = png.Encode(w, grayscale)
 	if err != nil {
@@ -101,7 +102,7 @@ func renderTemplate(dst draw.Image, tpl string, layout rm.PageLayout) error {
 	}
 
 	if layout == rm.Landscape {
-		i = rotate(rad(90), i)
+		i = imaging.Rotate(rad(90), i)
 	}
 
 	p := image.ZP
@@ -166,15 +167,15 @@ func renderSegment(dst draw.Image, mask image.Image, color image.Image, pen Brus
 	width := float64(start.Width)
 	scaledSize := int(math.Round(width))
 	scale := image.Rect(0, 0, scaledSize, scaledSize)
-	scaled := resize(mask, scale)
+	scaled := imaging.Resize(mask, scale)
 
 	// Apply additional opacity for pressure/speed
 	opacity := pen.Opacity(start.Pressure, start.Speed)
-	opaque := applyOpacity(scaled, opacity)
+	opaque := imaging.ApplyOpacity(scaled, opacity)
 
 	// Rotate the brush to align with the path
 	angle := math.Atan2(float64(start.Y-end.Y), float64(start.X-end.X))
-	rotated := rotate(angle, opaque)
+	rotated := imaging.Rotate(angle, opaque)
 
 	w, h := scaledSize, scaledSize
 	overlap := pen.Overlap()
@@ -227,7 +228,7 @@ func loadBrushMask(b Brush) (image.Image, error) {
 		return nil, err
 	}
 
-	mask := createMask(i)
+	mask := imaging.CreateMask(i)
 
 	return mask, nil
 }

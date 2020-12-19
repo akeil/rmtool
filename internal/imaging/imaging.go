@@ -1,4 +1,4 @@
-package render
+package imaging
 
 import (
 	"image"
@@ -8,11 +8,8 @@ import (
 	"golang.org/x/image/draw"
 )
 
-// separate file because  we want to import x/image/draw
-// instead of image/draw.
-
 // Resize creates a copy of the given image, scaled to the given rectangle.
-func resize(i image.Image, r image.Rectangle) image.Image {
+func Resize(i image.Image, r image.Rectangle) image.Image {
 	dst := image.NewRGBA(r)
 	s := draw.BiLinear
 	s.Scale(dst, r, i, i.Bounds(), draw.Over, nil)
@@ -21,7 +18,7 @@ func resize(i image.Image, r image.Rectangle) image.Image {
 
 // create a mask image by using the gray value of the given image as the
 // value for the mask alpha channel. Returns the mask image.
-func createMask(i image.Image) image.Image {
+func CreateMask(i image.Image) image.Image {
 	rect := i.Bounds()
 	mask := image.NewRGBA(rect)
 	x0 := rect.Min.X
@@ -42,10 +39,10 @@ func createMask(i image.Image) image.Image {
 	return mask
 }
 
-// applyOpacity applies the given opacity (0.0..1.0) to the given image.
+// ApplyOpacity applies the given opacity (0.0..1.0) to the given image.
 // This method returns a new image where the alpha channel is a combination
 // of the source alpha and the opacity.
-func applyOpacity(i image.Image, opacity float64) image.Image {
+func ApplyOpacity(i image.Image, opacity float64) image.Image {
 	alpha := uint8(math.Round(255 * opacity))
 	mask := image.NewUniform(color.Alpha{alpha})
 
@@ -59,7 +56,7 @@ func applyOpacity(i image.Image, opacity float64) image.Image {
 // Rotate the given image counter-clockwise by angle (radians) degrees.
 // Rotation is around the center of the source image.
 // Returns an image with the rotated pixels.
-func rotate(angle float64, i image.Image) image.Image {
+func Rotate(angle float64, i image.Image) image.Image {
 	// Size of the source image
 	box := i.Bounds()
 	xMax := box.Max.X
@@ -97,7 +94,8 @@ func rotate(angle float64, i image.Image) image.Image {
 	return dst
 }
 
-func toGray(i image.Image) image.Image {
+// ToGray creates a grayscale version of the given image.
+func ToGray(i image.Image) image.Image {
 	b := i.Bounds()
 	g := image.NewGray(b)
 	for x := 0; x < b.Max.X; x++ {
