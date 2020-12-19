@@ -51,7 +51,10 @@ func RenderPage(p *rm.Page, w io.Writer) error {
 		return err
 	}
 
-	err = png.Encode(w, dst)
+	// Now that we are done with transparency...
+	grayscale := toGray(dst)
+
+	err = png.Encode(w, grayscale)
 	if err != nil {
 		return err
 	}

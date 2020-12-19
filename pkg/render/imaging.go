@@ -96,3 +96,14 @@ func rotate(angle float64, i image.Image) image.Image {
 
 	return dst
 }
+
+func toGray(i image.Image) image.Image {
+	b := i.Bounds()
+	g := image.NewGray(b)
+	for x := 0; x < b.Max.X; x++ {
+		for y := 0; y < b.Max.Y; y++ {
+			g.Set(x, y, i.At(x, y))
+		}
+	}
+	return g
+}
