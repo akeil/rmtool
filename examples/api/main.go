@@ -36,7 +36,11 @@ func register() error {
 		}
 	}
 
-	fmt.Println(token)
+	// fetch a (new) user token. This must be done once per session
+	err = client.RefreshToken()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

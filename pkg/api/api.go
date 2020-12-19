@@ -252,7 +252,7 @@ func newRequest(method, base, endpoint, token string, payload interface{}) (*htt
 
 	// Set required headers
 	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(token))
 	}
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
