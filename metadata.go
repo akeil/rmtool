@@ -32,8 +32,10 @@ type Metadata struct {
 	Pinned           bool         `json:"pinned"`
 	Synced           bool         `json:"synced"`
 	Type             NotebookType `json:"type"`
-	Version          uint         `json:"version"`
-	VisibleName      string       `json:"visibleName"`
+	// Version is incremented with each change to the file, starting at "1".
+	Version uint `json:"version"`
+	// VisibleName is the display name for this item.
+	VisibleName string `json:"visibleName"`
 }
 
 // ReadMetadata reads a Metadata struct from the given JSON file.
