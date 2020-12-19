@@ -61,8 +61,8 @@ func (b *Ballpoint) Name() string {
 
 func (b *Ballpoint) Opacity(pressure, speed float32) float64 {
 	// ballpoint has low sensitivity for pressure
-	x := math.Pow(float64(pressure), 4)
-	return x*0.25 + 0.75
+	x := math.Pow(float64(pressure), 2)
+	return x*0.2 + 0.8
 }
 func (b *Ballpoint) Overlap() float64 {
 	return 4.0
@@ -137,7 +137,7 @@ func (m *Marker) Opacity(pressure, speed float32) float64 {
 }
 
 func (m *Marker) Overlap() float64 {
-	return 2.0
+	return 4.0
 }
 
 // Highlighter ----------------------------------------------------------------
