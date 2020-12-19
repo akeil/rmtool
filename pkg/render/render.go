@@ -34,12 +34,16 @@ func RenderDrawing(d *rm.Drawing, w io.Writer) error {
 }
 
 func RenderPage(p *rm.Page, w io.Writer) error {
+	var err error
+
 	r := image.Rect(0, 0, 1404, 1872)
 	dst := image.NewRGBA(r)
 
-	err := renderTemplate(dst, p.Pagedata.Text, p.Pagedata.Layout)
-	if err != nil {
-		return err
+	if p.Pagedata.HasTemplate() {
+		err = renderTemplate(dst, p.Pagedata.Text, p.Pagedata.Layout)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = renderLayers(dst, p.Drawing)

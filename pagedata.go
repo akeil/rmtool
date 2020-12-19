@@ -30,6 +30,11 @@ type Pagedata struct {
 	Text     string
 }
 
+// HasTemplate tells if the page has a (visible) background template.
+func (p *Pagedata) HasTemplate() bool {
+	return p.Text != "Blank" && p.Text != ""
+}
+
 func ReadPagedata(r io.Reader) ([]Pagedata, error) {
 	pd := make([]Pagedata, 0)
 	s := bufio.NewScanner(r)
