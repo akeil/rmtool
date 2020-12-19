@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	//"errors"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/google/uuid"
@@ -82,6 +82,15 @@ func (c *Client) Fetch(id string) (Item, error) {
 		return item, err
 	}
 
+	//var w bytes.Buffer
+	// TODO temporary
+	w, err := os.Create("./data/rm-api-blob.zip")
+	if err != nil {
+		return item, err
+	}
+	defer w.Close()
+	c.fetchBlob(item.BlobURLGet, w)
+
 	return item, nil
 }
 
@@ -114,9 +123,29 @@ func (c *Client) doList(id string, blob bool) ([]Item, error) {
 	return items, nil
 }
 
-func (c *Client) fetchBlob(url string) error {
+func (c *Client) fetchBlob(url string, w io.Writer) error {
 	// fetches the "Blob" from a blob URL
 	// this is a Zip archive with the same files that are present on the tablets file system.
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+
+	res, err := c.client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("blob request failed with status %d", res.StatusCode)
+	}
+
+	defer res.Body.Close()
+	_, err = io.Copy(w, res.Body)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

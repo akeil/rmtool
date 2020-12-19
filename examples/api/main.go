@@ -36,7 +36,7 @@ func main() {
 	}
 
 	id := items[0].ID
-	id = "e147e6dc-bf10-45d8-be95-a0d58ff40dd0"
+	id = "e147e6dc-bf10-45d8-be95-a0d58ff40dd4"
 	item, err := client.Fetch(id)
 	if err != nil {
 		fmt.Println(err)
