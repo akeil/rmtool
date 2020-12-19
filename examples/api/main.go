@@ -28,8 +28,22 @@ func main() {
 	}
 
 	for _, item := range items {
-		fmt.Println(item)
+		fmt.Printf("%v - %v\n", item.ID, item.VisibleName)
 	}
+
+	if len(items) == 0 {
+		os.Exit(0)
+	}
+
+	id := items[0].ID
+	id = "e147e6dc-bf10-45d8-be95-a0d58ff40dd0"
+	item, err := client.Fetch(id)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	fmt.Println(item)
 }
 
 func register(client *api.Client) error {

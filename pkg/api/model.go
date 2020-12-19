@@ -21,7 +21,7 @@ type Item struct {
 	Parent            string
 }
 
-func Err(i Item) error {
+func errorFrom(i Item) error {
 	if i.Success {
 		return nil
 	}

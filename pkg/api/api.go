@@ -49,6 +49,8 @@ func NewClient(discoveryURL, authBase, deviceToken string) *Client {
 	}
 }
 
+// Storage --------------------------------------------------------------------
+
 func (c *Client) List() ([]Item, error) {
 	items := make([]Item, 0)
 
@@ -60,41 +62,56 @@ func (c *Client) List() ([]Item, error) {
 	return items, nil
 }
 
-func (c *Client) storageRequest(method, endpoint string, payload, dst interface{}) error {
-	req, err := newRequest(method, c.storageBase, endpoint, c.userToken, payload)
+func (c *Client) Fetch(id string) (Item, error) {
+	// use List endpoint, but add params 'doc' and 'withBlob'
+	var item Item
+
+	items, err := c.doList(id, true)
 	if err != nil {
-		return err
+		return item, err
 	}
 
-	res, err := c.client.Do(req)
+	if len(items) != 1 {
+		return item, fmt.Errorf("got unexpected number of items (%v)", len(items))
+	}
+	item = items[0]
+
+	// A successful response can still include errors
+	err = errorFrom(item)
 	if err != nil {
-		return err
+		return item, err
 	}
 
-	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("storage request failed with status %d", res.StatusCode)
-	}
-
-	defer res.Body.Close()
-	if dst != nil {
-		dec := json.NewDecoder(res.Body)
-		err = dec.Decode(dst)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return item, nil
 }
 
-func (c *Client) Fetch(id string) (Item, error) {
-	// use List endpoint, but add params:
-	//
-	// doc = <id>
-	// withBlob=true
+func (c *Client) doList(id string, blob bool) ([]Item, error) {
+	ep, err := url.Parse(epList)
+	if err != nil {
+		return nil, err
+	}
 
-	// fetches a list with one item
-	return Item{}, nil
+	// Add optional query parameters
+	if blob || id != "" {
+		q := url.Values{}
+		q.Set("withBlob", "true")
+		if id != "" {
+			q.Set("doc", id)
+		}
+		qry, err := url.Parse("?" + q.Encode())
+		if err != nil {
+			return nil, err
+		}
+		ep = ep.ResolveReference(qry)
+	}
+
+	items := make([]Item, 0)
+	err = c.storageRequest("GET", ep.String(), nil, &items)
+	if err != nil {
+		return nil, err
+	}
+
+	return items, nil
 }
 
 func (c *Client) fetchBlob(url string) error {
@@ -166,6 +183,35 @@ func (c *Client) update(i Item) error {
 	// PUT epUpdateStatus
 	return nil
 }
+
+func (c *Client) storageRequest(method, endpoint string, payload, dst interface{}) error {
+	req, err := newRequest(method, c.storageBase, endpoint, c.userToken, payload)
+	if err != nil {
+		return err
+	}
+
+	res, err := c.client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("storage request failed with status %d", res.StatusCode)
+	}
+
+	defer res.Body.Close()
+	if dst != nil {
+		dec := json.NewDecoder(res.Body)
+		err = dec.Decode(dst)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Auth -----------------------------------------------------------------------
 
 // Register registers a new device with the remarkable service.
 // It sends a one-time code from my.remarkable.com/connect/desktop
