@@ -198,7 +198,7 @@ func (c *Client) Move(id, dstId string) error {
 		return err
 	}
 	if parent.Type != CollectionType {
-		return fmt.Errorf("Destination %q is not a collection", dstId)
+		return fmt.Errorf("destination %q is not a collection", dstId)
 	}
 
 	item.Parent = dstId
@@ -239,16 +239,80 @@ func (c *Client) Rename(id, name string) error {
 
 // Upload adds a document to the given parent folder.
 // The parentId must be empty (root folder) or refer to a CollectinType item.
-func (c *Client) Upload(parentId string) error {
-	// TODO: supply an io.Reader for the source?
+func (c *Client) Upload(name, parentId string, src io.Reader) error {
+	var err error
+	// We need to check the parent folder, server will not check
+	if parentId != "" {
+		p, err := c.fetchItem(parentId)
+		if err != nil {
+			return err
+		}
+		if p.Type != CollectionType {
+			return fmt.Errorf("parent %q is not a collection", parentId)
+		}
+	}
 
-	// create upload Item, PUT to epUpload
+	// Create an "upload request" which will give us the upload URL
+	u := uploadItem{
+		ID:      uuid.New().String(),
+		Version: 1,
+	}
 
-	// response from upload req contains BlobPutURL
+	wrap := make([]uploadItem, 1)
+	wrap[0] = u
+	result := make([]Item, 0)
 
-	// PUT the zip file
+	err = c.storageRequest("PUT", epUpload, &u, result)
+	if err != nil {
+		return err
+	}
 
-	// create metadata (upload Item with Modified=Now and Version +=1)
+	if len(result) != 1 {
+		return fmt.Errorf("unexpected number of result documents (%d)", len(result))
+	}
+
+	i := result[0]
+	err = errorFrom(i)
+	if err != nil {
+		return err
+	}
+
+	// TODO: should we delete the item if one of the subsequent requests fail?
+
+	// Use the Put URL to upload the zipped content.
+	url := i.BlobURLPut
+	if url == "" {
+		return fmt.Errorf("requested upload URL is empty")
+	}
+
+	req, err := http.NewRequest("PUT", url, src)
+	if err != nil {
+		return err
+	}
+
+	res, err := c.client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		// TODO: error message from response?
+		return fmt.Errorf("upload failed with status %d", res.StatusCode)
+	}
+
+	// Set the metadata for the new item
+	meta := Item{
+		ID:          u.ID,
+		Version:     u.Version,
+		Type:        DocumentType,
+		Parent:      parentId,
+		VisibleName: name,
+	}
+	err = c.update(meta)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
