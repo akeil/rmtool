@@ -152,9 +152,9 @@ func (c *Client) fetchBlob(url string, w io.Writer) error {
 // CreateFolder creates a new folder under the given parent folder.
 // The parentId must be empty (root folder) or refer to a CollectinType item.
 func (c *Client) CreateFolder(parentId, name string) error {
-	// TODO: generate the UUID here?
 	item := Item{
-		ID:          "TODO",
+		ID:          uuid.New().String(),
+		Version:     0,
 		Type:        "CollectionType",
 		Parent:      parentId,
 		VisibleName: name,
@@ -208,7 +208,7 @@ func (c *Client) Upload(parentId string) error {
 // Update updates the metadata for an item
 func (c *Client) update(i Item) error {
 	// increment version, set modified = now
-	i.Version += 1
+	//i.Version += 1
 	// PUT epUpdateStatus
 	return nil
 }
@@ -225,6 +225,7 @@ func (c *Client) storageRequest(method, endpoint string, payload, dst interface{
 	}
 
 	if res.StatusCode != http.StatusOK {
+		// TODO: body can contain plain text error message
 		return fmt.Errorf("storage request failed with status %d", res.StatusCode)
 	}
 
