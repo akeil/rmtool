@@ -7,6 +7,11 @@ import (
 	"time"
 )
 
+const (
+	CollectionType = "CollectionType"
+	DocumentType   = "DocumentType"
+)
+
 type Item struct {
 	ID                string
 	Version           int
@@ -31,6 +36,25 @@ func errorFrom(i Item) error {
 	return errors.New(i.Message)
 }
 
+func copy(i Item) Item {
+	return Item{
+		ID:                i.ID,
+		Version:           i.Version,
+		Message:           i.Message,
+		Success:           i.Success,
+		BlobURLGet:        i.BlobURLGet,
+		BlobURLGetExpires: i.BlobURLGetExpires,
+		BlobURLPut:        i.BlobURLPut,
+		BlobURLPutExpires: i.BlobURLPutExpires,
+		ModifiedClient:    i.ModifiedClient,
+		Type:              i.Type,
+		VisibleName:       i.VisibleName,
+		CurrentPage:       i.CurrentPage,
+		Bookmarked:        i.Bookmarked,
+		Parent:            i.Parent,
+	}
+}
+
 type Registration struct {
 	Code        string `json:"code"`
 	Description string `json:"deviceDesc"`
@@ -44,6 +68,10 @@ type Discovery struct {
 
 type DateTime struct {
 	time.Time
+}
+
+func now() DateTime {
+	return DateTime{time.Now()}
 }
 
 func (d *DateTime) UnmarshalJSON(b []byte) error {

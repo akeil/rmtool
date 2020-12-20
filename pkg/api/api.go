@@ -25,10 +25,10 @@ const (
 	epRegister = "/token/json/2/device/new"
 	epRefresh  = "/token/json/2/user/new"
 	// storage
-	epList         = "/document-storage/json/2/docs"
-	epUpload       = "/document-storage/json/2/upload/request"
-	epUpdateStatus = "/document-storage/json/2/upload/update-status"
-	epDelete       = "/document-storage/json/2/delete"
+	epList   = "/document-storage/json/2/docs"
+	epUpload = "/document-storage/json/2/upload/request"
+	epUpdate = "/document-storage/json/2/upload/update-status"
+	epDelete = "/document-storage/json/2/delete"
 )
 
 type Client struct {
@@ -63,21 +63,7 @@ func (c *Client) List() ([]Item, error) {
 }
 
 func (c *Client) Fetch(id string) (Item, error) {
-	// use List endpoint, but add params 'doc' and 'withBlob'
-	var item Item
-
-	items, err := c.doList(id, true)
-	if err != nil {
-		return item, err
-	}
-
-	if len(items) != 1 {
-		return item, fmt.Errorf("got unexpected number of items (%v)", len(items))
-	}
-	item = items[0]
-
-	// A successful response can still include errors
-	err = errorFrom(item)
+	item, err := c.fetchItem(id)
 	if err != nil {
 		return item, err
 	}
@@ -121,6 +107,28 @@ func (c *Client) doList(id string, blob bool) ([]Item, error) {
 	}
 
 	return items, nil
+}
+
+// FetchItem downloads metadata for a single item.
+func (c *Client) fetchItem(id string) (Item, error) {
+	// uses List endpoint, but adds params 'doc' and 'withBlob'
+	items, err := c.doList(id, true)
+	if err != nil {
+		return Item{}, err
+	}
+
+	if len(items) != 1 {
+		return Item{}, fmt.Errorf("got unexpected number of items (%v)", len(items))
+	}
+	item := items[0]
+
+	// A successful response can still include errors
+	err = errorFrom(item)
+	if err != nil {
+		return Item{}, err
+	}
+
+	return item, nil
 }
 
 func (c *Client) fetchBlob(url string, w io.Writer) error {
@@ -174,17 +182,27 @@ func (c *Client) Delete(id string) error {
 // Move transfers the documents with the given id to a destination folder.
 // The dstId must be empty (root folder) or refer to a CollectinType item.
 func (c *Client) Move(id, dstId string) error {
-	// use epUpdateStatus
-	// create an item with ID and Parent set
-	// should also set new Modified and Version fields -> requires to fetch the item first?
-	item, err := c.Fetch(id)
+	item, err := c.fetchItem(id)
 	if err != nil {
 		return err
 	}
 
-	// TODO: copy item before changing it?
-	item.Parent = dstId
+	// Early exit if there is no actual change
+	if item.Parent == dstId {
+		return nil
+	}
 
+	// We need to check if the parent is an existing folder
+	// (service will not check this)
+	parent, err := c.fetchItem(dstId)
+	if err != nil {
+		return err
+	}
+	if parent.Type != CollectionType {
+		return fmt.Errorf("Destination %q is not a collection", dstId)
+	}
+
+	item.Parent = dstId
 	return c.update(item)
 }
 
@@ -207,9 +225,26 @@ func (c *Client) Upload(parentId string) error {
 
 // Update updates the metadata for an item
 func (c *Client) update(i Item) error {
-	// increment version, set modified = now
-	//i.Version += 1
-	// PUT epUpdateStatus
+	i.Version += 1
+	i.ModifiedClient = now()
+
+	result := make([]Item, 0)
+	wrap := make([]Item, 1)
+	wrap[0] = i
+
+	err := c.storageRequest("PUT", epUpdate, wrap, &result)
+	if err != nil {
+		return err
+	}
+
+	if len(result) == 0 {
+		return fmt.Errorf("unexpected response (empty list)")
+	}
+	err = errorFrom(result[0])
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
