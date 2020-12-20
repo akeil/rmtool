@@ -172,9 +172,29 @@ func (c *Client) CreateFolder(parentId, name string) error {
 
 // Delete deletes document or folder referred to by the given ID.
 func (c *Client) Delete(id string) error {
-	// send a list of Items with documents to be deleted
-	// assumption: requires the Version fields to match
-	// Item{ID: id, Version: version}
+	item, err := c.fetchItem(id)
+	if err != nil {
+		return err
+	}
+
+	// TODO: if CollectionType, check if empty?
+
+	wrap := make([]uploadItem, 1)
+	wrap[0] = item.toUpload()
+	result := make([]Item, 0)
+	c.storageRequest("PUT", epDelete, wrap, result)
+
+	if len(result) != 1 {
+		return fmt.Errorf("got unexpected number of items (%v)", len(result))
+	}
+	i := result[0]
+
+	// A successful response can still include errors
+	err = errorFrom(i)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
