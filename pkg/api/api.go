@@ -225,12 +225,13 @@ func (c *Client) Upload(parentId string) error {
 
 // Update updates the metadata for an item
 func (c *Client) update(i Item) error {
-	i.Version += 1
-	i.ModifiedClient = now()
+	u := i.toUpload()
+	u.Version += 1
+	u.ModifiedClient = now()
 
 	result := make([]Item, 0)
-	wrap := make([]Item, 1)
-	wrap[0] = i
+	wrap := make([]uploadItem, 1)
+	wrap[0] = u
 
 	err := c.storageRequest("PUT", epUpdate, wrap, &result)
 	if err != nil {

@@ -22,10 +22,10 @@ type Item struct {
 	BlobURLPut        string
 	BlobURLPutExpires DateTime
 	ModifiedClient    DateTime
-	Type              string // DocumentType or CollectionType
-	VisibleName       string `json:"VissibleName"` // yes, has typo "ss"
+	Type              string
+	VisibleName       string `json:"VissibleName"`
 	CurrentPage       int
-	Bookmarked        bool /// "pinned"
+	Bookmarked        bool
 	Parent            string
 }
 
@@ -36,22 +36,28 @@ func errorFrom(i Item) error {
 	return errors.New(i.Message)
 }
 
-func copy(i Item) Item {
-	return Item{
-		ID:                i.ID,
-		Version:           i.Version,
-		Message:           i.Message,
-		Success:           i.Success,
-		BlobURLGet:        i.BlobURLGet,
-		BlobURLGetExpires: i.BlobURLGetExpires,
-		BlobURLPut:        i.BlobURLPut,
-		BlobURLPutExpires: i.BlobURLPutExpires,
-		ModifiedClient:    i.ModifiedClient,
-		Type:              i.Type,
-		VisibleName:       i.VisibleName,
-		CurrentPage:       i.CurrentPage,
-		Bookmarked:        i.Bookmarked,
-		Parent:            i.Parent,
+// reduced variant of `item` with only the updateable fields.
+type uploadItem struct {
+	ID             string
+	Version        int
+	ModifiedClient DateTime
+	Type           string
+	VisibleName    string `json:"VissibleName"`
+	CurrentPage    int
+	Bookmarked     bool
+	Parent         string
+}
+
+func (i Item) toUpload() uploadItem {
+	return uploadItem{
+		ID:             i.ID,
+		Version:        i.Version,
+		ModifiedClient: i.ModifiedClient,
+		Type:           i.Type,
+		VisibleName:    i.VisibleName,
+		CurrentPage:    i.CurrentPage,
+		Bookmarked:     i.Bookmarked,
+		Parent:         i.Parent,
 	}
 }
 
