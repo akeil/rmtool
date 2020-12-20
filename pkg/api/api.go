@@ -221,7 +221,21 @@ func (c *Client) Bookmark(id string, mark bool) error {
 	return c.update(item)
 }
 
-// Rename
+// Rename changes the name for an item.
+func (c *Client) Rename(id, name string) error {
+	item, err := c.fetchItem(id)
+	if err != nil {
+		return err
+	}
+
+	// Early exit if there is no actual change
+	if item.VisibleName == name {
+		return nil
+	}
+
+	item.VisibleName = name
+	return c.update(item)
+}
 
 // Upload adds a document to the given parent folder.
 // The parentId must be empty (root folder) or refer to a CollectinType item.
