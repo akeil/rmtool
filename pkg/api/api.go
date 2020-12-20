@@ -162,8 +162,7 @@ func (c *Client) fetchBlob(url string, w io.Writer) error {
 func (c *Client) CreateFolder(parentId, name string) error {
 	item := Item{
 		ID:          uuid.New().String(),
-		Version:     0,
-		Type:        "CollectionType",
+		Type:        CollectionType,
 		Parent:      parentId,
 		VisibleName: name,
 	}
@@ -206,7 +205,23 @@ func (c *Client) Move(id, dstId string) error {
 	return c.update(item)
 }
 
-// Rename, Bookmark/Unbookmark
+// Bookmark adds or removes a bookmark for the given item.
+func (c *Client) Bookmark(id string, mark bool) error {
+	item, err := c.fetchItem(id)
+	if err != nil {
+		return err
+	}
+
+	// Early exit if there is no actual change
+	if item.Bookmarked == mark {
+		return nil
+	}
+
+	item.Bookmarked = mark
+	return c.update(item)
+}
+
+// Rename
 
 // Upload adds a document to the given parent folder.
 // The parentId must be empty (root folder) or refer to a CollectinType item.
@@ -223,7 +238,7 @@ func (c *Client) Upload(parentId string) error {
 	return nil
 }
 
-// Update updates the metadata for an item
+// Update updates the metadata for an item.
 func (c *Client) update(i Item) error {
 	u := i.toUpload()
 	u.Version += 1
