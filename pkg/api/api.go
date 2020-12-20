@@ -280,9 +280,27 @@ func (c *Client) Upload(name, parentId string, src io.Reader) error {
 	// TODO: should we delete the item if one of the subsequent requests fail?
 
 	// Use the Put URL to upload the zipped content.
-	url := i.BlobURLPut
+	err = c.putBlob(i.BlobURLPut, src)
+
+	// Set the metadata for the new item
+	meta := Item{
+		ID:          u.ID,
+		Version:     u.Version,
+		Type:        DocumentType,
+		Parent:      parentId,
+		VisibleName: name,
+	}
+	err = c.update(meta)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) putBlob(url string, src io.Reader) error {
 	if url == "" {
-		return fmt.Errorf("requested upload URL is empty")
+		return fmt.Errorf("upload URL is empty")
 	}
 
 	req, err := http.NewRequest("PUT", url, src)
@@ -298,19 +316,6 @@ func (c *Client) Upload(name, parentId string, src io.Reader) error {
 	if res.StatusCode != http.StatusOK {
 		// TODO: error message from response?
 		return fmt.Errorf("upload failed with status %d", res.StatusCode)
-	}
-
-	// Set the metadata for the new item
-	meta := Item{
-		ID:          u.ID,
-		Version:     u.Version,
-		Type:        DocumentType,
-		Parent:      parentId,
-		VisibleName: name,
-	}
-	err = c.update(meta)
-	if err != nil {
-		return err
 	}
 
 	return nil
