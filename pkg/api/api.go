@@ -15,8 +15,9 @@ import (
 )
 
 const (
-	AuthURL      = "https://my.remarkable.com"
-	DiscoveryURL = "https://service-manager-production-dot-remarkable-production.appspot.com/service/json/1/document-storage?environment=production&group=auth0%7C5a68dc51cb30df3877a1d7c4&apiVer=2"
+	AuthURL                   = "https://my.remarkable.com"
+	StorageDiscoveryURL       = "https://service-manager-production-dot-remarkable-production.appspot.com/service/json/1/document-storage?environment=production&group=auth0%7C5a68dc51cb30df3877a1d7c4&apiVer=2"
+	NotificationsDiscoveryURL = "https://service-manager-production-dot-remarkable-production.appspot.com/service/json/1/notifications?environment=production&group=auth0%7C5a68dc51cb30df3877a1d7c4&apiVer=1"
 )
 
 // API endpoints
@@ -29,24 +30,33 @@ const (
 	epUpload = "/document-storage/json/2/upload/request"
 	epUpdate = "/document-storage/json/2/upload/update-status"
 	epDelete = "/document-storage/json/2/delete"
+	// notifications
+	epNotifications = "/notifications/ws/json/1"
 )
 
 type Client struct {
-	discoveryURL string
-	authBase     string
-	storageBase  string
-	deviceToken  string
-	userToken    string
-	client       *http.Client
+	discoverStorageURL string
+	discoverNotifURL   string
+	authBase           string
+	storageBase        string
+	notifBase          string
+	deviceToken        string
+	userToken          string
+	client             *http.Client
 }
 
-func NewClient(discoveryURL, authBase, deviceToken string) *Client {
+func NewClient(discoveryStorage, discoverNotif, authBase, deviceToken string) *Client {
 	return &Client{
-		discoveryURL: discoveryURL,
-		authBase:     authBase,
-		deviceToken:  deviceToken,
-		client:       &http.Client{},
+		discoverStorageURL: discoveryStorage,
+		discoverNotifURL:   discoverNotif,
+		authBase:           authBase,
+		deviceToken:        deviceToken,
+		client:             &http.Client{},
 	}
+}
+
+func (c *Client) Notifications() *Notifications {
+	return NewNotifications(c.notifBase+epNotifications, c.userToken)
 }
 
 // Storage --------------------------------------------------------------------
@@ -482,18 +492,35 @@ func (c *Client) requestToken(endpoint, token string, payload interface{}) (stri
 // Call this once to initialize the client.
 // The call is unauthenticated and can be made before authenticaion.
 func (c *Client) Discover() error {
-	req, err := http.NewRequest("GET", c.discoveryURL, nil)
+	s, err := c.discoverHost(c.discoverStorageURL)
 	if err != nil {
 		return err
+	}
+
+	n, err := c.discoverHost(c.discoverNotifURL)
+	if err != nil {
+		return err
+	}
+
+	c.storageBase = "https://" + s
+	c.notifBase = "wss://" + n
+
+	return nil
+}
+
+func (c *Client) discoverHost(url string) (string, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", err
 	}
 
 	res, err := c.client.Do(req)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("service discovery failed with status %d", res.StatusCode)
+		return "", fmt.Errorf("service discovery failed with status %d", res.StatusCode)
 	}
 
 	defer res.Body.Close()
@@ -502,12 +529,18 @@ func (c *Client) Discover() error {
 	dec := json.NewDecoder(res.Body)
 	err = dec.Decode(dis)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	c.storageBase = "https://" + dis.Host
+	if dis.Status != "OK" {
+		return "", fmt.Errorf(dis.Status)
+	}
 
-	return nil
+	if dis.Host == "" {
+		return "", fmt.Errorf("service discovery returned empty host name")
+	}
+
+	return dis.Host, nil
 }
 
 func newRequest(method, base, endpoint, token string, payload interface{}) (*http.Request, error) {

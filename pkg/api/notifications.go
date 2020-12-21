@@ -8,12 +8,15 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type MessageHandler func(string)
+
 type Notifications struct {
 	url   string
 	token string
 	conn  *websocket.Conn
 	done  chan struct{}
 	exit  chan struct{}
+	hdl   MessageHandler
 }
 
 func NewNotifications(url, token string) *Notifications {
@@ -27,13 +30,15 @@ func NewNotifications(url, token string) *Notifications {
 
 func (n *Notifications) Connect() error {
 	// TODO: if already connected, return error
-
 	n.conn = nil
 
+	fmt.Printf("Connecting to notifications server at %q\n", n.url)
+
 	auth := http.Header{}
-	auth.Set("Authentication", "Bearer "+n.token)
-	conn, _, err := websocket.DefaultDialer.Dial(n.url, auth)
+	auth.Set("Authorization", "Bearer "+n.token)
+	conn, res, err := websocket.DefaultDialer.Dial(n.url, auth)
 	if err != nil {
+		return fmt.Errorf("websocket connection failed with status %v, error %v", res.StatusCode, err)
 		return err
 	}
 
@@ -52,6 +57,8 @@ func (n *Notifications) Disconnect() {
 }
 
 func (n *Notifications) onDisconnected() {
+	fmt.Println("Notifications disconnected")
+	// TODO: Lock
 	if n.conn != nil {
 		n.conn.Close()
 		n.conn = nil
@@ -60,6 +67,7 @@ func (n *Notifications) onDisconnected() {
 }
 
 func (n *Notifications) loop() {
+	fmt.Println("Start write loop...")
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	defer n.onDisconnected()
@@ -93,6 +101,7 @@ func (n *Notifications) loop() {
 }
 
 func (n *Notifications) read() {
+	fmt.Println("Start read loop...")
 	defer close(n.done)
 	for {
 		_, msg, err := n.conn.ReadMessage()
@@ -106,12 +115,17 @@ func (n *Notifications) read() {
 }
 
 func (n *Notifications) onMessage(msg string) {
-	// TODO return if we have no handler
+	// TODO Lock()
+	if n.hdl == nil {
+		return
+	}
+
 	fmt.Println(msg)
 	// parse JSON?
-	// call handler
+	n.hdl(msg)
 }
 
-func (n *Notifications) OnMessage(f func(msg string)) {
-	// register handler
+func (n *Notifications) OnMessage(f MessageHandler) {
+	// TODO Lock()
+	n.hdl = f
 }
