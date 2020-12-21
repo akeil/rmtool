@@ -143,7 +143,7 @@ func notifications(c *api.Client) error {
 
 	n := c.Notifications()
 
-	n.OnMessage(func(msg string) {
+	n.OnMessage(func(msg api.Message) {
 		fmt.Printf("Message received: %v\n", msg)
 	})
 

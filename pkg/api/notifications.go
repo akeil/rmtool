@@ -1,6 +1,8 @@
 package api
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -8,7 +10,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type MessageHandler func(string)
+type MessageHandler func(Message)
 
 type Notifications struct {
 	url   string
@@ -104,25 +106,32 @@ func (n *Notifications) read() {
 	fmt.Println("Start read loop...")
 	defer close(n.done)
 	for {
-		_, msg, err := n.conn.ReadMessage()
+		_, data, err := n.conn.ReadMessage()
 		if err != nil {
 			fmt.Println("read:", err)
 			// server closed connection
 			return
 		}
-		n.onMessage(string(msg))
+		n.onMessage(data)
 	}
 }
 
-func (n *Notifications) onMessage(msg string) {
+func (n *Notifications) onMessage(data []byte) {
 	// TODO Lock()
 	if n.hdl == nil {
 		return
 	}
 
-	fmt.Println(msg)
-	// parse JSON?
-	n.hdl(msg)
+	var w msgWrapper
+	dec := json.NewDecoder(bytes.NewReader(data))
+	err := dec.Decode(&w)
+	if err != nil {
+		fmt.Printf("Error decoding notification message: %v", err)
+		fmt.Println(string(data))
+	}
+
+	// TODO Lock
+	n.hdl(w.toMessage())
 }
 
 func (n *Notifications) OnMessage(f MessageHandler) {
