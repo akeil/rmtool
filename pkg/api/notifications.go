@@ -10,8 +10,14 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// A MessageHandler can be registered with the notifications client to receive
+// incoming messages.
 type MessageHandler func(Message)
 
+// Notifications is the client for the notification service.
+//
+// It connects to the websocket service, parses messages from JSON
+// and forwards them to a registered message handler.
 type Notifications struct {
 	url   string
 	token string
@@ -21,6 +27,7 @@ type Notifications struct {
 	hdl   MessageHandler
 }
 
+// NewNotifications sets up a new notifications client.
 func NewNotifications(url, token string) *Notifications {
 	return &Notifications{
 		url:   url,
@@ -30,11 +37,11 @@ func NewNotifications(url, token string) *Notifications {
 	}
 }
 
+// Connect creates a new websocket connection to the notification service.
+// Calling Connect while the client is already connected leads to a reconnect.
 func (n *Notifications) Connect() error {
-	// TODO: if already connected, return error
+	// TODO: if already connected, return error or reconnect
 	n.conn = nil
-
-	fmt.Printf("Connecting to notifications server at %q\n", n.url)
 
 	auth := http.Header{}
 	auth.Set("Authorization", "Bearer "+n.token)
@@ -54,10 +61,13 @@ func (n *Notifications) Connect() error {
 	return nil
 }
 
+// Disconnect closes the connection with the notification server.
+// Calling Disconnect while the client is already disconnected has no effect.
 func (n *Notifications) Disconnect() {
 	close(n.exit)
 }
 
+// onDisconnected is called internally after the connection has been closed.
 func (n *Notifications) onDisconnected() {
 	fmt.Println("Notifications disconnected")
 	// TODO: Lock
@@ -68,10 +78,10 @@ func (n *Notifications) onDisconnected() {
 
 }
 
+// loop is the "empty" write loop.
+// since we never write anything, this is only used to send a close message.
+// ...and maybe for keep alive messges?
 func (n *Notifications) loop() {
-	fmt.Println("Start write loop...")
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
 	defer n.onDisconnected()
 
 	for {
@@ -92,36 +102,34 @@ func (n *Notifications) loop() {
 			case <-time.After(time.Second):
 			}
 			return
-		case t := <-ticker.C:
-			err := n.conn.WriteMessage(websocket.TextMessage, []byte(t.String()))
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
 		}
 	}
 }
 
+// read is the receive-loop for our websocket connection.
+// It read all incoming messages an passes them to the internal message handler.
 func (n *Notifications) read() {
-	fmt.Println("Start read loop...")
 	defer close(n.done)
 	for {
 		_, data, err := n.conn.ReadMessage()
 		if err != nil {
-			fmt.Println("read:", err)
-			// server closed connection
+			fmt.Println("read error:", err)
+			// assume: server closed connection
 			return
 		}
-		n.onMessage(data)
+		n.handleMessage(data)
 	}
 }
 
-func (n *Notifications) onMessage(data []byte) {
+// onMessage is called for each incoming message that is successfully received.
+func (n *Notifications) handleMessage(data []byte) {
 	// TODO Lock()
+	// early exit if there is nobody to receive the message
 	if n.hdl == nil {
 		return
 	}
 
+	// parse content...
 	var w msgWrapper
 	dec := json.NewDecoder(bytes.NewReader(data))
 	err := dec.Decode(&w)
@@ -130,10 +138,14 @@ func (n *Notifications) onMessage(data []byte) {
 		fmt.Println(string(data))
 	}
 
+	// ...and dispatch
 	// TODO Lock
 	n.hdl(w.toMessage())
 }
 
+// OnMessage registers a handler function for received messages.
+// Setting a handler removes the current one; setting the handler to `nil`
+// is allowed to remove the current handler.
 func (n *Notifications) OnMessage(f MessageHandler) {
 	// TODO Lock()
 	n.hdl = f

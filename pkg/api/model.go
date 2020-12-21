@@ -110,26 +110,29 @@ func (d DateTime) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// Message contains the data from a notification message,
+// slightly simplified.
 type Message struct {
 	MessageID   string
 	PublishTime time.Time
-	Bookmarked  bool
+	SourceDesc  string
+	SourceID    string
 	Event       string
 	ItemID      string
 	Parent      string
-	SourceDesc  string
-	SourceID    string
 	Type        string
+	Bookmarked  bool
 	Version     int
 	VisibleName string
 }
 
-// used to unmarshal from JSON
+// msgWrapper used to unmarshal a notification mapper from JSON.
 type msgWrapper struct {
 	Msg msg    `json:"message"`
 	Sub string `json:"subscription"`
 }
 
+// ToMessage creates a proper Message from a "raw" notification message.
 func (w msgWrapper) toMessage() Message {
 	return Message{
 		MessageID:   w.Msg.ID,
