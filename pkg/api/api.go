@@ -441,19 +441,35 @@ func (c *Client) Registered() bool {
 // Authenticate requests a user token from the remarkable API.
 // This requires that the device is registered and the we have a valid
 // "device token".
+//
+// The user token is stored internally and also returned to the caller.
 func (c *Client) RefreshToken() error {
 	c.userToken = ""
+	token, err := c.FetchToken()
+	if err != nil {
+		return err
+	}
+
+	c.userToken = token
+	return nil
+}
+
+// FetchToken requests a new user token from the authentication service.
+//
+// The token is returned to the caller as a string and will NOT be used by
+// the client. Use RefreshToken to fetch a token that is used by the client
+// internally.
+func (c *Client) FetchToken() (string, error) {
 	if c.deviceToken == "" {
-		return fmt.Errorf("device not registered/missing device token")
+		return "", fmt.Errorf("device not registered/missing device token")
 	}
 
 	token, err := c.requestToken(epRefresh, c.deviceToken, nil)
 	if err != nil {
-		return err
+		return "", err
 	}
-	c.userToken = token
 
-	return nil
+	return token, nil
 }
 
 func (c *Client) requestToken(endpoint, token string, payload interface{}) (string, error) {
