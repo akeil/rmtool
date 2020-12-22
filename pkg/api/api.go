@@ -66,7 +66,7 @@ func (c *Client) NewNotifications() (*Notifications, error) {
 		return nil, err
 	}
 
-	url := "wss://" + host
+	url := "wss://" + host + epNotifications
 
 	token := c.userToken
 	if token == "" {

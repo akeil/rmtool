@@ -48,6 +48,8 @@ func (n *Notifications) Connect() error {
 	}
 	n.conn = nil
 
+	fmt.Printf("Connect to notification service at %q\n", n.url)
+
 	h := http.Header{}
 	h.Set("Authorization", "Bearer "+n.token)
 	conn, res, err := websocket.DefaultDialer.Dial(n.url, h)
