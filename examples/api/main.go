@@ -21,13 +21,14 @@ func main() {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-
-		err = list(client)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
 	*/
+
+	err = list(client)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	err = notifications(client)
 	if err != nil {
 		fmt.Println(err)
@@ -36,7 +37,6 @@ func main() {
 }
 
 func register(client *api.Client) error {
-	var err error
 	if !client.Registered() {
 		if len(os.Args) != 2 {
 			return fmt.Errorf("invalid number of arguments")
@@ -47,12 +47,6 @@ func register(client *api.Client) error {
 			return err
 		}
 		saveToken(token)
-	}
-
-	// fetch a (new) user token. This must be done once per session
-	err = client.RefreshToken()
-	if err != nil {
-		return err
 	}
 
 	return nil

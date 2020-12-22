@@ -69,7 +69,7 @@ func (c *Client) NewNotifications() (*Notifications, error) {
 	url := "wss://" + host + epNotifications
 
 	if c.userToken == "" {
-		err = c.RefreshToken()
+		err = c.refreshToken()
 		if err != nil {
 			return nil, err
 		}
@@ -397,9 +397,18 @@ func (c *Client) update(i Item) error {
 }
 
 func (c *Client) storageRequest(method, endpoint string, payload, dst interface{}) error {
-	err := c.discover()
-	if err != nil {
-		return err
+	if c.storageBase == "" {
+		err := c.discover()
+		if err != nil {
+			return err
+		}
+	}
+
+	if c.userToken == "" {
+		err := c.refreshToken()
+		if err != nil {
+			return err
+		}
 	}
 
 	req, err := newRequest(method, c.storageBase, endpoint, c.userToken, payload)
@@ -467,7 +476,7 @@ func (c *Client) Registered() bool {
 // "device token".
 //
 // The user token is stored internally and also returned to the caller.
-func (c *Client) RefreshToken() error {
+func (c *Client) refreshToken() error {
 	c.userToken = ""
 
 	if c.deviceToken == "" {
@@ -522,11 +531,6 @@ func (c *Client) requestToken(endpoint, token string, payload interface{}) (stri
 //
 // The call is unauthenticated and can be made before authenticaion.
 func (c *Client) discover() error {
-	// already discovered?
-	if c.storageBase != "" {
-		return nil
-	}
-
 	s, err := c.discoverHost(c.discoverStorageURL)
 	if err != nil {
 		return err
