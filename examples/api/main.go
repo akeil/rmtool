@@ -49,11 +49,6 @@ func register(client *api.Client) error {
 		saveToken(token)
 	}
 
-	err = client.Discover()
-	if err != nil {
-		return err
-	}
-
 	// fetch a (new) user token. This must be done once per session
 	err = client.RefreshToken()
 	if err != nil {

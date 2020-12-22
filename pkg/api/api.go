@@ -398,6 +398,11 @@ func (c *Client) update(i Item) error {
 }
 
 func (c *Client) storageRequest(method, endpoint string, payload, dst interface{}) error {
+	err := c.discover()
+	if err != nil {
+		return err
+	}
+
 	req, err := newRequest(method, c.storageBase, endpoint, c.userToken, payload)
 	if err != nil {
 		return err
@@ -510,11 +515,17 @@ func (c *Client) requestToken(endpoint, token string, payload interface{}) (stri
 	return string(data), nil
 }
 
-// Discover is used to determine the endpoints that should be used for Storage
-// and Notifications.
-// Call this once to initialize the client.
+// Discover is used internally to determine the endpoints that should be used
+// for Storage. It will retrieve the storage base URL from the respective
+// endpoint ONLY if the url has not been discovered yet.
+//
 // The call is unauthenticated and can be made before authenticaion.
-func (c *Client) Discover() error {
+func (c *Client) discover() error {
+	// already discovered?
+	if c.storageBase != "" {
+		return nil
+	}
+
 	s, err := c.discoverHost(c.discoverStorageURL)
 	if err != nil {
 		return err
