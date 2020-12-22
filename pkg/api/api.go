@@ -10,13 +10,15 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 )
 
 const (
-	AuthURL      = "https://my.remarkable.com"
-	DiscoveryURL = "https://service-manager-production-dot-remarkable-production.appspot.com/service/json/1/document-storage?environment=production&group=auth0%7C5a68dc51cb30df3877a1d7c4&apiVer=2"
+	AuthURL                   = "https://my.remarkable.com"
+	StorageDiscoveryURL       = "https://service-manager-production-dot-remarkable-production.appspot.com/service/json/1/document-storage?environment=production&group=auth0%7C5a68dc51cb30df3877a1d7c4&apiVer=2"
+	NotificationsDiscoveryURL = "https://service-manager-production-dot-remarkable-production.appspot.com/service/json/1/notifications?environment=production&group=auth0%7C5a68dc51cb30df3877a1d7c4&apiVer=1"
 )
 
 // API endpoints
@@ -29,24 +31,53 @@ const (
 	epUpload = "/document-storage/json/2/upload/request"
 	epUpdate = "/document-storage/json/2/upload/update-status"
 	epDelete = "/document-storage/json/2/delete"
+	// notifications
+	epNotifications = "/notifications/ws/json/1"
 )
 
 type Client struct {
-	discoveryURL string
-	authBase     string
-	storageBase  string
-	deviceToken  string
-	userToken    string
-	client       *http.Client
+	discoverStorageURL string
+	discoverNotifURL   string
+	authBase           string
+	storageBase        string
+	deviceToken        string
+	userToken          string
+	tokenExpires       time.Time
+	client             *http.Client
 }
 
-func NewClient(discoveryURL, authBase, deviceToken string) *Client {
+func NewClient(discoveryStorage, discoverNotif, authBase, deviceToken string) *Client {
 	return &Client{
-		discoveryURL: discoveryURL,
-		authBase:     authBase,
-		deviceToken:  deviceToken,
-		client:       &http.Client{},
+		discoverStorageURL: discoveryStorage,
+		discoverNotifURL:   discoverNotif,
+		authBase:           authBase,
+		deviceToken:        deviceToken,
+		client:             &http.Client{},
 	}
+}
+
+// NewNotifications sets up a client for the notifications service.
+//
+// This method will retrieve the hostname for the notification service from
+// the discovery URL.
+// If necessary, this method will also call RefreshToken internally to provide
+// an authentication token for the notificatin service.
+func (c *Client) NewNotifications() (*Notifications, error) {
+	host, err := c.discoverHost(c.discoverNotifURL)
+	if err != nil {
+		return nil, err
+	}
+
+	url := "wss://" + host + epNotifications
+
+	if c.userToken == "" {
+		err = c.refreshToken()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return newNotifications(url, c.userToken), nil
 }
 
 // Storage --------------------------------------------------------------------
@@ -368,6 +399,28 @@ func (c *Client) update(i Item) error {
 }
 
 func (c *Client) storageRequest(method, endpoint string, payload, dst interface{}) error {
+	if c.storageBase == "" {
+		err := c.discover()
+		if err != nil {
+			return err
+		}
+	}
+
+	expired := false
+	if !c.tokenExpires.IsZero() {
+		// We must expect the expiration time to be unknown
+		// and still be in an "OK" state.
+		// If we would consider the token "expired", this would cause
+		// constant refreshToken calls
+		expired = c.tokenExpires.Before(time.Now())
+	}
+	if c.userToken == "" || expired {
+		err := c.refreshToken()
+		if err != nil {
+			return err
+		}
+	}
+
 	req, err := newRequest(method, c.storageBase, endpoint, c.userToken, payload)
 	if err != nil {
 		return err
@@ -431,8 +484,12 @@ func (c *Client) Registered() bool {
 // Authenticate requests a user token from the remarkable API.
 // This requires that the device is registered and the we have a valid
 // "device token".
-func (c *Client) RefreshToken() error {
+//
+// The user token is stored internally and also returned to the caller.
+func (c *Client) refreshToken() error {
 	c.userToken = ""
+	c.tokenExpires = time.Time{}
+
 	if c.deviceToken == "" {
 		return fmt.Errorf("device not registered/missing device token")
 	}
@@ -441,12 +498,23 @@ func (c *Client) RefreshToken() error {
 	if err != nil {
 		return err
 	}
-	c.userToken = token
 
+	t, parseErr := parseTokenExpiration(token)
+	if parseErr == nil {
+		c.tokenExpires = t
+		fmt.Printf("Token will expire at %v\n", t)
+	} else {
+		fmt.Printf("Error parsing expiration time from JWT: %v\n", parseErr)
+		// we still consider the token as "valid" and carry on
+	}
+
+	c.userToken = token
 	return nil
 }
 
 func (c *Client) requestToken(endpoint, token string, payload interface{}) (string, error) {
+	fmt.Printf("Request new token from %q\n", endpoint)
+
 	req, err := newRequest("POST", c.authBase, endpoint, token, payload)
 	if err != nil {
 		return "", err
@@ -477,23 +545,35 @@ func (c *Client) requestToken(endpoint, token string, payload interface{}) (stri
 	return string(data), nil
 }
 
-// Discover is used to determine the endpoints that should be used for Storage
-// and Notifications.
-// Call this once to initialize the client.
+// Discover is used internally to determine the endpoints that should be used
+// for Storage. It will retrieve the storage base URL from the respective
+// endpoint ONLY if the url has not been discovered yet.
+//
 // The call is unauthenticated and can be made before authenticaion.
-func (c *Client) Discover() error {
-	req, err := http.NewRequest("GET", c.discoveryURL, nil)
+func (c *Client) discover() error {
+	s, err := c.discoverHost(c.discoverStorageURL)
 	if err != nil {
 		return err
+	}
+
+	c.storageBase = "https://" + s
+
+	return nil
+}
+
+func (c *Client) discoverHost(url string) (string, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", err
 	}
 
 	res, err := c.client.Do(req)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("service discovery failed with status %d", res.StatusCode)
+		return "", fmt.Errorf("service discovery failed with status %d", res.StatusCode)
 	}
 
 	defer res.Body.Close()
@@ -502,12 +582,18 @@ func (c *Client) Discover() error {
 	dec := json.NewDecoder(res.Body)
 	err = dec.Decode(dis)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	c.storageBase = "https://" + dis.Host
+	if dis.Status != "OK" {
+		return "", fmt.Errorf(dis.Status)
+	}
 
-	return nil
+	if dis.Host == "" {
+		return "", fmt.Errorf("service discovery returned empty host name")
+	}
+
+	return dis.Host, nil
 }
 
 func newRequest(method, base, endpoint, token string, payload interface{}) (*http.Request, error) {
@@ -542,18 +628,4 @@ func newRequest(method, base, endpoint, token string, payload interface{}) (*htt
 	//req.Header.Set("Accept", "application/json")  // necessary?
 
 	return req, nil
-}
-
-func resolve(base, endpoint string) (string, error) {
-	b, err := url.Parse(base)
-	if err != nil {
-		return "", err
-	}
-
-	e, err := url.Parse(endpoint)
-	if err != nil {
-		return "", err
-	}
-
-	return b.ResolveReference(e).String(), nil
 }

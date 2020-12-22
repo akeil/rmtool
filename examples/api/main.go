@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/signal"
 
 	"akeil.net/akeil/rm/pkg/api"
 )
@@ -14,40 +15,30 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	/*
+		err = register(client)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	*/
 
-	err = register(client)
+	err = list(client)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	items, err := client.List()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	for _, item := range items {
-		fmt.Printf("%v - %v\n", item.ID, item.VisibleName)
-	}
-
-	if len(items) == 0 {
-		os.Exit(0)
-	}
-
-	id := items[0].ID
-	id = "e147e6dc-bf10-45d8-be95-a0d58ff40dd4"
-	item, err := client.Fetch(id)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	fmt.Println(item)
+	/*
+		err = notifications(client)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	*/
 }
 
 func register(client *api.Client) error {
-	var err error
 	if !client.Registered() {
 		if len(os.Args) != 2 {
 			return fmt.Errorf("invalid number of arguments")
@@ -60,17 +51,6 @@ func register(client *api.Client) error {
 		saveToken(token)
 	}
 
-	err = client.Discover()
-	if err != nil {
-		return err
-	}
-
-	// fetch a (new) user token. This must be done once per session
-	err = client.RefreshToken()
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -79,7 +59,7 @@ func setup() (*api.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	client := api.NewClient(api.DiscoveryURL, api.AuthURL, token)
+	client := api.NewClient(api.StorageDiscoveryURL, api.NotificationsDiscoveryURL, api.AuthURL, token)
 
 	return client, nil
 }
@@ -108,4 +88,55 @@ func saveToken(token string) {
 	defer f.Close()
 
 	f.Write([]byte(token))
+}
+
+func list(c *api.Client) error {
+	items, err := c.List()
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		fmt.Printf("%v - %v\n", item.ID, item.VisibleName)
+	}
+
+	if len(items) == 0 {
+		fmt.Println("List is empty")
+		return nil
+	}
+
+	id := items[0].ID
+	id = "e147e6dc-bf10-45d8-be95-a0d58ff40dd4"
+	item, err := c.Fetch(id)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(item)
+
+	return nil
+}
+
+func notifications(c *api.Client) error {
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt)
+
+	n, err := c.NewNotifications()
+	if err != nil {
+		return err
+	}
+
+	n.OnMessage(func(msg api.Message) {
+		fmt.Printf("Message received: %v\n", msg)
+	})
+
+	err = n.Connect()
+	if err != nil {
+		return err
+	}
+	fmt.Println("Notifications connected...")
+	defer n.Disconnect()
+
+	<-interrupt
+	return nil
 }
