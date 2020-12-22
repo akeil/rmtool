@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -25,6 +26,7 @@ type Notifications struct {
 	done  chan struct{}
 	exit  chan struct{}
 	hdl   MessageHandler
+	hdlMx sync.Mutex
 }
 
 // NewNotifications sets up a new notifications client.
@@ -123,9 +125,12 @@ func (n *Notifications) read() {
 
 // onMessage is called for each incoming message that is successfully received.
 func (n *Notifications) handleMessage(data []byte) {
-	// TODO Lock()
+	n.hdlMx.Lock()
+	handler := n.hdl
+	n.hdlMx.Unlock()
+
 	// early exit if there is nobody to receive the message
-	if n.hdl == nil {
+	if handler == nil {
 		return
 	}
 
@@ -139,14 +144,14 @@ func (n *Notifications) handleMessage(data []byte) {
 	}
 
 	// ...and dispatch
-	// TODO Lock
-	n.hdl(w.toMessage())
+	go handler(w.toMessage())
 }
 
 // OnMessage registers a handler function for received messages.
 // Setting a handler removes the current one; setting the handler to `nil`
 // is allowed to remove the current handler.
 func (n *Notifications) OnMessage(f MessageHandler) {
-	// TODO Lock()
+	n.hdlMx.Lock()
 	n.hdl = f
+	n.hdlMx.Unlock()
 }
