@@ -42,12 +42,15 @@ func NewNotifications(url, token string) *Notifications {
 // Connect creates a new websocket connection to the notification service.
 // Calling Connect while the client is already connected leads to a reconnect.
 func (n *Notifications) Connect() error {
-	// TODO: if already connected, return error or reconnect
+	if n.isConnected() {
+		n.Disconnect()
+		// TODO: ideally, we would block until the connection is actually closed
+	}
 	n.conn = nil
 
-	auth := http.Header{}
-	auth.Set("Authorization", "Bearer "+n.token)
-	conn, res, err := websocket.DefaultDialer.Dial(n.url, auth)
+	h := http.Header{}
+	h.Set("Authorization", "Bearer "+n.token)
+	conn, res, err := websocket.DefaultDialer.Dial(n.url, h)
 	if err != nil {
 		return fmt.Errorf("websocket connection failed with status %v, error %v", res.StatusCode, err)
 		return err
@@ -61,6 +64,13 @@ func (n *Notifications) Connect() error {
 	go n.read()
 
 	return nil
+}
+
+// isConnected checks whether we have an active connection to the notification
+// service.
+func (n *Notifications) isConnected() bool {
+	// TODO: Lock
+	return n.conn != nil
 }
 
 // Disconnect closes the connection with the notification server.
@@ -77,7 +87,6 @@ func (n *Notifications) onDisconnected() {
 		n.conn.Close()
 		n.conn = nil
 	}
-
 }
 
 // loop is the "empty" write loop.
@@ -109,7 +118,7 @@ func (n *Notifications) loop() {
 }
 
 // read is the receive-loop for our websocket connection.
-// It read all incoming messages an passes them to the internal message handler.
+// It reads incoming messages an passes them to the internal message handler.
 func (n *Notifications) read() {
 	defer close(n.done)
 	for {
@@ -123,7 +132,7 @@ func (n *Notifications) read() {
 	}
 }
 
-// onMessage is called for each incoming message that is successfully received.
+// handleMessage is called for each incoming message that is successfully received.
 func (n *Notifications) handleMessage(data []byte) {
 	n.hdlMx.Lock()
 	handler := n.hdl
