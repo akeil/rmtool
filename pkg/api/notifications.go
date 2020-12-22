@@ -48,7 +48,7 @@ func (n *Notifications) Connect() error {
 	}
 	n.conn = nil
 
-	fmt.Printf("Connect to notification service at %q\n", n.url)
+	fmt.Printf("Connect to notification service at %q (using token: %v)\n", n.url, n.token != "")
 
 	h := http.Header{}
 	h.Set("Authorization", "Bearer "+n.token)

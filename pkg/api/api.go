@@ -68,15 +68,14 @@ func (c *Client) NewNotifications() (*Notifications, error) {
 
 	url := "wss://" + host + epNotifications
 
-	token := c.userToken
-	if token == "" {
+	if c.userToken == "" {
 		err = c.RefreshToken()
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return newNotifications(url, token), nil
+	return newNotifications(url, c.userToken), nil
 }
 
 // Storage --------------------------------------------------------------------
@@ -485,6 +484,8 @@ func (c *Client) RefreshToken() error {
 }
 
 func (c *Client) requestToken(endpoint, token string, payload interface{}) (string, error) {
+	fmt.Printf("Request new token from %q\n", endpoint)
+
 	req, err := newRequest("POST", c.authBase, endpoint, token, payload)
 	if err != nil {
 		return "", err
