@@ -31,6 +31,7 @@ type Notifications struct {
 
 // NewNotifications sets up a new notifications client.
 func newNotifications(url, token string) *Notifications {
+	// TODO: automatically refresh the token when it's expired
 	return &Notifications{
 		url:   url,
 		token: token,
