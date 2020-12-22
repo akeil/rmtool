@@ -30,7 +30,7 @@ type Notifications struct {
 }
 
 // NewNotifications sets up a new notifications client.
-func NewNotifications(url, token string) *Notifications {
+func newNotifications(url, token string) *Notifications {
 	return &Notifications{
 		url:   url,
 		token: token,

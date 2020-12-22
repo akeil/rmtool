@@ -39,7 +39,6 @@ type Client struct {
 	discoverNotifURL   string
 	authBase           string
 	storageBase        string
-	notifBase          string
 	deviceToken        string
 	userToken          string
 	client             *http.Client
@@ -55,8 +54,29 @@ func NewClient(discoveryStorage, discoverNotif, authBase, deviceToken string) *C
 	}
 }
 
-func (c *Client) Notifications() *Notifications {
-	return NewNotifications(c.notifBase+epNotifications, c.userToken)
+// NewNotifications sets up a client for the notifications service.
+//
+// This method will retrieve the hostname for the notification service from
+// the discovery URL.
+// If necessary, this method will also call RefreshToken internally to provide
+// an authentication token for the notificatin service.
+func (c *Client) NewNotifications() (*Notifications, error) {
+	host, err := c.discoverHost(c.discoverNotifURL)
+	if err != nil {
+		return nil, err
+	}
+
+	url := "wss://" + host
+
+	token := c.userToken
+	if token == "" {
+		err = c.RefreshToken()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return newNotifications(url, token), nil
 }
 
 // Storage --------------------------------------------------------------------
@@ -445,31 +465,18 @@ func (c *Client) Registered() bool {
 // The user token is stored internally and also returned to the caller.
 func (c *Client) RefreshToken() error {
 	c.userToken = ""
-	token, err := c.FetchToken()
+
+	if c.deviceToken == "" {
+		return fmt.Errorf("device not registered/missing device token")
+	}
+
+	token, err := c.requestToken(epRefresh, c.deviceToken, nil)
 	if err != nil {
 		return err
 	}
 
 	c.userToken = token
 	return nil
-}
-
-// FetchToken requests a new user token from the authentication service.
-//
-// The token is returned to the caller as a string and will NOT be used by
-// the client. Use RefreshToken to fetch a token that is used by the client
-// internally.
-func (c *Client) FetchToken() (string, error) {
-	if c.deviceToken == "" {
-		return "", fmt.Errorf("device not registered/missing device token")
-	}
-
-	token, err := c.requestToken(epRefresh, c.deviceToken, nil)
-	if err != nil {
-		return "", err
-	}
-
-	return token, nil
 }
 
 func (c *Client) requestToken(endpoint, token string, payload interface{}) (string, error) {
@@ -513,13 +520,7 @@ func (c *Client) Discover() error {
 		return err
 	}
 
-	n, err := c.discoverHost(c.discoverNotifURL)
-	if err != nil {
-		return err
-	}
-
 	c.storageBase = "https://" + s
-	c.notifBase = "wss://" + n
 
 	return nil
 }

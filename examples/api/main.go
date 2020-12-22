@@ -130,18 +130,10 @@ func notifications(c *api.Client) error {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
-	err := c.Discover()
+	n, err := c.NewNotifications()
 	if err != nil {
 		return err
 	}
-
-	// fetch a (new) user token. This must be done once per session
-	err = c.RefreshToken()
-	if err != nil {
-		return err
-	}
-
-	n := c.Notifications()
 
 	n.OnMessage(func(msg api.Message) {
 		fmt.Printf("Message received: %v\n", msg)
