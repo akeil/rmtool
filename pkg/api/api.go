@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -41,6 +43,7 @@ type Client struct {
 	storageBase        string
 	deviceToken        string
 	userToken          string
+	tokenExpires       time.Time
 	client             *http.Client
 }
 
@@ -404,7 +407,15 @@ func (c *Client) storageRequest(method, endpoint string, payload, dst interface{
 		}
 	}
 
-	if c.userToken == "" {
+	expired := false
+	if !c.tokenExpires.IsZero() {
+		// We must expect the expiration time to be unknown
+		// and still be in an "OK" state.
+		// If we would consider the token "expired", this would cause
+		// constant refreshToken calls
+		expired = c.tokenExpires.Before(time.Now())
+	}
+	if c.userToken == "" || expired {
 		err := c.refreshToken()
 		if err != nil {
 			return err
@@ -478,6 +489,7 @@ func (c *Client) Registered() bool {
 // The user token is stored internally and also returned to the caller.
 func (c *Client) refreshToken() error {
 	c.userToken = ""
+	c.tokenExpires = time.Time{}
 
 	if c.deviceToken == "" {
 		return fmt.Errorf("device not registered/missing device token")
@@ -486,6 +498,15 @@ func (c *Client) refreshToken() error {
 	token, err := c.requestToken(epRefresh, c.deviceToken, nil)
 	if err != nil {
 		return err
+	}
+
+	t, parseErr := parseTokenExpiration(token)
+	if parseErr == nil {
+		c.tokenExpires = t
+		fmt.Printf("Token will expire at %v\n", t)
+	} else {
+		fmt.Printf("Error parsing expiration time from JWT: %v\n", parseErr)
+		// we still consider the token as "valid" and carry on
 	}
 
 	c.userToken = token
@@ -622,4 +643,34 @@ func resolve(base, endpoint string) (string, error) {
 	}
 
 	return b.ResolveReference(e).String(), nil
+}
+
+// parseTokenExpiration retrieves the expiration time from the user token.
+func parseTokenExpiration(token string) (time.Time, error) {
+	var t time.Time
+
+	// split the JWT into its parts (header.payload.signature),
+	// we are only interested in the `payload`.
+	parts := strings.Split(token, ".")
+	if len(parts) < 2 {
+		return t, fmt.Errorf("unexpected number of token segments")
+	}
+
+	// decode from base64
+	data, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return t, err
+	}
+
+	// parse the one field we are interested in
+	jwt := struct {
+		Exp int64 `json:"exp"`
+	}{}
+	dec := json.NewDecoder(bytes.NewReader(data))
+	err = dec.Decode(&jwt)
+	if err != nil {
+		return t, err
+	}
+
+	return time.Unix(jwt.Exp, 0), nil
 }

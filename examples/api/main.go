@@ -29,11 +29,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = notifications(client)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	/*
+		err = notifications(client)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	*/
 }
 
 func register(client *api.Client) error {
