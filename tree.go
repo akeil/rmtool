@@ -43,6 +43,21 @@ func (n *Node) Pinned() bool {
 	return n.meta.Pinned
 }
 
+func (n *Node) Path() []string {
+	p := make([]string, 0)
+
+	ctx := n
+	for {
+		if ctx.Parent == nil {
+			break
+		}
+		p = append(p, ctx.Parent.ID)
+		ctx = ctx.Parent
+	}
+
+	return p
+}
+
 // Walk applies the given function to the subtree starting at this node,
 // (including this node). Returns the first error that is encountered or nil.
 func (n *Node) Walk(f func(n *Node) error) error {
