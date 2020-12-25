@@ -200,6 +200,20 @@ func (d *Document) Drawing(pageId string) (*Drawing, error) {
 	return drawing, nil
 }
 
+func (d *Document) AttachmentReader() (io.ReadCloser, error) {
+	p := d.ID()
+	switch d.FileType() {
+	case Pdf:
+		p += ".pdf"
+	case Epub:
+		p += ".epub"
+	default:
+		return nil, fmt.Errorf("document of type %v has no attachment", d.FileType())
+	}
+
+	return d.Reader(p)
+}
+
 func (d *Document) pageIndex(pageId string) (int, error) {
 	// Check if that page id exists
 	// AND determine the page index
