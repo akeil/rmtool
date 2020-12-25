@@ -51,6 +51,10 @@ type Meta interface {
 }
 
 func ReadDocument(m Meta) (*Document, error) {
+	if m.Type() != DocumentType {
+		return nil, fmt.Errorf("can opnly read document for items with type DocumentType")
+	}
+
 	cp := m.ID() + ".content"
 	cr, err := m.Reader(cp)
 	if err != nil {
