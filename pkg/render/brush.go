@@ -16,7 +16,6 @@ type Brush interface {
 }
 
 func NewBrush(t rm.BrushType) Brush {
-	//fmt.Printf("Brush: size=%v\n", s)
 	switch t {
 	case rm.Ballpoint, rm.BallpointV5:
 		return &Ballpoint{}

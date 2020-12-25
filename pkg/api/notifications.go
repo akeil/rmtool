@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+
+	"akeil.net/akeil/rm/internal/logging"
 )
 
 // A MessageHandler can be registered with the notifications client to receive
@@ -49,7 +51,7 @@ func (n *Notifications) Connect() error {
 	}
 	n.conn = nil
 
-	fmt.Printf("Connect to notification service at %q (using token: %v)\n", n.url, n.token != "")
+	logging.Info("Connect to notification service at %q (using token: %v)\n", n.url, n.token != "")
 
 	h := http.Header{}
 	h.Set("Authorization", "Bearer "+n.token)
@@ -84,7 +86,7 @@ func (n *Notifications) Disconnect() {
 
 // onDisconnected is called internally after the connection has been closed.
 func (n *Notifications) onDisconnected() {
-	fmt.Println("Notifications disconnected")
+	logging.Info("Notifications disconnected")
 	// TODO: Lock
 	if n.conn != nil {
 		n.conn.Close()
@@ -107,7 +109,7 @@ func (n *Notifications) loop() {
 			close := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
 			err := n.conn.WriteMessage(websocket.CloseMessage, close)
 			if err != nil {
-				fmt.Println("write close:", err)
+				logging.Debug("Websocket, write close: %v", err)
 				return
 			}
 			// wait for server to close the connection (or timeout)
@@ -127,7 +129,7 @@ func (n *Notifications) read() {
 	for {
 		_, data, err := n.conn.ReadMessage()
 		if err != nil {
-			fmt.Println("read error:", err)
+			logging.Debug("Websocket read error: %v", err)
 			// assume: server closed connection
 			return
 		}
@@ -151,8 +153,8 @@ func (n *Notifications) handleMessage(data []byte) {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	err := dec.Decode(&w)
 	if err != nil {
-		fmt.Printf("Error decoding notification message: %v", err)
-		fmt.Println(string(data))
+		logging.Warning("Error decoding notification message: %v", err)
+		logging.Debug(string(data))
 	}
 
 	// ...and dispatch

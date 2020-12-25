@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"time"
+
+	"akeil.net/akeil/rm/internal/logging"
 )
 
 // Repository is the interface for the storage backend.
@@ -141,6 +143,7 @@ func (d *Document) Page(pageId string) (*Page, error) {
 	pmp := d.PagePrefix(d.ID(), idx) + "-metadata.json"
 	pmr, err := d.Reader(d.ID(), pmp)
 	if err != nil {
+		logging.Debug("No page metadata for page %v at %q", idx, pmp)
 		// xxx-metadata.json seems to be optional.
 		// Probably(?) the last (empty) page in a notebook has no metadata
 		// check if this is a NotFoundError

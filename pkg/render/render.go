@@ -14,6 +14,7 @@ import (
 
 	"akeil.net/akeil/rm"
 	"akeil.net/akeil/rm/internal/imaging"
+	"akeil.net/akeil/rm/internal/logging"
 )
 
 var colors = map[rm.BrushColor]color.Color{
@@ -254,7 +255,7 @@ func readPNG(subdir, name string) (image.Image, error) {
 	d := "./data"
 	n := name + ".png"
 	p := filepath.Join(d, subdir, n)
-	fmt.Printf("Load PNG %q\n", p)
+	logging.Debug("Load PNG %q\n", p)
 
 	f, err := os.Open(p)
 	if err != nil {

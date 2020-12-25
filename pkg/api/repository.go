@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"akeil.net/akeil/rm"
+	"akeil.net/akeil/rm/internal/logging"
 )
 
 type repo struct {
@@ -26,7 +27,7 @@ func NewRepository(c *Client, dataDir string) rm.Repository {
 }
 
 func (r *repo) List() ([]rm.Meta, error) {
-	fmt.Println("repo.List")
+	logging.Debug("Repository.List")
 	items, err := r.client.List()
 	if err != nil {
 		return nil, err
@@ -112,17 +113,17 @@ func (r *repo) downloadToCache(id string, version uint) error {
 			if os.IsNotExist(err) {
 				return
 			} else {
-				fmt.Printf("unexpected error: %v\n", err)
+				logging.Warning("Unexpected error: %v\n", err)
 				return
 			}
 		}
 		err = os.Remove(f.Name())
 		if err != nil {
-			fmt.Printf("unexpected error: %v\n", err)
+			logging.Warning("Unexpected error: %v\n", err)
 		}
 	}()
 
-	fmt.Printf("Download blob to %q\n", f.Name())
+	logging.Debug("Download blob to %q\n", f.Name())
 	err = r.client.fetchBlob(i.BlobURLGet, f)
 	if err != nil {
 		return err
@@ -130,7 +131,7 @@ func (r *repo) downloadToCache(id string, version uint) error {
 
 	// Move to destination dir
 	p := r.cachePath(id, version)
-	fmt.Printf("Move archive blob to %q\n", p)
+	logging.Debug("Move archive blob to %q\n", p)
 	err = os.Rename(f.Name(), p)
 	if err != nil {
 		return err

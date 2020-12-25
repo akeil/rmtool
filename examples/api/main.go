@@ -8,10 +8,12 @@ import (
 
 	"akeil.net/akeil/rm"
 	"akeil.net/akeil/rm/pkg/api"
-	"akeil.net/akeil/rm/pkg/fs"
+	//"akeil.net/akeil/rm/pkg/fs"
 )
 
 func main() {
+	rm.SetLogLevel("debug")
+
 	client, err := setup()
 	if err != nil {
 		fmt.Println(err)
@@ -19,14 +21,6 @@ func main() {
 	}
 	/*
 		err = register(client)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-	*/
-
-	/*
-		err = list(client)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -100,33 +94,6 @@ func saveToken(token string) {
 	f.Write([]byte(token))
 }
 
-func list(c *api.Client) error {
-	items, err := c.List()
-	if err != nil {
-		return err
-	}
-
-	for _, item := range items {
-		fmt.Printf("%v - %v\n", item.ID, item.VisibleName)
-	}
-
-	if len(items) == 0 {
-		fmt.Println("List is empty")
-		return nil
-	}
-
-	id := items[0].ID
-	id = "e147e6dc-bf10-45d8-be95-a0d58ff40dd4"
-	item, err := c.Fetch(id)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(item)
-
-	return nil
-}
-
 func notifications(c *api.Client) error {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
@@ -152,11 +119,11 @@ func notifications(c *api.Client) error {
 }
 
 func repository(c *api.Client) error {
-	//dataDir := "/tmp/remarkable"
-	//repo := api.NewRepository(c, dataDir)
+	dataDir := "/tmp/remarkable"
+	repo := api.NewRepository(c, dataDir)
 
-	srcDir := "/tmp/xochitl"
-	repo := fs.NewRepository(srcDir)
+	//srcDir := "/tmp/xochitl"
+	//repo := fs.NewRepository(srcDir)
 
 	items, err := repo.List()
 	if err != nil {
@@ -185,10 +152,12 @@ func repository(c *api.Client) error {
 
 		// Drawing
 		d, err := doc.Drawing(pageId)
+		if err != nil {
+			return err
+		}
 		fmt.Printf("Drawing version=%v\n", d.Version)
 	}
 
-	item.SetName("Modified")
 	item.SetPinned(true)
 	err = repo.Update(item)
 	if err != nil {
