@@ -93,17 +93,9 @@ func (d *Document) Page(pageId string) (*PageX, error) {
 		}
 	}
 
-	// Check if that page id exists
-	// AND determine the page number
-	idx := -1
-	for i, id := range d.Pages() {
-		idx = i
-		if id == pageId {
-			break
-		}
-	}
-	if idx < 0 {
-		return nil, fmt.Errorf("invalid page id %q", pageId)
+	idx, err := d.pageIndex(pageId)
+	if err != nil {
+		return nil, err
 	}
 
 	// lazy load pagedata
@@ -128,17 +120,9 @@ func (d *Document) Page(pageId string) (*PageX, error) {
 	}
 
 	// Load page metadata
-	// Depending on the repository type, the path is different:
-	// - Filesystem: pageId
-	// - API: page index
-	var prefix string
-	switch d.kind {
-	case "filesystem":
-		prefix = pageId
-	case "api":
-		prefix = fmt.Sprintf("%d", idx)
-	default:
-		return nil, fmt.Errorf("invalid repository kind %q", d.kind)
+	prefix, err := d.pagePrefix(pageId, idx)
+	if err != nil {
+		return nil, err
 	}
 	pmp := prefix + "-metadata.json"
 
@@ -181,7 +165,17 @@ func (d *Document) Page(pageId string) (*PageX, error) {
 }
 
 func (d *Document) Drawing(pageId string) (*Drawing, error) {
-	dp := pageId + ".rm"
+	idx, err := d.pageIndex(pageId)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load page metadata
+	prefix, err := d.pagePrefix(pageId, idx)
+	if err != nil {
+		return nil, err
+	}
+	dp := prefix + ".rm"
 	dr, err := d.repo.Reader(d.ID(), d.Version(), d.ID(), dp)
 	if err != nil {
 		return nil, err
@@ -194,6 +188,32 @@ func (d *Document) Drawing(pageId string) (*Drawing, error) {
 	}
 
 	return drawing, nil
+}
+
+func (d *Document) pageIndex(pageId string) (int, error) {
+	// Check if that page id exists
+	// AND determine the page index
+	for i, id := range d.Pages() {
+		if id == pageId {
+			return i, nil
+		}
+	}
+
+	return 0, fmt.Errorf("invalid page id %q", pageId)
+}
+
+func (d *Document) pagePrefix(pageId string, pageIndex int) (string, error) {
+	// Depending on the repository type, the path is different:
+	// - Filesystem: pageId
+	// - API: page index
+	switch d.kind {
+	case "filesystem":
+		return pageId, nil
+	case "api":
+		return fmt.Sprintf("%d", pageIndex), nil
+	default:
+		return "", fmt.Errorf("invalid repository kind %q", d.kind)
+	}
 }
 
 func (p *Document) HasDrawing(pageId string) bool {

@@ -176,6 +176,10 @@ func repository(c *api.Client) error {
 			return err
 		}
 		fmt.Printf("Page %d - %v\n", pg.Number(), pg.Template())
+
+		// Drawing
+		d, err := doc.Drawing(pageId)
+		fmt.Printf("Drawing version=%v\n", d.Version)
 	}
 
 	return nil
