@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 	"sync"
 
 	"akeil.net/akeil/rm"
+	"akeil.net/akeil/rm/pkg/api"
 	"akeil.net/akeil/rm/pkg/fs"
 	"akeil.net/akeil/rm/pkg/render"
 )
@@ -35,7 +37,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	repo := fs.NewRepository(dir)
+	var repo rm.Repository
+
+	// filesystem
+	repo = fs.NewRepository(dir)
+
+	// api
+	client, err := setup()
+	if err != nil {
+		log.Fatal(err)
+	}
+	repo = api.NewRepository(client, "/tmp/remarkable")
+
 	root, err := rm.BuildTree(repo)
 	if err != nil {
 		log.Fatal(err)
@@ -111,4 +124,29 @@ func pdf(n *rm.Document) error {
 
 	w := bufio.NewWriter(f)
 	return render.RenderPDF(n, w)
+}
+
+func setup() (*api.Client, error) {
+	token, err := readToken()
+	if err != nil {
+		return nil, err
+	}
+	client := api.NewClient(api.StorageDiscoveryURL, api.NotificationsDiscoveryURL, api.AuthURL, token)
+
+	return client, nil
+}
+
+func readToken() (string, error) {
+	tokenfile := "./data/device-token"
+	f, err := os.Open(tokenfile)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	d, err := ioutil.ReadAll(f)
+	if err != nil {
+		return "", err
+	}
+
+	return string(d), err
 }
