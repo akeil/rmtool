@@ -10,7 +10,6 @@ import (
 type Repository interface {
 	List() ([]Meta, error)
 
-	Fetch(id string) (Meta, error)
 	Update(meta Meta) error
 
 	Reader(id string, version uint, path ...string) (io.ReadCloser, error)

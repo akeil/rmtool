@@ -151,8 +151,13 @@ func notifications(c *api.Client) error {
 }
 
 func repository(c *api.Client) error {
-	dataDir := "/tmp/remarkable"
-	repo := api.NewRepository(c, dataDir)
+	//dataDir := "/tmp/remarkable"
+	//repo := api.NewRepository(c, dataDir)
+	//kind := "api"
+
+	srcDir := "/mnt/backup/remarkable/backup/xochitl"
+	repo := rm.NewFilesystemRepository(srcDir)
+	kind := "filesystem"
 
 	items, err := repo.List()
 	if err != nil {
@@ -163,7 +168,7 @@ func repository(c *api.Client) error {
 		fmt.Printf("%v - %v\n", i.ID(), i.Name())
 	}
 
-	doc, err := rm.ReadDocument(items[7], repo, "api")
+	doc, err := rm.ReadDocument(items[7], repo, kind)
 	if err != nil {
 		return err
 	}

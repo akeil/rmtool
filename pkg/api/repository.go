@@ -40,15 +40,6 @@ func (r *repo) List() ([]rm.Meta, error) {
 	return rv, nil
 }
 
-func (r *repo) Fetch(id string) (rm.Meta, error) {
-	item, err := r.client.Fetch(id)
-	if err != nil {
-		return nil, err
-	}
-
-	return metaWrapper{item}, nil
-}
-
 func (r *repo) Update(m rm.Meta) error {
 	item := Item{
 		ID:          m.ID(),
@@ -174,9 +165,7 @@ func (m metaWrapper) SetName(n string) {
 }
 
 func (m metaWrapper) Type() rm.NotebookType {
-	//return m.i.Type
-	// TODO:
-	return rm.DocumentType
+	return m.i.Type
 }
 
 func (m metaWrapper) Pinned() bool {
