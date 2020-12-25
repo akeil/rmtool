@@ -15,6 +15,12 @@ func RenderPDF(d *rm.Document, w io.Writer) error {
 	logging.Debug("Render PDF for document %q, type %q", d.ID(), d.FileType())
 	pdf := setupPDF("A4", d)
 
+	// TODO remove this
+	logging.Debug("Number of Pages: %d", d.PageCount())
+	for i, pageId := range d.Pages() {
+		logging.Debug("Page: %v - %v", i, pageId)
+	}
+
 	for i, pageId := range d.Pages() {
 		// TODO: insert a blank page if there is no drawing
 		err := doRenderPDFPage(pdf, d, pageId, i)
