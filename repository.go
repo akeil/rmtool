@@ -11,6 +11,8 @@ type Repository interface {
 	List() ([]Meta, error)
 
 	Update(meta Meta) error
+	// Delete
+	// Create
 
 	Reader(id string, version uint, path ...string) (io.ReadCloser, error)
 

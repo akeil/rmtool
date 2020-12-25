@@ -155,7 +155,7 @@ func repository(c *api.Client) error {
 	//repo := api.NewRepository(c, dataDir)
 	//kind := "api"
 
-	srcDir := "/mnt/backup/remarkable/backup/xochitl"
+	srcDir := "/tmp/xochitl"
 	repo := rm.NewFilesystemRepository(srcDir)
 	kind := "filesystem"
 
@@ -168,7 +168,9 @@ func repository(c *api.Client) error {
 		fmt.Printf("%v - %v\n", i.ID(), i.Name())
 	}
 
-	doc, err := rm.ReadDocument(items[7], repo, kind)
+	item := items[2]
+
+	doc, err := rm.ReadDocument(item, repo, kind)
 	if err != nil {
 		return err
 	}
@@ -185,6 +187,13 @@ func repository(c *api.Client) error {
 		// Drawing
 		d, err := doc.Drawing(pageId)
 		fmt.Printf("Drawing version=%v\n", d.Version)
+	}
+
+	item.SetName("Modified")
+	item.SetPinned(true)
+	err = repo.Update(item)
+	if err != nil {
+		return err
 	}
 
 	return nil
