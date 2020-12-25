@@ -1,6 +1,12 @@
 package api
 
 import (
+	"archive/zip"
+	"fmt"
+	//    "os"
+	"io"
+	"io/ioutil"
+	"strings"
 	"time"
 
 	"akeil.net/akeil/rm"
@@ -17,8 +23,9 @@ func NewRepository(c *Client) rm.Repository {
 }
 
 func (r *repo) List() ([]rm.Meta, error) {
+	fmt.Println("repo.List")
 	items, err := r.client.List()
-	if r != nil {
+	if err != nil {
 		return nil, err
 	}
 
@@ -49,6 +56,52 @@ func (r *repo) Update(m rm.Meta) error {
 		Parent:      m.Parent(),
 	}
 	return r.client.update(item)
+}
+
+func (r *repo) Reader(id string, version uint, path ...string) (io.ReadCloser, error) {
+	// Retreive the BlobURLGet
+	i, err := r.client.fetchItem(id)
+	if err != nil {
+		return nil, err
+	}
+
+	f, err := ioutil.TempFile("", "rm_"+id+"_*.zip")
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	fmt.Printf("Download blob to %q\n", f.Name())
+	err = r.client.fetchBlob(i.BlobURLGet, f)
+	if err != nil {
+		return nil, err
+	}
+
+	// Read the desired entry from the zip file
+	zr, err := zip.OpenReader(f.Name())
+	if err != nil {
+		return nil, err
+	}
+	//defer zr.Close()
+
+	match := strings.Join(path, "/")
+	var entry *zip.File
+	for _, zf := range zr.File {
+		fmt.Printf("Zip entry: %q\n", zf.Name)
+		if zf.Name == match {
+			entry = zf
+			break
+		}
+	}
+	if entry == nil {
+		return nil, fmt.Errorf("no zip entry found with name %q", match)
+	}
+	// return a reader for the file
+	// closing the reader should close the zip reader
+	// and delete the tempfile
+	return entry.Open()
+
+	//return nil, nil
 }
 
 // implement the Meta interface for an Item

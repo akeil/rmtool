@@ -14,6 +14,7 @@ type Repository interface {
 	Update(meta Meta) error
 
 	//Get(id string, version uint) (Document, error)
+	Reader(id string, version uint, path ...string) (io.ReadCloser, error)
 
 	// Put(d Document) error
 }
@@ -86,27 +87,6 @@ func (d *Document) Orientation() string {
 	return d.content.Orientation
 }
 
-func (d *Document) Drawing(pageId string) (*Drawing, error) {
-	dp := pageId + ".rm"
-	dr, err := d.adapter.Read(d.ID(), d.Version(), d.ID(), dp)
-	if err != nil {
-		return nil, err
-	}
-	defer dr.Close()
-
-	drawing, err := ReadDrawing(dr)
-	if err != nil {
-		return nil, err
-	}
-
-	return drawing, nil
-}
-
-func (p *Document) HasDrawing(pageId string) bool {
-	// TODO: How do we find out?
-	return true
-}
-
 func (d *Document) Page(pageId string) (*PageX, error) {
 	if d.pages != nil {
 		p := d.pages[pageId]
@@ -177,6 +157,27 @@ func (d *Document) Page(pageId string) (*PageX, error) {
 	d.pages[pageId] = p
 
 	return p, nil
+}
+
+func (d *Document) Drawing(pageId string) (*Drawing, error) {
+	dp := pageId + ".rm"
+	dr, err := d.adapter.Read(d.ID(), d.Version(), d.ID(), dp)
+	if err != nil {
+		return nil, err
+	}
+	defer dr.Close()
+
+	drawing, err := ReadDrawing(dr)
+	if err != nil {
+		return nil, err
+	}
+
+	return drawing, nil
+}
+
+func (p *Document) HasDrawing(pageId string) bool {
+	// TODO: How do we find out?
+	return true
 }
 
 type PageX struct {

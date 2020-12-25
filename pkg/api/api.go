@@ -85,14 +85,7 @@ func (c *Client) NewNotifications() (*Notifications, error) {
 // Storage --------------------------------------------------------------------
 
 func (c *Client) List() ([]Item, error) {
-	items := make([]Item, 0)
-
-	err := c.storageRequest("GET", epList, nil, &items)
-	if err != nil {
-		return nil, err
-	}
-
-	return items, nil
+	return c.doList("", false)
 }
 
 func (c *Client) Fetch(id string) (Item, error) {
@@ -138,6 +131,8 @@ func (c *Client) doList(id string, blob bool) ([]Item, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Printf("List request returned %d items\n", len(items))
 
 	return items, nil
 }
@@ -401,6 +396,7 @@ func (c *Client) update(i Item) error {
 }
 
 func (c *Client) storageRequest(method, endpoint string, payload, dst interface{}) error {
+	fmt.Printf("API %v %v\n", method, endpoint)
 	if c.storageBase == "" {
 		err := c.discover()
 		if err != nil {
@@ -433,6 +429,7 @@ func (c *Client) storageRequest(method, endpoint string, payload, dst interface{
 		return err
 	}
 
+	fmt.Printf("API request %v %v returned status %v\n", method, endpoint, res.StatusCode)
 	if res.StatusCode != http.StatusOK {
 		// TODO: body can contain plain text error message
 		return fmt.Errorf("storage request failed with status %d", res.StatusCode)

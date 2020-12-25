@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/signal"
 
+	"akeil.net/akeil/rm"
 	"akeil.net/akeil/rm/pkg/api"
 )
 
@@ -23,11 +25,13 @@ func main() {
 		}
 	*/
 
-	err = list(client)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	/*
+		err = list(client)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	*/
 
 	/*
 		err = notifications(client)
@@ -36,6 +40,12 @@ func main() {
 			os.Exit(1)
 		}
 	*/
+
+	err = repository(client)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
 
 func register(client *api.Client) error {
@@ -138,5 +148,36 @@ func notifications(c *api.Client) error {
 	defer n.Disconnect()
 
 	<-interrupt
+	return nil
+}
+
+func repository(c *api.Client) error {
+	repo := api.NewRepository(c)
+	fmt.Println(repo)
+	items, err := repo.List()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(items)
+	for _, i := range items {
+		fmt.Printf("%v - %v", i.ID(), i.Name())
+	}
+
+	// choose a random entry and download stuff
+	item := items[2]
+	r, err := repo.Reader(item.ID(), item.Version(), item.ID()+".content")
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	var content rm.Content
+	err = json.NewDecoder(r).Decode(&content)
+	if err != nil {
+		return err
+	}
+	fmt.Println(content)
+
 	return nil
 }
