@@ -2,9 +2,9 @@ package render
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 
+	"github.com/google/uuid"
 	"github.com/jung-kurt/gofpdf"
 
 	"akeil.net/akeil/rm"
@@ -15,12 +15,20 @@ func RenderPDF(d *rm.Document, w io.Writer) error {
 	logging.Debug("Render PDF for document %q, type %q", d.ID(), d.FileType())
 	pdf := setupPDF("A4", d)
 
-	// TODO remove this
-	logging.Debug("Number of Pages: %d", d.PageCount())
-	for i, pageId := range d.Pages() {
-		logging.Debug("Page: %v - %v", i, pageId)
+	var err error
+	if d.FileType() == rm.Pdf {
+		err = overlayPDF(d, pdf)
+	} else {
+		err = renderDrawingsPDF(pdf, d)
 	}
 
+	if err != nil {
+		return err
+	}
+	return pdf.Output(w)
+}
+
+func renderDrawingsPDF(pdf *gofpdf.Fpdf, d *rm.Document) error {
 	for i, pageId := range d.Pages() {
 		// TODO: insert a blank page if there is no drawing
 		err := doRenderPDFPage(pdf, d, pageId, i)
@@ -29,7 +37,7 @@ func RenderPDF(d *rm.Document, w io.Writer) error {
 		}
 	}
 
-	return pdf.Output(w)
+	return nil
 }
 
 func RenderPDFPage(d *rm.Document, pageId string, w io.Writer) error {
@@ -51,7 +59,7 @@ func setupPDF(pageSize string, d *rm.Document) *gofpdf.Fpdf {
 	fontDir := ""
 	pdf := gofpdf.New(orientation, sizeUnit, pageSize, fontDir)
 
-	pdf.SetMargins(0, 8, 0) // left, top, right
+	//pdf.SetMargins(0, 8, 0) // left, top, right
 	pdf.AliasNbPages("{totalPages}")
 	pdf.SetFont("helvetica", "", 8)
 	pdf.SetTextColor(127, 127, 127)
@@ -79,11 +87,6 @@ func setupPDF(pageSize string, d *rm.Document) *gofpdf.Fpdf {
 }
 
 func doRenderPDFPage(pdf *gofpdf.Fpdf, doc *rm.Document, pageId string, i int) error {
-	p, err := doc.Page(pageId)
-	if err != nil {
-		return err
-	}
-
 	d, err := doc.Drawing(pageId)
 	if err != nil {
 		return err
@@ -95,12 +98,16 @@ func doRenderPDFPage(pdf *gofpdf.Fpdf, doc *rm.Document, pageId string, i int) e
 
 	// TODO: add the background template
 
-	name := fmt.Sprintf("drawing-%d", p.Number())
+	return renderDrawingToPDF(pdf, d)
+}
+
+func renderDrawingToPDF(pdf *gofpdf.Fpdf, d *rm.Drawing) error {
+	name := uuid.New().String()
 	opts := gofpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}
 
 	// render to PNG
 	var buf bytes.Buffer
-	err = RenderPNG(d, &buf)
+	err := renderPNG(d, false, &buf)
 	if err != nil {
 		return err
 	}
