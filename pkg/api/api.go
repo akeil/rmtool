@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"akeil.net/akeil/rm"
 )
 
 const (
@@ -83,14 +85,7 @@ func (c *Client) NewNotifications() (*Notifications, error) {
 // Storage --------------------------------------------------------------------
 
 func (c *Client) List() ([]Item, error) {
-	items := make([]Item, 0)
-
-	err := c.storageRequest("GET", epList, nil, &items)
-	if err != nil {
-		return nil, err
-	}
-
-	return items, nil
+	return c.doList("", false)
 }
 
 func (c *Client) Fetch(id string) (Item, error) {
@@ -137,6 +132,8 @@ func (c *Client) doList(id string, blob bool) ([]Item, error) {
 		return nil, err
 	}
 
+	fmt.Printf("List request returned %d items\n", len(items))
+
 	return items, nil
 }
 
@@ -154,7 +151,7 @@ func (c *Client) fetchItem(id string) (Item, error) {
 	item := items[0]
 
 	// A successful response can still include errors
-	err = errorFrom(item)
+	err = item.Err()
 	if err != nil {
 		return Item{}, err
 	}
@@ -193,7 +190,7 @@ func (c *Client) fetchBlob(url string, w io.Writer) error {
 func (c *Client) CreateFolder(parentId, name string) error {
 	item := Item{
 		ID:          uuid.New().String(),
-		Type:        CollectionType,
+		Type:        rm.CollectionType,
 		Parent:      parentId,
 		VisibleName: name,
 	}
@@ -221,7 +218,7 @@ func (c *Client) Delete(id string) error {
 	i := result[0]
 
 	// A successful response can still include errors
-	err = errorFrom(i)
+	err = i.Err()
 	if err != nil {
 		return err
 	}
@@ -248,7 +245,7 @@ func (c *Client) Move(id, dstId string) error {
 	if err != nil {
 		return err
 	}
-	if parent.Type != CollectionType {
+	if parent.Type != rm.CollectionType {
 		return fmt.Errorf("destination %q is not a collection", dstId)
 	}
 
@@ -298,7 +295,7 @@ func (c *Client) Upload(name, parentId string, src io.Reader) error {
 		if err != nil {
 			return err
 		}
-		if p.Type != CollectionType {
+		if p.Type != rm.CollectionType {
 			return fmt.Errorf("parent %q is not a collection", parentId)
 		}
 	}
@@ -323,7 +320,7 @@ func (c *Client) Upload(name, parentId string, src io.Reader) error {
 	}
 
 	i := result[0]
-	err = errorFrom(i)
+	err = i.Err()
 	if err != nil {
 		return err
 	}
@@ -337,7 +334,7 @@ func (c *Client) Upload(name, parentId string, src io.Reader) error {
 	meta := Item{
 		ID:          u.ID,
 		Version:     u.Version,
-		Type:        DocumentType,
+		Type:        rm.DocumentType,
 		Parent:      parentId,
 		VisibleName: name,
 	}
@@ -390,7 +387,7 @@ func (c *Client) update(i Item) error {
 	if len(result) == 0 {
 		return fmt.Errorf("unexpected response (empty list)")
 	}
-	err = errorFrom(result[0])
+	err = result[0].Err()
 	if err != nil {
 		return err
 	}
@@ -399,6 +396,7 @@ func (c *Client) update(i Item) error {
 }
 
 func (c *Client) storageRequest(method, endpoint string, payload, dst interface{}) error {
+	fmt.Printf("API %v %v\n", method, endpoint)
 	if c.storageBase == "" {
 		err := c.discover()
 		if err != nil {
@@ -431,6 +429,7 @@ func (c *Client) storageRequest(method, endpoint string, payload, dst interface{
 		return err
 	}
 
+	fmt.Printf("API request %v %v returned status %v\n", method, endpoint, res.StatusCode)
 	if res.StatusCode != http.StatusOK {
 		// TODO: body can contain plain text error message
 		return fmt.Errorf("storage request failed with status %d", res.StatusCode)

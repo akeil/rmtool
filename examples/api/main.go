@@ -6,7 +6,9 @@ import (
 	"os"
 	"os/signal"
 
+	"akeil.net/akeil/rm"
 	"akeil.net/akeil/rm/pkg/api"
+	"akeil.net/akeil/rm/pkg/fs"
 )
 
 func main() {
@@ -23,11 +25,13 @@ func main() {
 		}
 	*/
 
-	err = list(client)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	/*
+		err = list(client)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	*/
 
 	/*
 		err = notifications(client)
@@ -36,6 +40,12 @@ func main() {
 			os.Exit(1)
 		}
 	*/
+
+	err = repository(client)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
 
 func register(client *api.Client) error {
@@ -138,5 +148,54 @@ func notifications(c *api.Client) error {
 	defer n.Disconnect()
 
 	<-interrupt
+	return nil
+}
+
+func repository(c *api.Client) error {
+	//dataDir := "/tmp/remarkable"
+	//repo := api.NewRepository(c, dataDir)
+	//kind := "api"
+
+	srcDir := "/tmp/xochitl"
+	repo := fs.NewRepository(srcDir)
+	kind := "filesystem"
+
+	items, err := repo.List()
+	if err != nil {
+		return err
+	}
+
+	for _, i := range items {
+		fmt.Printf("%v - %v\n", i.ID(), i.Name())
+	}
+
+	item := items[2]
+
+	doc, err := rm.ReadDocument(item, repo, kind)
+	if err != nil {
+		return err
+	}
+	fmt.Println(doc)
+
+	fmt.Println("Pages:")
+	for _, pageId := range doc.Pages() {
+		pg, err := doc.Page(pageId)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Page %d - %v\n", pg.Number(), pg.Template())
+
+		// Drawing
+		d, err := doc.Drawing(pageId)
+		fmt.Printf("Drawing version=%v\n", d.Version)
+	}
+
+	item.SetName("Modified")
+	item.SetPinned(true)
+	err = repo.Update(item)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

@@ -7,13 +7,11 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
+	"akeil.net/akeil/rm"
 )
 
-const (
-	CollectionType = "CollectionType"
-	DocumentType   = "DocumentType"
-)
-
+// Item holds the data for a single metadata entry from the API.
 type Item struct {
 	ID                string
 	Version           int
@@ -24,14 +22,16 @@ type Item struct {
 	BlobURLPut        string
 	BlobURLPutExpires DateTime
 	ModifiedClient    DateTime
-	Type              string
+	Type              rm.NotebookType
 	VisibleName       string `json:"VissibleName"`
 	CurrentPage       int
 	Bookmarked        bool
 	Parent            string
 }
 
-func errorFrom(i Item) error {
+// Err returns the error from an API response, if this item was received as a
+// response to an API request. Returns nil otherwise.
+func (i Item) Err() error {
 	if i.Success {
 		return nil
 	}
@@ -43,7 +43,7 @@ type uploadItem struct {
 	ID             string
 	Version        int
 	ModifiedClient DateTime
-	Type           string
+	Type           rm.NotebookType
 	VisibleName    string `json:"VissibleName"`
 	CurrentPage    int
 	Bookmarked     bool

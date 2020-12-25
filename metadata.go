@@ -131,8 +131,9 @@ type Content struct {
 	// notebook, pdf, epub
 	FileType    string   `json:"fileType"`
 	Orientation string   `json:"orientation"`
-	PageCount   int      `json:"pageCount"`
+	PageCount   uint     `json:"pageCount"`
 	Pages       []string `json:"pages"`
+	// coverPageNumber uint
 }
 
 func ReadContent(path string) (Content, error) {

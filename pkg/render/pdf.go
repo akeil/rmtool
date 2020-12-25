@@ -9,26 +9,24 @@ import (
 	"github.com/jung-kurt/gofpdf"
 )
 
-func RenderPDF(n *rm.Notebook, w io.Writer) error {
-	pdf := setupPDF("A4", n)
+func RenderPDF(d *rm.Document, w io.Writer) error {
+	pdf := setupPDF("A4", d)
 
-	for i, p := range n.Pages {
+	for i, pageId := range d.Pages() {
 		// TODO: insert a blank page if there is no drawing
-		if p.HasDrawing() {
-			err := doRenderPDFPage(pdf, p, i)
-			if err != nil {
-				return err
-			}
+		err := doRenderPDFPage(pdf, d, pageId, i)
+		if err != nil {
+			return err
 		}
 	}
 
 	return pdf.Output(w)
 }
 
-func RenderPDFPage(p *rm.Page, w io.Writer) error {
+func RenderPDFPage(d *rm.Document, pageId string, w io.Writer) error {
 	pdf := setupPDF("A4", nil)
 
-	err := doRenderPDFPage(pdf, p, 0)
+	err := doRenderPDFPage(pdf, d, pageId, 0)
 	if err != nil {
 		return err
 	}
@@ -38,7 +36,7 @@ func RenderPDFPage(p *rm.Page, w io.Writer) error {
 
 const tsFormat = "2006-01-02 15:04:05"
 
-func setupPDF(pageSize string, n *rm.Notebook) *gofpdf.Fpdf {
+func setupPDF(pageSize string, d *rm.Document) *gofpdf.Fpdf {
 	orientation := "P" // [P]ortrait or [L]andscape
 	sizeUnit := "pt"
 	fontDir := ""
@@ -51,11 +49,9 @@ func setupPDF(pageSize string, n *rm.Notebook) *gofpdf.Fpdf {
 	pdf.SetProducer("rmtool", true)
 
 	// If we are rendering a complete notebook, add metadata
-	if n != nil {
-		title := n.Meta.VisibleName
-		pdf.SetTitle(title, true)
-		// TODO: set from metadata?
-		modified := n.Meta.LastModified.UTC()
+	if d != nil {
+		pdf.SetTitle(d.Name(), true)
+		modified := d.LastModified().UTC()
 		pdf.SetModificationDate(modified)
 		pdf.SetCreationDate(modified)
 
@@ -64,28 +60,38 @@ func setupPDF(pageSize string, n *rm.Notebook) *gofpdf.Fpdf {
 			pdf.SetX(24)
 			pdf.Cellf(0, 10, "%d / {totalPages}  |  %v (v%d, %v)",
 				pdf.PageNo(),
-				title,
-				n.Meta.Version,
-				n.Meta.LastModified.Local().Format(tsFormat))
+				d.Name(),
+				d.Version(),
+				d.LastModified().Local().Format(tsFormat))
 		})
 	}
 
 	return pdf
 }
 
-func doRenderPDFPage(pdf *gofpdf.Fpdf, p *rm.Page, i int) error {
+func doRenderPDFPage(pdf *gofpdf.Fpdf, doc *rm.Document, pageId string, i int) error {
+	p, err := doc.Page(pageId)
+	if err != nil {
+		return err
+	}
+
+	d, err := doc.Drawing(pageId)
+	if err != nil {
+		return err
+	}
+
 	// TODO: determine orientation, rotate image if neccessary
 	// and set the page to Landscape
 	pdf.AddPage()
 
 	// TODO: add the background template
 
-	name := fmt.Sprintf("drawing-%d", i)
+	name := fmt.Sprintf("drawing-%d", p.Number())
 	opts := gofpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}
 
 	// render to PNG
 	var buf bytes.Buffer
-	err := RenderPNG(p.Drawing, &buf)
+	err = RenderPNG(d, &buf)
 	if err != nil {
 		return err
 	}

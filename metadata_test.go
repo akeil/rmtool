@@ -72,12 +72,12 @@ func TestReadContent(t *testing.T) {
 		t.Errorf("unexpected file type")
 	}
 
-	expectedPageCount := 8
+	expectedPageCount := uint(8)
 	if c.PageCount != expectedPageCount {
 		t.Errorf("unexpected page count: %v != %v", c.PageCount, expectedPageCount)
 	}
 
-	if len(c.Pages) != expectedPageCount {
+	if uint(len(c.Pages)) != expectedPageCount {
 		t.Errorf("unexpected number of page ids")
 	}
 }

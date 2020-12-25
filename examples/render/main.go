@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"akeil.net/akeil/rm"
+	"akeil.net/akeil/rm/pkg/fs"
 	"akeil.net/akeil/rm/pkg/render"
 )
 
@@ -32,8 +33,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	storage := rm.NewFilesystemStorage(dir)
-	root, err := rm.BuildTree(storage)
+	repo := fs.NewRepository(dir)
+	root, err := rm.BuildTree(repo)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -44,20 +45,20 @@ func main() {
 			return nil
 		}
 
-		if node.Parent.ID == "trash" {
+		if node.Parent() == "trash" {
 			return nil
 		}
 
-		n, err := rm.ReadFull(storage, node.ID)
+		doc, err := rm.ReadDocument(node, repo, "filesystem")
 		if err != nil {
-			log.Printf("Failed to read notebook %q", node.Name())
+			log.Printf("Failed to read document %q", node.Name())
 			return err
 		}
 
 		//pngs(storage, n)
-		err = pdf(n)
+		err = pdf(doc)
 		if err != nil {
-			log.Printf("Failed to render PDF for notebook %q", n.Meta.VisibleName)
+			log.Printf("Failed to render PDF for notebook %q", doc.ID())
 		}
 		return err
 	}
@@ -70,22 +71,12 @@ func main() {
 	log.Println("exit ok")
 }
 
-func pngs(storage rm.Storage, n *rm.Notebook) {
+func pngs(storage rm.Repository, doc *rm.Document) {
 	var wg sync.WaitGroup
-	for i, p := range n.Pages {
+	for i, p := range doc.Pages() {
 		wg.Add(1)
-		go func(i int, p *rm.Page) {
+		go func(i int, p string) {
 			defer wg.Done()
-			//log.Printf("Read page %v", i)
-			//err := rm.ReadPage(storage, p)
-			//if err != nil {
-			//	log.Fatal(err)
-			//}
-
-			err := p.Drawing.Validate()
-			if err != nil {
-				log.Printf("Found validation error: %v", err)
-			}
 
 			out := fmt.Sprintf("./out/drawing-%v.png", i)
 			f, err := os.Create(out)
@@ -95,7 +86,7 @@ func pngs(storage rm.Storage, n *rm.Notebook) {
 			defer f.Close()
 
 			w := bufio.NewWriter(f)
-			err = render.RenderPage(p, w)
+			err = render.RenderPage(doc, p, w)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -107,9 +98,9 @@ func pngs(storage rm.Storage, n *rm.Notebook) {
 	wg.Wait()
 }
 
-func pdf(n *rm.Notebook) error {
+func pdf(n *rm.Document) error {
 	// render to pdf
-	p := filepath.Join("./out", n.Meta.VisibleName+".pdf")
+	p := filepath.Join("./out", n.Name()+".pdf")
 	f, err := os.Create(p)
 	if err != nil {
 		return err
