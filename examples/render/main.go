@@ -100,7 +100,7 @@ func pngs(storage rm.Repository, doc *rm.Document) {
 
 func pdf(n *rm.Document) error {
 	// render to pdf
-	p := filepath.Join("./out", n.ID()+".pdf")
+	p := filepath.Join("./out", n.Name()+".pdf")
 	f, err := os.Create(p)
 	if err != nil {
 		return err

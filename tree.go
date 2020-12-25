@@ -112,7 +112,7 @@ func BuildTree(r Repository) (*Node, error) {
 		return nil, err
 	}
 
-	root := &Node{}
+	root := newNode(nodeMeta{name: "root"})
 	root.addChild(newNode(nodeMeta{
 		id:   "trash",
 		name: "Trash",
