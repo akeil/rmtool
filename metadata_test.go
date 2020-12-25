@@ -68,7 +68,7 @@ func TestReadContent(t *testing.T) {
 		t.Error(err)
 	}
 
-	if c.FileType != "notebook" {
+	if c.FileType != Notebook {
 		t.Errorf("unexpected file type")
 	}
 

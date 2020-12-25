@@ -85,7 +85,7 @@ func (d *Document) Pages() []string {
 	return d.content.Pages
 }
 
-func (d *Document) FileType() string {
+func (d *Document) FileType() FileType {
 	return d.content.FileType
 }
 
