@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"akeil.net/akeil/rm"
 )
 
 const (
@@ -193,7 +195,7 @@ func (c *Client) fetchBlob(url string, w io.Writer) error {
 func (c *Client) CreateFolder(parentId, name string) error {
 	item := Item{
 		ID:          uuid.New().String(),
-		Type:        CollectionType,
+		Type:        rm.CollectionType,
 		Parent:      parentId,
 		VisibleName: name,
 	}
@@ -248,7 +250,7 @@ func (c *Client) Move(id, dstId string) error {
 	if err != nil {
 		return err
 	}
-	if parent.Type != CollectionType {
+	if parent.Type != rm.CollectionType {
 		return fmt.Errorf("destination %q is not a collection", dstId)
 	}
 
@@ -298,7 +300,7 @@ func (c *Client) Upload(name, parentId string, src io.Reader) error {
 		if err != nil {
 			return err
 		}
-		if p.Type != CollectionType {
+		if p.Type != rm.CollectionType {
 			return fmt.Errorf("parent %q is not a collection", parentId)
 		}
 	}
@@ -337,7 +339,7 @@ func (c *Client) Upload(name, parentId string, src io.Reader) error {
 	meta := Item{
 		ID:          u.ID,
 		Version:     u.Version,
-		Type:        DocumentType,
+		Type:        rm.DocumentType,
 		Parent:      parentId,
 		VisibleName: name,
 	}

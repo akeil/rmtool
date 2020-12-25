@@ -7,11 +7,8 @@ import (
 	"fmt"
 	"strconv"
 	"time"
-)
 
-const (
-	CollectionType = "CollectionType"
-	DocumentType   = "DocumentType"
+	"akeil.net/akeil/rm"
 )
 
 type Item struct {
@@ -24,7 +21,7 @@ type Item struct {
 	BlobURLPut        string
 	BlobURLPutExpires DateTime
 	ModifiedClient    DateTime
-	Type              string
+	Type              rm.NotebookType
 	VisibleName       string `json:"VissibleName"`
 	CurrentPage       int
 	Bookmarked        bool
@@ -43,7 +40,7 @@ type uploadItem struct {
 	ID             string
 	Version        int
 	ModifiedClient DateTime
-	Type           string
+	Type           rm.NotebookType
 	VisibleName    string `json:"VissibleName"`
 	CurrentPage    int
 	Bookmarked     bool

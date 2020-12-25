@@ -41,11 +41,9 @@ func (r *repo) Fetch(id string) (rm.Meta, error) {
 
 func (r *repo) Update(m rm.Meta) error {
 	item := Item{
-		ID:      m.ID(),
-		Version: int(m.Version()),
-		// TODO
-		//Type: m.Type(),
-		Type:        DocumentType,
+		ID:          m.ID(),
+		Version:     int(m.Version()),
+		Type:        m.Type(),
 		VisibleName: m.Name(),
 		Bookmarked:  m.Pinned(),
 		Parent:      m.Parent(),
