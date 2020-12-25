@@ -89,7 +89,7 @@ func (d *Document) FileType() string {
 	return d.content.FileType
 }
 
-func (d *Document) Orientation() string {
+func (d *Document) Orientation() Orientation {
 	return d.content.Orientation
 }
 
@@ -215,8 +215,8 @@ func (p *Page) Number() uint {
 	return uint(p.index + 1)
 }
 
-func (p *Page) Layout() PageLayout {
-	return p.pagedata.Layout
+func (p *Page) Orientation() Orientation {
+	return p.pagedata.Orientation
 }
 
 func (p *Page) Template() string {

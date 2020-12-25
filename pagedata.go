@@ -16,18 +16,11 @@ const (
 	TemplateLarge
 )
 
-type PageLayout int
-
-const (
-	Portrait PageLayout = iota
-	Landscape
-)
-
 type Pagedata struct {
-	Layout   PageLayout
-	Template string
-	Size     TemplateSize
-	Text     string
+	Orientation Orientation
+	Template    string
+	Size        TemplateSize
+	Text        string
 }
 
 // HasTemplate tells if the page has a (visible) background template.
@@ -42,7 +35,7 @@ func ReadPagedata(r io.Reader) ([]Pagedata, error) {
 	var text string
 	var err error
 	var size TemplateSize
-	var layout PageLayout
+	var layout Orientation
 	var parts []string
 	for s.Scan() {
 		text = s.Text()
@@ -62,10 +55,10 @@ func ReadPagedata(r io.Reader) ([]Pagedata, error) {
 			"Perspective1",
 			"Perspective2":
 			pd = append(pd, Pagedata{
-				Layout:   Portrait,
-				Template: text,
-				Size:     TemplateMedium,
-				Text:     text,
+				Orientation: Portrait,
+				Template:    text,
+				Size:        TemplateMedium,
+				Text:        text,
 			})
 		default:
 			// TODO some templates have no size
@@ -74,12 +67,12 @@ func ReadPagedata(r io.Reader) ([]Pagedata, error) {
 				return pd, fmt.Errorf("invalid pagedata line: %q", text)
 			}
 			size = size.FromString(parts[2])
-			layout = layout.FromString(parts[0])
+			layout = layout.fromString(parts[0])
 			pd = append(pd, Pagedata{
-				Layout:   layout,
-				Template: parts[1],
-				Size:     size,
-				Text:     text,
+				Orientation: layout,
+				Template:    parts[1],
+				Size:        size,
+				Text:        text,
 			})
 		}
 	}
@@ -99,7 +92,7 @@ func (t TemplateSize) FromString(s string) TemplateSize {
 	return TemplateNoSize
 }
 
-func (p PageLayout) FromString(s string) PageLayout {
+func (o Orientation) fromString(s string) Orientation {
 	switch s {
 	case "P":
 		return Portrait
@@ -107,5 +100,16 @@ func (p PageLayout) FromString(s string) PageLayout {
 		return Landscape
 	default:
 		return Portrait
+	}
+}
+
+func (o Orientation) toString() string {
+	switch o {
+	case Portrait:
+		return "P"
+	case Landscape:
+		return "LS"
+	default:
+		return ""
 	}
 }

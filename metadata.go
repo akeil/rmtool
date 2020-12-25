@@ -21,6 +21,13 @@ const (
 	CollectionType
 )
 
+type Orientation int
+
+const (
+	Portrait Orientation = iota
+	Landscape
+)
+
 // Metadata holds the metadata for a notebook.
 type Metadata struct {
 	Deleted          bool         `json:"deleted"`
@@ -125,14 +132,53 @@ func (n NotebookType) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+func (o *Orientation) UnmarshalJSON(b []byte) error {
+	var s string
+	err := json.Unmarshal(b, &s)
+	if err != nil {
+		return err
+	}
+
+	var x Orientation
+	switch s {
+	case "portrait":
+		x = Portrait
+	case "landscape":
+		x = Landscape
+	default:
+		return fmt.Errorf("invalid notebook type %q", s)
+	}
+
+	*o = x
+	return nil
+}
+
+func (n Orientation) MarshalJSON() ([]byte, error) {
+	var s string
+	switch n {
+	case Portrait:
+		s = "portrait"
+	case Landscape:
+		s = "landscape"
+	default:
+		return nil, fmt.Errorf("invalid notebook type %v", n)
+	}
+
+	buf := bytes.NewBufferString(`"`)
+	buf.WriteString(s)
+	buf.WriteString(`"`)
+
+	return buf.Bytes(), nil
+}
+
 // Content holds the data from the remarkable `.content` file.
 // Collections have an empty content object.
 type Content struct {
 	// notebook, pdf, epub
-	FileType    string   `json:"fileType"`
-	Orientation string   `json:"orientation"`
-	PageCount   uint     `json:"pageCount"`
-	Pages       []string `json:"pages"`
+	FileType    string      `json:"fileType"`
+	Orientation Orientation `json:"orientation"`
+	PageCount   uint        `json:"pageCount"`
+	Pages       []string    `json:"pages"`
 	// coverPageNumber uint
 }
 
