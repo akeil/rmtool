@@ -15,6 +15,10 @@ func RenderPDF(d *rm.Document, w io.Writer) error {
 	logging.Debug("Render PDF for document %q, type %q", d.ID(), d.FileType())
 	pdf := setupPDF("A4", d)
 
+	if d.FileType() == rm.Pdf {
+		return overlayPDF(d, pdf)
+	}
+
 	// TODO remove this
 	logging.Debug("Number of Pages: %d", d.PageCount())
 	for i, pageId := range d.Pages() {
