@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"akeil.net/akeil/rm"
+	"akeil.net/akeil/rm/pkg/fs"
 )
 
 func main() {
@@ -28,8 +29,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	s := rm.NewFilesystemStorage(dir)
-	root, err := rm.BuildTree(s)
+	repo := fs.NewRepository(dir)
+	root, err := rm.BuildTree(repo)
 	if err != nil {
 		log.Fatal(err)
 	}

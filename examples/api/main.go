@@ -8,6 +8,7 @@ import (
 
 	"akeil.net/akeil/rm"
 	"akeil.net/akeil/rm/pkg/api"
+	"akeil.net/akeil/rm/pkg/fs"
 )
 
 func main() {
@@ -156,7 +157,7 @@ func repository(c *api.Client) error {
 	//kind := "api"
 
 	srcDir := "/tmp/xochitl"
-	repo := rm.NewFilesystemRepository(srcDir)
+	repo := fs.NewRepository(srcDir)
 	kind := "filesystem"
 
 	items, err := repo.List()

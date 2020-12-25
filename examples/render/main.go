@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"akeil.net/akeil/rm"
+	"akeil.net/akeil/rm/pkg/fs"
 	"akeil.net/akeil/rm/pkg/render"
 )
 
@@ -32,8 +33,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	storage := rm.NewFilesystemStorage(dir)
-	root, err := rm.BuildTree(storage)
+	repo := fs.NewRepository(dir)
+	root, err := rm.BuildTree(repo)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -44,20 +45,20 @@ func main() {
 			return nil
 		}
 
-		if node.Parent.ID == "trash" {
+		if node.Parent() == "trash" {
 			return nil
 		}
 
-		n, err := rm.ReadFull(storage, node.ID)
+		doc, err := rm.ReadDocument(node, repo, "filesystem")
 		if err != nil {
-			log.Printf("Failed to read notebook %q", node.Name())
+			log.Printf("Failed to read document %q", node.Name())
 			return err
 		}
 
 		//pngs(storage, n)
-		err = pdf(n)
+		err = pdf(doc)
 		if err != nil {
-			log.Printf("Failed to render PDF for notebook %q", n.Meta.VisibleName)
+			log.Printf("Failed to render PDF for notebook %q", doc.ID())
 		}
 		return err
 	}
@@ -70,7 +71,7 @@ func main() {
 	log.Println("exit ok")
 }
 
-func pngs(storage rm.Storage, n *rm.Notebook) {
+func pngs(storage rm.Repository, n *rm.Notebook) {
 	var wg sync.WaitGroup
 	for i, p := range n.Pages {
 		wg.Add(1)
@@ -107,9 +108,9 @@ func pngs(storage rm.Storage, n *rm.Notebook) {
 	wg.Wait()
 }
 
-func pdf(n *rm.Notebook) error {
+func pdf(n *rm.Document) error {
 	// render to pdf
-	p := filepath.Join("./out", n.Meta.VisibleName+".pdf")
+	p := filepath.Join("./out", n.ID()+".pdf")
 	f, err := os.Create(p)
 	if err != nil {
 		return err

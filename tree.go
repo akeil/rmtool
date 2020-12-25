@@ -4,43 +4,31 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 )
 
 // Node is the representation for an entry in the content tree.
 // A not can either be a document or a collection (which has child nodes).
 type Node struct {
-	ID       string
-	Parent   *Node
-	Children []*Node
-	meta     Metadata
+	Meta
+	ParentNode *Node
+	Children   []*Node
 }
 
-func newNode(id string, m Metadata) *Node {
+func newNode(m Meta) *Node {
 	return &Node{
-		ID:       id,
+		Meta:     m,
 		Children: make([]*Node, 0),
-		meta:     m,
 	}
 }
 
-func (n *Node) Type() NotebookType {
-	return n.meta.Type
-}
-
-func (n *Node) Name() string {
-	return n.meta.VisibleName
-}
-
+// TODO: rename - this node is not "Root" but top-level (parent is root)
 func (n *Node) Root() bool {
-	return n.ID == ""
+	return n.ID() == ""
 }
 
 func (n *Node) Leaf() bool {
 	return n.Type() != CollectionType && !n.Root()
-}
-
-func (n *Node) Pinned() bool {
-	return n.meta.Pinned
 }
 
 func (n *Node) Path() []string {
@@ -48,11 +36,11 @@ func (n *Node) Path() []string {
 
 	ctx := n
 	for {
-		if ctx.Parent == nil {
+		if ctx.ParentNode == nil {
 			break
 		}
-		p = append(p, ctx.Parent.ID)
-		ctx = ctx.Parent
+		p = append(p, ctx.ParentNode.ID())
+		ctx = ctx.ParentNode
 	}
 
 	return p
@@ -95,14 +83,14 @@ func (n *Node) Sort(compare func(*Node, *Node) bool) {
 // of the child.
 func (n *Node) addChild(child *Node) {
 	n.Children = append(n.Children, child)
-	child.Parent = n
+	child.ParentNode = n
 }
 
 // Put attempts to accomodate this node in the subtree starting at this node.
 // The child node can be added as an immediate child or grandchild.
 // Returns `true` if the node could be added to the tree.
 func (n *Node) put(other *Node) bool {
-	if other.meta.Parent == n.ID {
+	if other.Parent() == n.ID() {
 		n.addChild(other)
 		return true
 	}
@@ -118,30 +106,24 @@ func (n *Node) put(other *Node) bool {
 
 // BuildTree creates a tree view of all items in the given storage.
 // Returns the root node.
-func BuildTree(s Storage) (*Node, error) {
-	l, err := s.List()
+func BuildTree(r Repository) (*Node, error) {
+	items, err := r.List()
 	if err != nil {
 		return nil, err
 	}
 
 	root := &Node{}
-	root.addChild(newNode("trash", Metadata{
-		Type:        CollectionType,
-		VisibleName: "Trash",
+	root.addChild(newNode(nodeMeta{
+		id:   "trash",
+		name: "Trash",
 	}))
 
-	var m Metadata
-	nodes := make([]*Node, 0)
-	for _, id := range l {
-		m, err = s.ReadMetadata(id)
-		if err != nil {
-			return nil, err
-		}
-		if !m.Deleted {
-			nodes = append(nodes, newNode(id, m))
-		}
+	nodes := make([]*Node, len(items))
+	for i, item := range items {
+		nodes[i] = newNode(item)
 	}
 
+	// build a tree structure from the flat list
 	change := false
 	for {
 		change = false
@@ -160,7 +142,7 @@ func BuildTree(s Storage) (*Node, error) {
 	}
 
 	if len(nodes) != 0 {
-		return nil, fmt.Errorf("could not put all notes into the tree")
+		return nil, fmt.Errorf("could not fit all notes into the tree")
 	}
 
 	return root, nil
@@ -173,9 +155,9 @@ func BuildTree(s Storage) (*Node, error) {
 func DefaultSort(one, other *Node) bool {
 	// tell if  one <  other
 	// special case - Trash goes last
-	if one.ID == "trash" {
+	if one.ID() == "trash" {
 		return false
-	} else if other.ID == "trash" {
+	} else if other.ID() == "trash" {
 		return true
 	}
 
@@ -195,7 +177,7 @@ func DefaultSort(one, other *Node) bool {
 
 	// special case, equal display names, fall back on ID
 	if one.Name() == other.Name() {
-		return one.ID < other.ID
+		return one.ID() < other.ID()
 	}
 
 	// by name, case-insensitive
@@ -211,11 +193,11 @@ type NodeFilter func(n *Node) bool
 // The subtree cill contain only nodes that match the given NodeFilter
 // and the parent folders of the matched nodes.
 func (n *Node) Filtered(accept NodeFilter) *Node {
-	root := newNode(n.ID, n.meta)
+	root := newNode(n.Meta)
 	for _, c := range n.Children {
 		if c.Leaf() {
 			if accept(c) {
-				root.addChild(newNode(c.ID, c.meta))
+				root.addChild(newNode(c.Meta))
 			}
 		} else {
 			x := c.Filtered(accept)
@@ -239,4 +221,42 @@ func (n *Node) hasContent() bool {
 	}
 
 	return false
+}
+
+type nodeMeta struct {
+	id     string
+	parent string
+	name   string
+}
+
+func (n nodeMeta) ID() string {
+	return n.id
+}
+
+func (n nodeMeta) Version() uint {
+	return uint(1)
+}
+
+func (n nodeMeta) Name() string {
+	return n.name
+}
+
+func (n nodeMeta) SetName(s string) {}
+
+func (n nodeMeta) Type() NotebookType {
+	return CollectionType
+}
+
+func (n nodeMeta) Pinned() bool {
+	return false
+}
+
+func (n nodeMeta) SetPinned(b bool) {}
+
+func (n nodeMeta) LastModified() time.Time {
+	return time.Time{}
+}
+
+func (n nodeMeta) Parent() string {
+	return n.Parent()
 }

@@ -1,4 +1,4 @@
-package rm
+package fs
 
 import (
 	"encoding/json"
@@ -9,19 +9,21 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"akeil.net/akeil/rm"
 )
 
 type repo struct {
 	base string
 }
 
-func NewFilesystemRepository(base string) Repository {
+func NewRepository(base string) rm.Repository {
 	return &repo{
 		base: base,
 	}
 }
 
-func (r *repo) List() ([]Meta, error) {
+func (r *repo) List() ([]rm.Meta, error) {
 	fmt.Printf("List files from %q\n", r.base)
 
 	files, err := ioutil.ReadDir(r.base)
@@ -29,7 +31,7 @@ func (r *repo) List() ([]Meta, error) {
 		return nil, err
 	}
 
-	l := make([]Meta, 0)
+	l := make([]rm.Meta, 0)
 	for _, f := range files {
 		if filepath.Ext(f.Name()) == ".metadata" {
 			id := strings.TrimSuffix(f.Name(), ".metadata")
@@ -45,7 +47,7 @@ func (r *repo) List() ([]Meta, error) {
 	return l, err
 }
 
-func (r *repo) Update(m Meta) error {
+func (r *repo) Update(m rm.Meta) error {
 	p := filepath.Join(r.base, m.ID()+".metadata")
 	o, err := readMetadata(p)
 	if err != nil {
@@ -58,7 +60,7 @@ func (r *repo) Update(m Meta) error {
 	}
 
 	o.Version += 1
-	o.LastModified = Timestamp{time.Now()}
+	o.LastModified = rm.Timestamp{time.Now()}
 
 	// assumption: we need to set these if we write to the tablet
 	o.Synced = false
@@ -97,8 +99,8 @@ func (r *repo) Reader(id string, version uint, path ...string) (io.ReadCloser, e
 	return os.Open(p)
 }
 
-func readMetadata(path string) (Metadata, error) {
-	var m Metadata
+func readMetadata(path string) (rm.Metadata, error) {
+	var m rm.Metadata
 	r, err := os.Open(path)
 	if err != nil {
 		return m, err
@@ -112,7 +114,7 @@ func readMetadata(path string) (Metadata, error) {
 
 type metaWrapper struct {
 	id string
-	i  *Metadata
+	i  *rm.Metadata
 }
 
 func (m metaWrapper) ID() string {
@@ -131,7 +133,7 @@ func (m metaWrapper) SetName(n string) {
 	m.i.VisibleName = n
 }
 
-func (m metaWrapper) Type() NotebookType {
+func (m metaWrapper) Type() rm.NotebookType {
 	return m.i.Type
 }
 
