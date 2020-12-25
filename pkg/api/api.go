@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 
 	"akeil.net/akeil/rm"
+	"akeil.net/akeil/rm/internal/logging"
 )
 
 const (
@@ -132,7 +133,7 @@ func (c *Client) doList(id string, blob bool) ([]Item, error) {
 		return nil, err
 	}
 
-	fmt.Printf("List request returned %d items\n", len(items))
+	logging.Debug("List request returned %d items\n", len(items))
 
 	return items, nil
 }
@@ -396,7 +397,7 @@ func (c *Client) update(i Item) error {
 }
 
 func (c *Client) storageRequest(method, endpoint string, payload, dst interface{}) error {
-	fmt.Printf("API %v %v\n", method, endpoint)
+	logging.Debug("API %v %v\n", method, endpoint)
 	if c.storageBase == "" {
 		err := c.discover()
 		if err != nil {
@@ -429,7 +430,7 @@ func (c *Client) storageRequest(method, endpoint string, payload, dst interface{
 		return err
 	}
 
-	fmt.Printf("API request %v %v returned status %v\n", method, endpoint, res.StatusCode)
+	logging.Debug("API request %v %v returned status %v\n", method, endpoint, res.StatusCode)
 	if res.StatusCode != http.StatusOK {
 		// TODO: body can contain plain text error message
 		return fmt.Errorf("storage request failed with status %d", res.StatusCode)
@@ -501,9 +502,9 @@ func (c *Client) refreshToken() error {
 	t, parseErr := parseTokenExpiration(token)
 	if parseErr == nil {
 		c.tokenExpires = t
-		fmt.Printf("Token will expire at %v\n", t)
+		logging.Debug("Token will expire at %v\n", t)
 	} else {
-		fmt.Printf("Error parsing expiration time from JWT: %v\n", parseErr)
+		logging.Debug("Error parsing expiration time from JWT: %v\n", parseErr)
 		// we still consider the token as "valid" and carry on
 	}
 
@@ -512,7 +513,7 @@ func (c *Client) refreshToken() error {
 }
 
 func (c *Client) requestToken(endpoint, token string, payload interface{}) (string, error) {
-	fmt.Printf("Request new token from %q\n", endpoint)
+	logging.Debug("Request new token from %q\n", endpoint)
 
 	req, err := newRequest("POST", c.authBase, endpoint, token, payload)
 	if err != nil {

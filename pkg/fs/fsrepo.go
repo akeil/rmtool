@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"akeil.net/akeil/rm"
+	"akeil.net/akeil/rm/internal/logging"
 )
 
 type repo struct {
@@ -24,7 +25,7 @@ func NewRepository(base string) rm.Repository {
 }
 
 func (r *repo) List() ([]rm.Meta, error) {
-	fmt.Printf("List files from %q\n", r.base)
+	logging.Debug("List files from %q", r.base)
 
 	files, err := ioutil.ReadDir(r.base)
 	if err != nil {
@@ -40,7 +41,7 @@ func (r *repo) List() ([]rm.Meta, error) {
 			if err != nil {
 				return nil, err
 			}
-			l = append(l, metaWrapper{id: id, i: &m})
+			l = append(l, metaWrapper{id: id, i: &m, repo: r})
 		}
 	}
 
@@ -48,6 +49,7 @@ func (r *repo) List() ([]rm.Meta, error) {
 }
 
 func (r *repo) Update(m rm.Meta) error {
+	logging.Debug("Update entry with id %q, version %v", m.ID(), m.Version())
 	p := filepath.Join(r.base, m.ID()+".metadata")
 	o, err := readMetadata(p)
 	if err != nil {
@@ -79,12 +81,13 @@ func (r *repo) Update(m rm.Meta) error {
 	}
 	defer f.Close()
 
+	logging.Debug("Write JSON to tempfile at %q", f.Name())
 	err = json.NewEncoder(f).Encode(&o)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Move updated JSON document to %q\n", p)
+	logging.Debug("Move updated JSON document to %q\n", p)
 
 	return os.Rename(f.Name(), p)
 }
@@ -94,7 +97,7 @@ func (r *repo) reader(id string, path ...string) (io.ReadCloser, error) {
 	parts = append(parts, path...)
 	p := filepath.Join(parts...)
 
-	fmt.Printf("Create reader for %q\n", p)
+	logging.Debug("Create reader for %q\n", p)
 
 	return os.Open(p)
 }

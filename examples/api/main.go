@@ -12,6 +12,8 @@ import (
 )
 
 func main() {
+	rm.SetLogLevel("debug")
+
 	client, err := setup()
 	if err != nil {
 		fmt.Println(err)
@@ -185,6 +187,9 @@ func repository(c *api.Client) error {
 
 		// Drawing
 		d, err := doc.Drawing(pageId)
+		if err != nil {
+			return err
+		}
 		fmt.Printf("Drawing version=%v\n", d.Version)
 	}
 

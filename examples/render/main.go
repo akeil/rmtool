@@ -15,6 +15,8 @@ import (
 )
 
 func main() {
+	rm.SetLogLevel("debug")
+
 	var dir string
 	var match rm.NodeFilter
 	if len(os.Args) == 2 {
