@@ -265,3 +265,7 @@ func (n nodeMeta) Parent() string {
 func (n nodeMeta) Reader(path ...string) (io.ReadCloser, error) {
 	return nil, fmt.Errorf("not implemented for virtual nodes")
 }
+
+func (n nodeMeta) PagePrefix(id string, index int) string {
+	return ""
+}

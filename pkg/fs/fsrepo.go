@@ -157,3 +157,7 @@ func (m metaWrapper) LastModified() time.Time {
 func (m metaWrapper) Parent() string {
 	return m.i.Parent
 }
+
+func (n metaWrapper) PagePrefix(id string, index int) string {
+	return id
+}

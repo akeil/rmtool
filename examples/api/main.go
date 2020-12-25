@@ -154,11 +154,9 @@ func notifications(c *api.Client) error {
 func repository(c *api.Client) error {
 	//dataDir := "/tmp/remarkable"
 	//repo := api.NewRepository(c, dataDir)
-	//kind := "api"
 
 	srcDir := "/tmp/xochitl"
 	repo := fs.NewRepository(srcDir)
-	kind := "filesystem"
 
 	items, err := repo.List()
 	if err != nil {
@@ -171,7 +169,7 @@ func repository(c *api.Client) error {
 
 	item := items[2]
 
-	doc, err := rm.ReadDocument(item, kind)
+	doc, err := rm.ReadDocument(item)
 	if err != nil {
 		return err
 	}
