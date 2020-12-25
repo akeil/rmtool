@@ -93,6 +93,11 @@ func (d *Document) Orientation() Orientation {
 	return d.content.Orientation
 }
 
+func (d *Document) CoverPage() int {
+	// fallback on lastOpenedPage ?
+	return d.content.CoverPageNumber
+}
+
 func (d *Document) Page(pageId string) (*Page, error) {
 	if d.pages != nil {
 		p := d.pages[pageId]

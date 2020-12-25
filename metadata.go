@@ -175,11 +175,11 @@ func (n Orientation) MarshalJSON() ([]byte, error) {
 // Collections have an empty content object.
 type Content struct {
 	// notebook, pdf, epub
-	FileType    string      `json:"fileType"`
-	Orientation Orientation `json:"orientation"`
-	PageCount   uint        `json:"pageCount"`
-	Pages       []string    `json:"pages"`
-	// coverPageNumber uint
+	FileType        string      `json:"fileType"`
+	Orientation     Orientation `json:"orientation"`
+	PageCount       uint        `json:"pageCount"`
+	Pages           []string    `json:"pages"`
+	CoverPageNumber int         `json:"coverPageNumber"`
 }
 
 func ReadContent(path string) (Content, error) {
