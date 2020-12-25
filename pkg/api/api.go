@@ -156,7 +156,7 @@ func (c *Client) fetchItem(id string) (Item, error) {
 	item := items[0]
 
 	// A successful response can still include errors
-	err = errorFrom(item)
+	err = item.Err()
 	if err != nil {
 		return Item{}, err
 	}
@@ -223,7 +223,7 @@ func (c *Client) Delete(id string) error {
 	i := result[0]
 
 	// A successful response can still include errors
-	err = errorFrom(i)
+	err = i.Err()
 	if err != nil {
 		return err
 	}
@@ -325,7 +325,7 @@ func (c *Client) Upload(name, parentId string, src io.Reader) error {
 	}
 
 	i := result[0]
-	err = errorFrom(i)
+	err = i.Err()
 	if err != nil {
 		return err
 	}
@@ -392,7 +392,7 @@ func (c *Client) update(i Item) error {
 	if len(result) == 0 {
 		return fmt.Errorf("unexpected response (empty list)")
 	}
-	err = errorFrom(result[0])
+	err = result[0].Err()
 	if err != nil {
 		return err
 	}
