@@ -46,28 +46,20 @@ func ReadDocument(m Meta, repo Repository, kind string) (*Document, error) {
 	}
 
 	return &Document{
+		Meta:    m,
 		repo:    repo,
 		kind:    kind,
-		meta:    m,
 		content: &c,
 	}, nil
 }
 
 type Document struct {
+	Meta
 	repo     Repository
 	kind     string
-	meta     Meta
 	content  *Content
 	pagedata []Pagedata
-	pages    map[string]*PageX
-}
-
-func (d *Document) ID() string {
-	return d.meta.ID()
-}
-
-func (d *Document) Version() uint {
-	return d.meta.Version()
+	pages    map[string]*Page
 }
 
 func (d *Document) PageCount() uint {
@@ -86,7 +78,7 @@ func (d *Document) Orientation() string {
 	return d.content.Orientation
 }
 
-func (d *Document) Page(pageId string) (*PageX, error) {
+func (d *Document) Page(pageId string) (*Page, error) {
 	if d.pages != nil {
 		p := d.pages[pageId]
 		if p != nil {
@@ -150,7 +142,7 @@ func (d *Document) Page(pageId string) (*PageX, error) {
 	}()
 
 	// construct the Page item
-	p := &PageX{
+	p := &Page{
 		index:    idx,
 		meta:     pm,
 		pagedata: d.pagedata[idx],
@@ -158,7 +150,7 @@ func (d *Document) Page(pageId string) (*PageX, error) {
 
 	// cache
 	if d.pages == nil {
-		d.pages = make(map[string]*PageX)
+		d.pages = make(map[string]*Page)
 	}
 	d.pages[pageId] = p
 
@@ -222,25 +214,29 @@ func (p *Document) HasDrawing(pageId string) bool {
 	return true
 }
 
-type PageX struct {
+type Page struct {
 	index    int
 	meta     PageMetadata
 	pagedata Pagedata
 }
 
-func (p *PageX) Number() uint {
+func (p *Page) Number() uint {
 	return uint(p.index + 1)
 }
 
-func (p *PageX) Layout() PageLayout {
+func (p *Page) Layout() PageLayout {
 	return p.pagedata.Layout
 }
 
-func (p *PageX) Template() string {
+func (p *Page) Template() string {
 	return p.pagedata.Text
 }
 
-func (p *PageX) Layers() []LayerMetadata {
+func (p *Page) HasTemplate() bool {
+	return p.pagedata.HasTemplate()
+}
+
+func (p *Page) Layers() []LayerMetadata {
 	if p.meta.Layers == nil {
 		p.meta.Layers = make([]LayerMetadata, 0)
 	}

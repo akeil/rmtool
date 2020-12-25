@@ -71,22 +71,12 @@ func main() {
 	log.Println("exit ok")
 }
 
-func pngs(storage rm.Repository, n *rm.Notebook) {
+func pngs(storage rm.Repository, doc *rm.Document) {
 	var wg sync.WaitGroup
-	for i, p := range n.Pages {
+	for i, p := range doc.Pages() {
 		wg.Add(1)
-		go func(i int, p *rm.Page) {
+		go func(i int, p string) {
 			defer wg.Done()
-			//log.Printf("Read page %v", i)
-			//err := rm.ReadPage(storage, p)
-			//if err != nil {
-			//	log.Fatal(err)
-			//}
-
-			err := p.Drawing.Validate()
-			if err != nil {
-				log.Printf("Found validation error: %v", err)
-			}
 
 			out := fmt.Sprintf("./out/drawing-%v.png", i)
 			f, err := os.Create(out)
@@ -96,7 +86,7 @@ func pngs(storage rm.Repository, n *rm.Notebook) {
 			defer f.Close()
 
 			w := bufio.NewWriter(f)
-			err = render.RenderPage(p, w)
+			err = render.RenderPage(doc, p, w)
 			if err != nil {
 				log.Fatal(err)
 			}
