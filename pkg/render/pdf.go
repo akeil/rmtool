@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"io"
 
-	"akeil.net/akeil/rm"
 	"github.com/jung-kurt/gofpdf"
+
+	"akeil.net/akeil/rm"
+	"akeil.net/akeil/rm/internal/logging"
 )
 
 func RenderPDF(d *rm.Document, w io.Writer) error {
+	logging.Debug("Render PDF for document %q, type %q", d.ID(), d.FileType())
 	pdf := setupPDF("A4", d)
 
 	for i, pageId := range d.Pages() {

@@ -203,15 +203,8 @@ func (f *FileType) UnmarshalJSON(b []byte) error {
 }
 
 func (f FileType) MarshalJSON() ([]byte, error) {
-	var s string
-	switch f {
-	case Notebook:
-		s = "notebook"
-	case Epub:
-		s = "epub"
-	case Pdf:
-		s = "pdf"
-	default:
+	s := f.String()
+	if s == "UNKNOWN" {
 		return nil, fmt.Errorf("invalid file type %v", f)
 	}
 
@@ -220,6 +213,19 @@ func (f FileType) MarshalJSON() ([]byte, error) {
 	buf.WriteString(`"`)
 
 	return buf.Bytes(), nil
+}
+
+func (f FileType) String() string {
+	switch f {
+	case Notebook:
+		return "notebook"
+	case Epub:
+		return "epub"
+	case Pdf:
+		return "pdf"
+	default:
+		return "UNKNOWN"
+	}
 }
 
 // Content holds the data from the remarkable `.content` file.
