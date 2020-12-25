@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -152,32 +151,32 @@ func notifications(c *api.Client) error {
 }
 
 func repository(c *api.Client) error {
-	repo := api.NewRepository(c)
-	fmt.Println(repo)
+	dataDir := "/tmp/remarkable"
+	repo := api.NewRepository(c, dataDir)
+
 	items, err := repo.List()
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(items)
 	for _, i := range items {
-		fmt.Printf("%v - %v", i.ID(), i.Name())
+		fmt.Printf("%v - %v\n", i.ID(), i.Name())
 	}
 
-	// choose a random entry and download stuff
-	item := items[2]
-	r, err := repo.Reader(item.ID(), item.Version(), item.ID()+".content")
+	doc, err := rm.ReadDocument(items[7], repo, "api")
 	if err != nil {
 		return err
 	}
-	defer r.Close()
+	fmt.Println(doc)
 
-	var content rm.Content
-	err = json.NewDecoder(r).Decode(&content)
-	if err != nil {
-		return err
+	fmt.Println("Pages:")
+	for _, pageId := range doc.Pages() {
+		pg, err := doc.Page(pageId)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Page %d - %v\n", pg.Number(), pg.Template())
 	}
-	fmt.Println(content)
 
 	return nil
 }

@@ -13,10 +13,9 @@ type Repository interface {
 	Fetch(id string) (Meta, error)
 	Update(meta Meta) error
 
-	//Get(id string, version uint) (Document, error)
 	Reader(id string, version uint, path ...string) (io.ReadCloser, error)
 
-	// Put(d Document) error
+	// Writer()
 }
 
 type Meta interface {
@@ -31,32 +30,31 @@ type Meta interface {
 	Parent() string
 }
 
-type storageAdapter interface {
-	Read(id string, version uint, relPath ...string) (io.ReadCloser, error)
-}
-
-func readDocument(m Meta, adapter storageAdapter) (*Document, error) {
+func ReadDocument(m Meta, repo Repository, kind string) (*Document, error) {
 	cp := m.ID() + ".content"
-	r, err := adapter.Read(m.ID(), m.Version(), cp)
+	cr, err := repo.Reader(m.ID(), m.Version(), cp)
 	if err != nil {
 		return nil, err
 	}
-	defer r.Close()
+	defer cr.Close()
 
 	var c Content
-	err = json.NewDecoder(r).Decode(&c)
+	err = json.NewDecoder(cr).Decode(&c)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Document{
-		adapter: adapter,
+		repo:    repo,
+		kind:    kind,
 		meta:    m,
+		content: &c,
 	}, nil
 }
 
 type Document struct {
-	adapter  storageAdapter
+	repo     Repository
+	kind     string
 	meta     Meta
 	content  *Content
 	pagedata []Pagedata
@@ -111,7 +109,7 @@ func (d *Document) Page(pageId string) (*PageX, error) {
 	// lazy load pagedata
 	if d.pagedata == nil {
 		pdp := d.ID() + ".pagedata"
-		pdr, err := d.adapter.Read(d.ID(), d.Version(), pdp)
+		pdr, err := d.repo.Reader(d.ID(), d.Version(), pdp)
 		if err != nil {
 			return nil, err
 		}
@@ -129,9 +127,24 @@ func (d *Document) Page(pageId string) (*PageX, error) {
 		return nil, fmt.Errorf("no pagedata for page with id %q", pageId)
 	}
 
-	// load page metadata
-	pmp := pageId + "-metadata.json"
-	pmr, err := d.adapter.Read(d.ID(), d.Version(), d.ID(), pmp)
+	// Load page metadata
+	// Depending on the repository type, the path is different:
+	// - Filesystem: pageId
+	// - API: page index
+	var prefix string
+	switch d.kind {
+	case "filesystem":
+		prefix = pageId
+	case "api":
+		prefix = fmt.Sprintf("%d", idx)
+	default:
+		return nil, fmt.Errorf("invalid repository kind %q", d.kind)
+	}
+	pmp := prefix + "-metadata.json"
+
+	// -metadata.json seems to be optional.
+	// Maybe(?) the last (empty) page in a notebook has no metadata
+	pmr, err := d.repo.Reader(d.ID(), d.Version(), d.ID(), pmp)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +174,7 @@ func (d *Document) Page(pageId string) (*PageX, error) {
 
 func (d *Document) Drawing(pageId string) (*Drawing, error) {
 	dp := pageId + ".rm"
-	dr, err := d.adapter.Read(d.ID(), d.Version(), d.ID(), dp)
+	dr, err := d.repo.Reader(d.ID(), d.Version(), d.ID(), dp)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +207,7 @@ func (p *PageX) Layout() PageLayout {
 	return p.pagedata.Layout
 }
 
-func (p *PageX) TemplateName() string {
+func (p *PageX) Template() string {
 	return p.pagedata.Text
 }
 

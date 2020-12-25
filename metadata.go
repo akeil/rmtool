@@ -133,6 +133,7 @@ type Content struct {
 	Orientation string   `json:"orientation"`
 	PageCount   uint     `json:"pageCount"`
 	Pages       []string `json:"pages"`
+	// coverPageNumber uint
 }
 
 func ReadContent(path string) (Content, error) {
