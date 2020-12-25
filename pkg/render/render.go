@@ -49,7 +49,7 @@ func RenderPage(doc *rm.Document, pageId string, w io.Writer) error {
 	dst := image.NewRGBA(r)
 
 	if p.HasTemplate() {
-		err = renderTemplate(dst, p.Template(), p.Layout())
+		err = renderTemplate(dst, p.Template(), p.Orientation())
 		if err != nil {
 			return err
 		}
@@ -103,7 +103,7 @@ func renderLayers(dst draw.Image, d *rm.Drawing) error {
 	return nil
 }
 
-func renderTemplate(dst draw.Image, tpl string, layout rm.PageLayout) error {
+func renderTemplate(dst draw.Image, tpl string, layout rm.Orientation) error {
 	i, err := readPNG("templates", tpl)
 	if err != nil {
 		return err

@@ -17,7 +17,7 @@ type Timestamp struct {
 type NotebookType int
 
 const (
-	DocumentType = iota
+	DocumentType NotebookType = iota
 	CollectionType
 )
 
@@ -26,6 +26,14 @@ type Orientation int
 const (
 	Portrait Orientation = iota
 	Landscape
+)
+
+type FileType int
+
+const (
+	Notebook FileType = iota
+	Epub
+	Pdf
 )
 
 // Metadata holds the metadata for a notebook.
@@ -162,6 +170,49 @@ func (n Orientation) MarshalJSON() ([]byte, error) {
 		s = "landscape"
 	default:
 		return nil, fmt.Errorf("invalid notebook type %v", n)
+	}
+
+	buf := bytes.NewBufferString(`"`)
+	buf.WriteString(s)
+	buf.WriteString(`"`)
+
+	return buf.Bytes(), nil
+}
+
+func (f *FileType) UnmarshalJSON(b []byte) error {
+	var s string
+	err := json.Unmarshal(b, &s)
+	if err != nil {
+		return err
+	}
+
+	var ft FileType
+	switch s {
+	case "notebook":
+		ft = Notebook
+	case "epub":
+		ft = Epub
+	case "pdf":
+		ft = Pdf
+	default:
+		return fmt.Errorf("invalid file type %q", s)
+	}
+
+	*f = ft
+	return nil
+}
+
+func (f FileType) MarshalJSON() ([]byte, error) {
+	var s string
+	switch f {
+	case Notebook:
+		s = "notebook"
+	case Epub:
+		s = "epub"
+	case Pdf:
+		s = "pdf"
+	default:
+		return nil, fmt.Errorf("invalid file type %v", f)
 	}
 
 	buf := bytes.NewBufferString(`"`)
