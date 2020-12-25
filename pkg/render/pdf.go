@@ -59,7 +59,7 @@ func setupPDF(pageSize string, d *rm.Document) *gofpdf.Fpdf {
 	fontDir := ""
 	pdf := gofpdf.New(orientation, sizeUnit, pageSize, fontDir)
 
-	pdf.SetMargins(0, 8, 0) // left, top, right
+	//pdf.SetMargins(0, 8, 0) // left, top, right
 	pdf.AliasNbPages("{totalPages}")
 	pdf.SetFont("helvetica", "", 8)
 	pdf.SetTextColor(127, 127, 127)
@@ -107,7 +107,7 @@ func renderDrawingToPDF(pdf *gofpdf.Fpdf, d *rm.Drawing) error {
 
 	// render to PNG
 	var buf bytes.Buffer
-	err := RenderPNG(d, &buf)
+	err := renderPNG(d, false, &buf)
 	if err != nil {
 		return err
 	}

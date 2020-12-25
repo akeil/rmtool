@@ -27,7 +27,7 @@ var bgColor = color.White
 // RenderDrawing paints the given drawing and writes the result to the given
 // writer.
 func RenderDrawing(d *rm.Drawing, w io.Writer) error {
-	err := RenderPNG(d, w)
+	err := renderPNG(d, true, w)
 	if err != nil {
 		return err
 	}
@@ -74,12 +74,14 @@ func RenderPage(doc *rm.Document, pageId string, w io.Writer) error {
 
 // RenderPNG paints the given drawing to a PNG file and writes the PNG data
 // to the given writer.
-func RenderPNG(d *rm.Drawing, w io.Writer) error {
+func renderPNG(d *rm.Drawing, bg bool, w io.Writer) error {
 	// TODO: use width/height from Drawing/Metadata
 	r := image.Rect(0, 0, 1404, 1872)
 	dst := image.NewRGBA(r)
 
-	renderBackground(dst)
+	if bg {
+		renderBackground(dst)
+	}
 
 	err := renderLayers(dst, d)
 	if err != nil {
