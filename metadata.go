@@ -161,15 +161,11 @@ func (o *Orientation) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (n Orientation) MarshalJSON() ([]byte, error) {
-	var s string
-	switch n {
-	case Portrait:
-		s = "portrait"
-	case Landscape:
-		s = "landscape"
-	default:
-		return nil, fmt.Errorf("invalid notebook type %v", n)
+func (o Orientation) MarshalJSON() ([]byte, error) {
+	s := o.String()
+
+	if s == "UNKNOWN" {
+		return nil, fmt.Errorf("invalid notebook type %v", o)
 	}
 
 	buf := bytes.NewBufferString(`"`)
@@ -177,6 +173,17 @@ func (n Orientation) MarshalJSON() ([]byte, error) {
 	buf.WriteString(`"`)
 
 	return buf.Bytes(), nil
+}
+
+func (o Orientation) String() string {
+	switch o {
+	case Portrait:
+		return "portrait"
+	case Landscape:
+		return "landscape"
+	default:
+		return "UNKNOWN"
+	}
 }
 
 func (f *FileType) UnmarshalJSON(b []byte) error {
