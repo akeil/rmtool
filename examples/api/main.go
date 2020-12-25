@@ -171,7 +171,7 @@ func repository(c *api.Client) error {
 
 	item := items[2]
 
-	doc, err := rm.ReadDocument(item, repo, kind)
+	doc, err := rm.ReadDocument(item, kind)
 	if err != nil {
 		return err
 	}

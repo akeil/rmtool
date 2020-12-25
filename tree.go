@@ -2,6 +2,7 @@ package rm
 
 import (
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 	"time"
@@ -259,4 +260,8 @@ func (n nodeMeta) LastModified() time.Time {
 
 func (n nodeMeta) Parent() string {
 	return n.Parent()
+}
+
+func (n nodeMeta) Reader(path ...string) (io.ReadCloser, error) {
+	return nil, fmt.Errorf("not implemented for virtual nodes")
 }

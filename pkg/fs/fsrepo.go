@@ -89,7 +89,7 @@ func (r *repo) Update(m rm.Meta) error {
 	return os.Rename(f.Name(), p)
 }
 
-func (r *repo) Reader(id string, version uint, path ...string) (io.ReadCloser, error) {
+func (r *repo) reader(id string, path ...string) (io.ReadCloser, error) {
 	parts := []string{r.base}
 	parts = append(parts, path...)
 	p := filepath.Join(parts...)
@@ -113,8 +113,13 @@ func readMetadata(path string) (rm.Metadata, error) {
 }
 
 type metaWrapper struct {
-	id string
-	i  *rm.Metadata
+	id   string
+	i    *rm.Metadata
+	repo *repo
+}
+
+func (m metaWrapper) Reader(path ...string) (io.ReadCloser, error) {
+	return m.repo.reader(m.ID(), path...)
 }
 
 func (m metaWrapper) ID() string {

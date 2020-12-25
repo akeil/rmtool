@@ -22,11 +22,6 @@ type Repository interface {
 	// Delete
 	// Create
 
-	// Reader create a reader for one of the components associated with an
-	// item, e.g. the drawing for a single page.
-	Reader(id string, version uint, path ...string) (io.ReadCloser, error)
-
-	// Writer()
 }
 
 // Meta is the interface for a single entry (a nodebook or folder) in a
@@ -42,11 +37,17 @@ type Meta interface {
 	SetPinned(p bool)
 	LastModified() time.Time
 	Parent() string
+	// Reader creates a reader for one of the components associated with an
+	// item, e.g. the drawing for a single page.
+	//
+	// This function is normally used internally by ReadDocument and friends.
+	Reader(path ...string) (io.ReadCloser, error)
+	// Writer()
 }
 
-func ReadDocument(m Meta, repo Repository, kind string) (*Document, error) {
+func ReadDocument(m Meta, kind string) (*Document, error) {
 	cp := m.ID() + ".content"
-	cr, err := repo.Reader(m.ID(), m.Version(), cp)
+	cr, err := m.Reader(cp)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +61,6 @@ func ReadDocument(m Meta, repo Repository, kind string) (*Document, error) {
 
 	return &Document{
 		Meta:    m,
-		repo:    repo,
 		kind:    kind,
 		content: &c,
 	}, nil
@@ -68,7 +68,6 @@ func ReadDocument(m Meta, repo Repository, kind string) (*Document, error) {
 
 type Document struct {
 	Meta
-	repo     Repository
 	kind     string
 	content  *Content
 	pagedata []Pagedata
@@ -107,7 +106,7 @@ func (d *Document) Page(pageId string) (*Page, error) {
 	// lazy load pagedata
 	if d.pagedata == nil {
 		pdp := d.ID() + ".pagedata"
-		pdr, err := d.repo.Reader(d.ID(), d.Version(), pdp)
+		pdr, err := d.Reader(pdp)
 		if err != nil {
 			return nil, err
 		}
@@ -133,7 +132,7 @@ func (d *Document) Page(pageId string) (*Page, error) {
 	pmp := prefix + "-metadata.json"
 
 	var pm PageMetadata
-	pmr, err := d.repo.Reader(d.ID(), d.Version(), d.ID(), pmp)
+	pmr, err := d.Reader(d.ID(), pmp)
 	if err != nil {
 		// xxx-metadata.json seems to be optional.
 		// Probably(?) the last (empty) page in a notebook has no metadata
@@ -182,7 +181,7 @@ func (d *Document) Drawing(pageId string) (*Drawing, error) {
 		return nil, err
 	}
 	dp := prefix + ".rm"
-	dr, err := d.repo.Reader(d.ID(), d.Version(), d.ID(), dp)
+	dr, err := d.Reader(d.ID(), dp)
 	if err != nil {
 		return nil, err
 	}

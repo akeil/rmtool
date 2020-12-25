@@ -34,7 +34,7 @@ func (r *repo) List() ([]rm.Meta, error) {
 
 	rv := make([]rm.Meta, len(items))
 	for i, item := range items {
-		rv[i] = metaWrapper{item}
+		rv[i] = metaWrapper{i: item, r: r}
 	}
 
 	return rv, nil
@@ -52,7 +52,7 @@ func (r *repo) Update(m rm.Meta) error {
 	return r.client.update(item)
 }
 
-func (r *repo) Reader(id string, version uint, path ...string) (io.ReadCloser, error) {
+func (r *repo) reader(id string, version uint, path ...string) (io.ReadCloser, error) {
 	// Attempt to read from cache, download if not exists or corrupt
 	p := r.cachePath(id, version)
 	zr, err := zip.OpenReader(p)
@@ -146,6 +146,11 @@ func (r *repo) cachePath(id string, version uint) string {
 // implement the Meta interface for an Item
 type metaWrapper struct {
 	i Item
+	r *repo
+}
+
+func (m metaWrapper) Reader(path ...string) (io.ReadCloser, error) {
+	return m.r.reader(m.ID(), m.Version(), path...)
 }
 
 func (m metaWrapper) ID() string {
