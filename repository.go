@@ -142,19 +142,27 @@ func (d *Document) Page(pageId string) (*PageX, error) {
 	}
 	pmp := prefix + "-metadata.json"
 
-	// -metadata.json seems to be optional.
-	// Maybe(?) the last (empty) page in a notebook has no metadata
+	var pm PageMetadata
 	pmr, err := d.repo.Reader(d.ID(), d.Version(), d.ID(), pmp)
 	if err != nil {
-		return nil, err
+		// xxx-metadata.json seems to be optional.
+		// Probably(?) the last (empty) page in a notebook has no metadata
+		// check if this is a NotFoundError
+		notFound := true
+		if !notFound {
+			return nil, err
+		}
+	} else {
+		err = json.NewDecoder(pmr).Decode(&pm)
+		if err != nil {
+			return nil, err
+		}
 	}
-	defer pmr.Close()
-
-	var pm PageMetadata
-	err = json.NewDecoder(pmr).Decode(&pm)
-	if err != nil {
-		return nil, err
-	}
+	defer func() {
+		if pmr != nil {
+			pmr.Close()
+		}
+	}()
 
 	// construct the Page item
 	p := &PageX{
@@ -212,5 +220,8 @@ func (p *PageX) Template() string {
 }
 
 func (p *PageX) Layers() []LayerMetadata {
+	if p.meta.Layers == nil {
+		p.meta.Layers = make([]LayerMetadata, 0)
+	}
 	return p.meta.Layers
 }
