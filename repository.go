@@ -7,18 +7,31 @@ import (
 	"time"
 )
 
+// Repository is the interface for the storage backend.
+//
+// It can either represent local files copied from the tablet
+// or notes accessed via the Cloud API.
 type Repository interface {
+	// List returns a flat list of all entries in the repository.
+	// The list is in no particular order - use BuildTree() to recreate the
+	// tree structure with folders and subfolders.
 	List() ([]Meta, error)
 
+	// Update changes metadata for an entry.
 	Update(meta Meta) error
 	// Delete
 	// Create
 
+	// Reader create a reader for one of the components associated with an
+	// item, e.g. the drawing for a single page.
 	Reader(id string, version uint, path ...string) (io.ReadCloser, error)
 
 	// Writer()
 }
 
+// Meta is the interface for a single entry (a nodebook or folder) in a
+// Repository.
+// these entries are used to access and change metadata for an item.
 type Meta interface {
 	ID() string
 	Version() uint
