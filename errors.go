@@ -5,7 +5,8 @@ import (
 	"net/http"
 )
 
-func Wrap(err error, msg string) error {
+func Wrap(err error, msg string, v ...interface{}) error {
+	msg = fmt.Sprintf(msg, v...)
 	return fmt.Errorf("%v: %v", msg, err)
 }
 

@@ -103,18 +103,28 @@ func (r *repo) reader(id string, path ...string) (io.ReadCloser, error) {
 
 	logging.Debug("Create reader for %q\n", p)
 
-	return os.Open(p)
+	f, err := os.Open(p)
+	if os.IsNotExist(err) {
+		return f, rm.NewNotFound(err.Error())
+	}
+	return f, err
 }
 
 func readMetadata(path string) (rm.Metadata, error) {
 	var m rm.Metadata
 	r, err := os.Open(path)
 	if err != nil {
-		return m, err
+		if os.IsNotExist(err) {
+			return m, rm.NewNotFound("no metadata file at %q", path)
+		}
+		return m, rm.Wrap(err, "failed to read metadata for %q", path)
 	}
 	defer r.Close()
 
 	err = json.NewDecoder(r).Decode(&m)
+	if err != nil {
+		return m, rm.Wrap(err, "failed to read metadata for %q", path)
+	}
 
 	return m, err
 }
