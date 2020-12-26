@@ -111,6 +111,14 @@ It is given in radians and ranges in two intervals
 from `0.0` to `1.5708` (0 to 90 degrees)
 and from `4.7124` to `6.2832` (270 to 360 degrees).
 
+## API
+The `api` package contains an implementation for the reMarkable cloud API,
+including a client for websocket notifications.
+
+If the tablet is connected to the API, one can access folders and documents
+through that API and also upload or modify content.
+Changes made through the API will by synced to the tablet.
+
 ---
 
 Sources:
