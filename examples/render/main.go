@@ -101,7 +101,7 @@ func pngs(storage rm.Repository, doc *rm.Document) {
 			defer f.Close()
 
 			w := bufio.NewWriter(f)
-			err = render.RenderPage(doc, p, w)
+			err = render.Page(doc, p, w)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -123,7 +123,7 @@ func pdf(n *rm.Document) error {
 	defer f.Close()
 
 	w := bufio.NewWriter(f)
-	return render.RenderPDF(n, w)
+	return render.PDF(n, w)
 }
 
 func setup() (*api.Client, error) {

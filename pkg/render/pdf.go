@@ -13,10 +13,10 @@ import (
 
 const tsFormat = "2006-01-02 15:04:05"
 
-// RenderPDF renders all pages of the given document to a PDF file.
+// PDF renders all pages of the given document to a PDF file.
 //
 // The result is written to the given writer.
-func RenderPDF(d *rm.Document, w io.Writer) error {
+func PDF(d *rm.Document, w io.Writer) error {
 	logging.Debug("Render PDF for document %q, type %q", d.ID(), d.FileType())
 	pdf := setupPDF("A4", d)
 
@@ -34,8 +34,8 @@ func RenderPDF(d *rm.Document, w io.Writer) error {
 }
 
 func renderDrawingsPDF(pdf *gofpdf.Fpdf, d *rm.Document) error {
-	for i, pageId := range d.Pages() {
-		err := doRenderPDFPage(pdf, d, pageId, i)
+	for i, pageID := range d.Pages() {
+		err := doRenderPDFPage(pdf, d, pageID, i)
 		if err != nil {
 			return err
 		}
@@ -44,10 +44,11 @@ func renderDrawingsPDF(pdf *gofpdf.Fpdf, d *rm.Document) error {
 	return nil
 }
 
-func RenderPDFPage(d *rm.Document, pageId string, w io.Writer) error {
+// PDFPage renders a single drawing into a single one-page PDF.
+func PDFPage(d *rm.Document, pageID string, w io.Writer) error {
 	pdf := setupPDF("A4", nil)
 
-	err := doRenderPDFPage(pdf, d, pageId, 0)
+	err := doRenderPDFPage(pdf, d, pageID, 0)
 	if err != nil {
 		return err
 	}
@@ -88,8 +89,8 @@ func setupPDF(pageSize string, d *rm.Document) *gofpdf.Fpdf {
 	return pdf
 }
 
-func doRenderPDFPage(pdf *gofpdf.Fpdf, doc *rm.Document, pageId string, i int) error {
-	d, err := doc.Drawing(pageId)
+func doRenderPDFPage(pdf *gofpdf.Fpdf, doc *rm.Document, pageID string, i int) error {
+	d, err := doc.Drawing(pageID)
 	if err != nil {
 		return err
 	}

@@ -16,8 +16,9 @@ func Resize(i image.Image, r image.Rectangle) image.Image {
 	return dst
 }
 
-// create a mask image by using the gray value of the given image as the
-// value for the mask alpha channel. Returns the mask image.
+// CreateMask creates a mask image by using the gray value of the given image
+// as the value for the mask alpha channel.
+// Returns the mask image.
 func CreateMask(i image.Image) image.Image {
 	rect := i.Bounds()
 	mask := image.NewRGBA(rect)

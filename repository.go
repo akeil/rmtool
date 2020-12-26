@@ -54,7 +54,7 @@ type Meta interface {
 	// PagePrefix returns the filename prefix for page related paths.
 	//
 	// This function is normally used internally by ReadDocument and friends.
-	PagePrefix(pageId string, pageIndex int) string
+	PagePrefix(pageID string, pageIndex int) string
 }
 
 // ReadDocument is a helper function to read a full Document from a repository entry.
@@ -123,16 +123,16 @@ func (d *Document) CoverPage() int {
 	return d.content.CoverPageNumber
 }
 
-// Page loads meta data associated with the given pageId.
-func (d *Document) Page(pageId string) (*Page, error) {
+// Page loads meta data associated with the given pageID.
+func (d *Document) Page(pageID string) (*Page, error) {
 	if d.pages != nil {
-		p := d.pages[pageId]
+		p := d.pages[pageID]
 		if p != nil {
 			return p, nil
 		}
 	}
 
-	idx, err := d.pageIndex(pageId)
+	idx, err := d.pageIndex(pageID)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +155,7 @@ func (d *Document) Page(pageId string) (*Page, error) {
 	// check if we have pagedata for this page
 	// TODO: we might set a default if we have none
 	if len(d.pagedata) <= idx {
-		return nil, fmt.Errorf("no pagedata for page with id %q", pageId)
+		return nil, fmt.Errorf("no pagedata for page with id %q", pageID)
 	}
 
 	// Load page metadata
@@ -194,18 +194,18 @@ func (d *Document) Page(pageId string) (*Page, error) {
 	if d.pages == nil {
 		d.pages = make(map[string]*Page)
 	}
-	d.pages[pageId] = p
+	d.pages[pageID] = p
 
 	return p, nil
 }
 
-// Drawing loads the handwritten drawing for the given pageId.
+// Drawing loads the handwritten drawing for the given pageID.
 //
 // Note that not all pages have associated drawings.
 // If a page has no drawing...
 // TODO: return a specific type of error
-func (d *Document) Drawing(pageId string) (*Drawing, error) {
-	idx, err := d.pageIndex(pageId)
+func (d *Document) Drawing(pageID string) (*Drawing, error) {
+	idx, err := d.pageIndex(pageID)
 	if err != nil {
 		return nil, err
 	}
@@ -243,16 +243,16 @@ func (d *Document) AttachmentReader() (io.ReadCloser, error) {
 	return d.Reader(p)
 }
 
-func (d *Document) pageIndex(pageId string) (int, error) {
+func (d *Document) pageIndex(pageID string) (int, error) {
 	// Check if that page id exists
 	// AND determine the page index
 	for i, id := range d.Pages() {
-		if id == pageId {
+		if id == pageID {
 			return i, nil
 		}
 	}
 
-	return 0, fmt.Errorf("invalid page id %q", pageId)
+	return 0, fmt.Errorf("invalid page id %q", pageID)
 }
 
 // Page describes a single page within a document.

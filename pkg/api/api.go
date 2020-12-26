@@ -198,10 +198,10 @@ func (c *Client) fetchBlob(url string, w io.Writer) error {
 }
 
 // CreateFolder creates a new folder under the given parent folder.
-// The parentId can be empty (root folder) or refer to another folder.
-func (c *Client) CreateFolder(parentId, name string) error {
+// The parentID can be empty (root folder) or refer to another folder.
+func (c *Client) CreateFolder(parentID, name string) error {
 	// Check if the parent is an existing folder
-	err := c.checkParent(parentId)
+	err := c.checkParent(parentID)
 	if err != nil {
 		return err
 	}
@@ -209,7 +209,7 @@ func (c *Client) CreateFolder(parentId, name string) error {
 	item := Item{
 		ID:          uuid.New().String(),
 		Type:        rm.CollectionType,
-		Parent:      parentId,
+		Parent:      parentID,
 		VisibleName: name,
 	}
 
@@ -246,25 +246,25 @@ func (c *Client) Delete(id string) error {
 }
 
 // Move transfers the documents with the given id to a destination folder.
-// The dstId can be empty (root folder) or refer to another folder.
-func (c *Client) Move(id, dstId string) error {
+// The parentID can be empty (root folder) or refer to another folder.
+func (c *Client) Move(id, parentID string) error {
 	item, err := c.fetchItem(id)
 	if err != nil {
 		return err
 	}
 
 	// Early exit if there is no actual change
-	if item.Parent == dstId {
+	if item.Parent == parentID {
 		return nil
 	}
 
 	// Check if the parent is an existing folder
-	err = c.checkParent(dstId)
+	err = c.checkParent(parentID)
 	if err != nil {
 		return err
 	}
 
-	item.Parent = dstId
+	item.Parent = parentID
 	return c.update(item)
 }
 
@@ -301,10 +301,10 @@ func (c *Client) Rename(id, name string) error {
 }
 
 // Upload adds a document to the given parent folder.
-// The parentId can be empty (root folder) or refer to another folder.
-func (c *Client) Upload(name, parentId string, src io.Reader) error {
+// The parentID can be empty (root folder) or refer to another folder.
+func (c *Client) Upload(name, parentID string, src io.Reader) error {
 	// We need to check the parent folder, server will not check
-	err := c.checkParent(parentId)
+	err := c.checkParent(parentID)
 	if err != nil {
 		return err
 	}
@@ -343,7 +343,7 @@ func (c *Client) Upload(name, parentId string, src io.Reader) error {
 		ID:          u.ID,
 		Version:     u.Version,
 		Type:        rm.DocumentType,
-		Parent:      parentId,
+		Parent:      parentID,
 		VisibleName: name,
 	}
 	return c.update(meta)
@@ -351,18 +351,18 @@ func (c *Client) Upload(name, parentId string, src io.Reader) error {
 
 // checkParent checks if a given id can be used as a parent,
 // i.e. it exists and it is a folder.
-func (c *Client) checkParent(parentId string) error {
-	if parentId == "" {
+func (c *Client) checkParent(parentID string) error {
+	if parentID == "" {
 		return nil
 	}
 
-	p, err := c.fetchItem(parentId)
+	p, err := c.fetchItem(parentID)
 	if err != nil {
 		return err
 	}
 
 	if p.Type != rm.CollectionType {
-		return fmt.Errorf("parent %q is not a collection", parentId)
+		return fmt.Errorf("parent %q is not a collection", parentID)
 	}
 
 	return nil
@@ -406,7 +406,7 @@ func (c *Client) putBlob(url string, src io.Reader) error {
 // Update updates the metadata for an item.
 func (c *Client) update(i Item) error {
 	u := i.toUpload()
-	u.Version += 1
+	u.Version++
 	u.ModifiedClient = now()
 
 	result := make([]Item, 0)
@@ -485,11 +485,11 @@ func (c *Client) storageRequest(method, endpoint string, payload, dst interface{
 // Returns the device token.
 func (c *Client) Register(code string) (string, error) {
 	// Assumption: we do not have to remember our device ID.
-	deviceId := uuid.New().String()
+	deviceID := uuid.New().String()
 	reg := &Registration{
 		Code:        code,
 		Description: "desktop-windows",
-		DeviceID:    deviceId,
+		DeviceID:    deviceID,
 	}
 
 	token, err := c.requestToken(epRegister, "", reg)

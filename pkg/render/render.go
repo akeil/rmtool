@@ -24,9 +24,9 @@ var colors = map[rm.BrushColor]color.Color{
 }
 var bgColor = color.White
 
-// RenderDrawing paints the given drawing and writes the result to the given
+// Drawing paints the given drawing and writes the result to the given
 // writer.
-func RenderDrawing(d *rm.Drawing, w io.Writer) error {
+func Drawing(d *rm.Drawing, w io.Writer) error {
 	err := renderPNG(d, true, w)
 	if err != nil {
 		return err
@@ -35,17 +35,17 @@ func RenderDrawing(d *rm.Drawing, w io.Writer) error {
 	return nil
 }
 
-// RenderPage renders the pageId from the given documents and writes the
+// Page renders the page from the given document and writes the
 // result to the given writer.
 //
 // Unlike RenderDrawing, this includes the page's background template.
-func RenderPage(doc *rm.Document, pageId string, w io.Writer) error {
-	p, err := doc.Page(pageId)
+func Page(doc *rm.Document, pageID string, w io.Writer) error {
+	p, err := doc.Page(pageID)
 	if err != nil {
 		return err
 	}
 
-	d, err := doc.Drawing(pageId)
+	d, err := doc.Drawing(pageID)
 	if err != nil {
 		return err
 	}

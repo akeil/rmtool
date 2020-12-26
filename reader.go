@@ -20,7 +20,7 @@ func (d *Drawing) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-// Read creates a new reMarkable drawing from the given bytes.
+// ReadDrawing creates a new reMarkable drawing from the given reader.
 func ReadDrawing(r io.Reader) (*Drawing, error) {
 	d := &Drawing{}
 	err := read(r, d)

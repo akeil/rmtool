@@ -67,7 +67,7 @@ func (r *repo) Update(m rm.Meta) error {
 
 	// TODO: check the parent
 
-	o.Version += 1
+	o.Version++
 	o.LastModified = rm.Timestamp{time.Now()}
 
 	// assumption: we need to set these if we write to the tablet
@@ -177,6 +177,6 @@ func (m metaWrapper) Parent() string {
 	return m.i.Parent
 }
 
-func (n metaWrapper) PagePrefix(id string, index int) string {
+func (m metaWrapper) PagePrefix(id string, index int) string {
 	return id
 }

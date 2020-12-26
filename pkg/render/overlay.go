@@ -33,21 +33,21 @@ func overlayPDF(doc *rm.Document, pdf *gofpdf.Fpdf) error {
 
 	im := gofpdi.NewImporter()
 
-	for i, pageId := range doc.Pages() {
+	for i, pageID := range doc.Pages() {
 		pdf.AddPage()
 
-		var tplId int
+		var tpl int
 		err = dontPanic(func() {
 			// TODO: how do we know which box to use?
-			tplId = im.ImportPageFromStream(pdf, &rs, i+1, "/MediaBox")
+			tpl = im.ImportPageFromStream(pdf, &rs, i+1, "/MediaBox")
 		})
 		if err != nil {
 			return err
 		}
 		// setting h, w to 0 fills the page
-		im.UseImportedTemplate(pdf, tplId, 0, 0, 0, 0)
+		im.UseImportedTemplate(pdf, tpl, 0, 0, 0, 0)
 
-		d, err := doc.Drawing(pageId)
+		d, err := doc.Drawing(pageID)
 		if rm.IsNotFound(err) {
 			logging.Info("Skip page %d without drawing", i)
 			continue

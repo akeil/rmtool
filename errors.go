@@ -5,6 +5,8 @@ import (
 	"net/http"
 )
 
+// Wrap wraps an error by prepending additional text.
+// The text can contain formatting parameters.
 func Wrap(err error, msg string, v ...interface{}) error {
 	msg = fmt.Sprintf(msg, v...)
 	return fmt.Errorf("%v: %v", msg, err)
@@ -14,6 +16,7 @@ type notFound struct {
 	message string
 }
 
+// NewNotFound creates a new "not found" error.
 func NewNotFound(s string, v ...interface{}) error {
 	return asNotFound(fmt.Errorf(s, v...))
 }
@@ -26,15 +29,20 @@ func asNotFound(e error) error {
 	return notFound{fmt.Sprintf("Not found: %v", e)}
 }
 
+// IsNotFound checks if the given error is a "not found" error.
 func IsNotFound(err error) bool {
 	_, ok := err.(notFound)
 	return ok
 }
 
+// ExpectOK checks if the given http response has status "200 - OK"
+// and returns an error with the given message if not.
 func ExpectOK(res *http.Response, msg string) error {
 	return ExpectStatus(res, http.StatusOK, msg)
 }
 
+// ExpectStatus checks if the given http response has the expected status
+// and returns an error with the given message if not.
 func ExpectStatus(res *http.Response, expected int, msg string) error {
 	code := res.StatusCode
 

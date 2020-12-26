@@ -219,10 +219,8 @@ func (n *Node) hasContent() bool {
 	for _, c := range n.Children {
 		if c.Leaf() {
 			return true
-		} else {
-			if c.hasContent() {
-				return true
-			}
+		} else if c.hasContent() {
+			return true
 		}
 	}
 

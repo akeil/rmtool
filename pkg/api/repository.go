@@ -125,10 +125,9 @@ func (r *repo) downloadToCache(id string, version uint) error {
 		if err != nil {
 			if os.IsNotExist(err) {
 				return
-			} else {
-				logging.Warning("Unexpected error: %v\n", err)
-				return
 			}
+			logging.Warning("Unexpected error: %v\n", err)
+			return
 		}
 		err = os.Remove(f.Name())
 		if err != nil {
@@ -276,6 +275,6 @@ func (m metaWrapper) Parent() string {
 	return m.i.Parent
 }
 
-func (n metaWrapper) PagePrefix(id string, index int) string {
+func (m metaWrapper) PagePrefix(id string, index int) string {
 	return fmt.Sprintf("%d", index)
 }

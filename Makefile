@@ -24,3 +24,8 @@ fmt: ${src}
 	for file in $^ ; do\
 		gofmt -w $${file} ;\
 	done
+
+lint: ${src}
+	for file in $^ ; do\
+		golint -min_confidence 0.6 $${file} ;\
+	done

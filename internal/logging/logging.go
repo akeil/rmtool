@@ -6,13 +6,19 @@ import (
 	"os"
 )
 
+// Level is the type for log levels.
 type Level int
 
 const (
+	// LevelDebug means log debug messages and above.
 	LevelDebug Level = iota
+	// LevelInfo means log info messages and above.
 	LevelInfo
+	// LevelWarning means log warning messages and above.
 	LevelWarning
+	// LevelError means log error messages only.
 	LevelError
+	// LevelNone means log nothing.
 	LevelNone
 )
 
@@ -33,6 +39,7 @@ func init() {
 	SetLevel(LevelWarning)
 }
 
+// SetLevel sets the log level.
 func SetLevel(l Level) {
 	switch l {
 	case LevelDebug:
@@ -63,18 +70,22 @@ func SetLevel(l Level) {
 	}
 }
 
+// Debug logs a debug message.
 func Debug(msg string, v ...interface{}) {
 	debug.Printf(msg, v...)
 }
 
+// Info logs a message with level info.
 func Info(msg string, v ...interface{}) {
 	info.Printf(msg, v...)
 }
 
+// Warning logs a message with level warning.
 func Warning(msg string, v ...interface{}) {
 	warning.Printf(msg, v...)
 }
 
+// Error logs a message with level error.
 func Error(msg string, v ...interface{}) {
 	error.Printf(msg, v...)
 }
