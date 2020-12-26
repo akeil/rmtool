@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"akeil.net/akeil/rm"
@@ -19,6 +20,7 @@ import (
 type repo struct {
 	client  *Client
 	dataDir string
+	mx      sync.RWMutex
 }
 
 // NewRepository creates a Repository with the reMarkable cloud service as
@@ -60,13 +62,26 @@ func (r *repo) Update(m rm.Meta) error {
 }
 
 func (r *repo) reader(id string, version uint, path ...string) (io.ReadCloser, error) {
+
 	// Attempt to read from cache, download if not exists or corrupt
 	p := r.cachePath(id, version)
+
+	r.mx.RLock()
+	defer r.mx.RUnlock()
 	zr, err := zip.OpenReader(p)
+
+	// If the file does not exist or is otherwise unusable,
+	// download new and try again.
 	if err != nil {
-		// the file does not exist or is otherwise unusable
-		// download new and try again
+		// CAREFUL: we need a write lock when we downloading,
+		// so we release our read lock for a moment.
+		//
+		// This relies on the RLock being acquired before
+		// AND relies on the (defer) RUnlock being called before.
+		r.mx.RUnlock()
 		r.downloadToCache(id, version)
+		r.mx.RLock()
+
 		zr, err = zip.OpenReader(p)
 		if err != nil {
 			return nil, err
@@ -92,12 +107,6 @@ func (r *repo) reader(id string, version uint, path ...string) (io.ReadCloser, e
 }
 
 func (r *repo) downloadToCache(id string, version uint) error {
-	// Prepare the destination directory
-	err := os.MkdirAll(r.dataDir, 0755)
-	if err != nil {
-		return fmt.Errorf("could not create cache dir: %v", err)
-	}
-
 	// Retreive the BlobURLGet
 	i, err := r.client.fetchItem(id)
 	if err != nil {
@@ -110,8 +119,8 @@ func (r *repo) downloadToCache(id string, version uint) error {
 		return err
 	}
 	defer f.Close()
+	// cleanup: delete the tempfile (errors ignored)
 	defer func() {
-		// cleanup, errors ignored
 		_, err := os.Stat(f.Name())
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -133,6 +142,16 @@ func (r *repo) downloadToCache(id string, version uint) error {
 		return err
 	}
 
+	// Lock for writing.
+	r.mx.Lock()
+	defer r.mx.Unlock()
+
+	// Prepare the destination directory
+	err = os.MkdirAll(r.dataDir, 0755)
+	if err != nil {
+		return fmt.Errorf("could not create cache dir: %v", err)
+	}
+
 	// Move to destination dir
 	p := r.cachePath(id, version)
 	logging.Debug("Move archive blob to %q\n", p)
@@ -141,8 +160,8 @@ func (r *repo) downloadToCache(id string, version uint) error {
 		return err
 	}
 
-	// TODO: separate goroutine?
-	r.cleanCache()
+	// This should presumably remove the one outdated entry (if any).
+	go r.cleanCache()
 
 	return nil
 }
@@ -158,6 +177,10 @@ func (r *repo) cleanCache() {
 	//   <ID>_<Version>.zip
 	//
 	// We want to keep only the highest version for each ID.
+
+	// Hold the write lock the whole time as we read and change the directory..
+	r.mx.Lock()
+	defer r.mx.Unlock()
 
 	// List all cached files.
 	files, err := ioutil.ReadDir(r.dataDir)
