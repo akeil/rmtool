@@ -47,8 +47,8 @@ func TestValidateContent(t *testing.T) {
 	if c.Validate() == nil {
 		t.Errorf("Invalid FileType not detected")
 	}
-
 	c.FileType = Pdf
+
 	c.Orientation = Orientation(100)
 	if c.Validate() == nil {
 		t.Errorf("Invalid Orientation not detected")
@@ -65,6 +65,13 @@ func TestValidateContent(t *testing.T) {
 	if c.Validate() == nil {
 		t.Errorf("Mismatching number of pages not detected")
 	}
+	c.Pages = make([]string, 0)
+
+	c.TextAlignment = TextAlign(100)
+	if c.Validate() == nil {
+		t.Errorf("Invalid text align not detected")
+	}
+	c.TextAlignment = AlignJustify
 
 }
 

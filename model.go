@@ -44,6 +44,22 @@ const (
 	TemplateLarge
 )
 
+type LineHeight int
+
+const (
+	LineHeightDefault LineHeight = -1
+	LineHeightSmall   LineHeight = 100
+	LineHeightMedium  LineHeight = 150
+	LineHeightLarge   LineHeight = 200
+)
+
+type TextAlign int
+
+const (
+	AlignLeft TextAlign = iota
+	AlignJustify
+)
+
 const maxLayers = 5
 
 // Content holds the data from the remarkable `.content` file.
@@ -61,6 +77,19 @@ type Content struct {
 	Pages []string `json:"pages"`
 	// CoverPageNumber is the page that should be used as the cover in the UI.
 	CoverPageNumber int `json:"coverPageNumber"`
+
+	// not sure if these are relevant
+
+	// FontName for EPUB, empty to use default (probably a list w/ supported font names)
+	FontName string `json:"fontName"`
+	// LineHeight always seems to be -1 / 150 / 200 / 100?
+	LineHeight LineHeight `json:"lineHeight"`
+	// MArgins are the page margins (left/right?) for EPUB and PDF files, default is 100 (180 for PDF?)
+	Margins int `json:"margins"`
+	// TextAlignment for EPUB, left or justify
+	TextAlignment TextAlign `json:"textAlignment"`
+	// TextScale for EPUB, default is 1.0,
+	TextScale float32 `json:"textScale"`
 }
 
 func NewContent(f FileType) *Content {
@@ -69,6 +98,12 @@ func NewContent(f FileType) *Content {
 		Orientation: Portrait,
 		PageCount:   0,
 		Pages:       make([]string, 0),
+		// default values taken from a sample file
+		FontName:      "",
+		LineHeight:    LineHeightDefault,
+		Margins:       100,
+		TextAlignment: AlignLeft,
+		TextScale:     1.0,
 	}
 }
 
@@ -88,6 +123,17 @@ func (c *Content) Validate() error {
 
 	if c.PageCount != len(c.Pages) {
 		return NewValidationError("pageCount does not match number of pages %v != %v", c.PageCount, len(c.Pages))
+	}
+
+	// TODO validate font names
+	// TODO validate LineHeight
+	// TODO validate Margins
+	// TODO: validate TextScale
+	switch c.TextAlignment {
+	case AlignLeft, AlignJustify:
+		// ok
+	default:
+		return NewValidationError("invalid text align %v", c.TextAlignment)
 	}
 
 	return nil
@@ -264,6 +310,51 @@ func (f FileType) String() string {
 		return "epub"
 	case Pdf:
 		return "pdf"
+	default:
+		return "UNKNOWN"
+	}
+}
+
+func (t *TextAlign) UnmarshalJSON(b []byte) error {
+	var s string
+	err := json.Unmarshal(b, &s)
+	if err != nil {
+		return err
+	}
+
+	var ta TextAlign
+	switch s {
+	case "left":
+		ta = AlignLeft
+	case "justify":
+		ta = AlignJustify
+	default:
+		return fmt.Errorf("invalid text align %q", s)
+	}
+
+	*t = ta
+	return nil
+}
+
+func (t TextAlign) MarshalJSON() ([]byte, error) {
+	s := t.String()
+	if s == "UNKNOWN" {
+		return nil, fmt.Errorf("invalid text align type %v", t)
+	}
+
+	buf := bytes.NewBufferString(`"`)
+	buf.WriteString(s)
+	buf.WriteString(`"`)
+
+	return buf.Bytes(), nil
+}
+
+func (t TextAlign) String() string {
+	switch t {
+	case AlignLeft:
+		return "left"
+	case AlignJustify:
+		return "justify"
 	default:
 		return "UNKNOWN"
 	}
