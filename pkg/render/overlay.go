@@ -48,16 +48,17 @@ func overlayPDF(doc *rm.Document, pdf *gofpdf.Fpdf) error {
 		im.UseImportedTemplate(pdf, tplId, 0, 0, 0, 0)
 
 		d, err := doc.Drawing(pageId)
-		if err != nil {
-			// TODO: only if not found error
-			logging.Info("Page %d has no drawing", i)
+		if rm.IsNotFound(err) {
+			logging.Info("Skip page %d without drawing", i)
+			continue
+		} else if err != nil {
+			return err
 		}
-		if d != nil {
-			logging.Debug("overlay the drawing")
-			err = renderDrawingToPDF(pdf, d)
-			if err != nil {
-				return err
-			}
+
+		logging.Debug("overlay the drawing for page %v", i)
+		err = renderDrawingToPDF(pdf, d)
+		if err != nil {
+			return err
 		}
 	}
 

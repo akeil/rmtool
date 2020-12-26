@@ -146,21 +146,24 @@ func (c *Client) doList(id string, blob bool) ([]Item, error) {
 
 // FetchItem downloads metadata for a single item.
 func (c *Client) fetchItem(id string) (Item, error) {
+	var item Item
 	// uses List endpoint, but adds params 'doc' and 'withBlob'
 	items, err := c.doList(id, true)
 	if err != nil {
-		return Item{}, err
+		return item, err
 	}
 
-	if len(items) != 1 {
-		return Item{}, fmt.Errorf("got unexpected number of items (%v)", len(items))
+	if len(items) == 0 {
+		return item, rm.NewNotFound("no item with id %q", id)
+	} else if len(items) != 1 {
+		return item, fmt.Errorf("got unexpected number of items (%v)", len(items))
 	}
-	item := items[0]
+	item = items[0]
 
 	// A successful response can still include errors
 	err = item.Err()
 	if err != nil {
-		return Item{}, err
+		return item, err
 	}
 
 	return item, nil
@@ -181,8 +184,9 @@ func (c *Client) fetchBlob(url string, w io.Writer) error {
 		return err
 	}
 
-	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("blob request failed with status %d", res.StatusCode)
+	err = rm.ExpectOK(res, "blob request failed")
+	if err != nil {
+		return err
 	}
 
 	defer res.Body.Close()
@@ -218,7 +222,7 @@ func (c *Client) Delete(id string) error {
 		return err
 	}
 
-	// TODO: if CollectionType, check if empty?
+	// TODO: if CollectionType, check if empty
 
 	wrap := make([]uploadItem, 1)
 	wrap[0] = item.toUpload()
@@ -231,12 +235,7 @@ func (c *Client) Delete(id string) error {
 	i := result[0]
 
 	// A successful response can still include errors
-	err = i.Err()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return i.Err()
 }
 
 // Move transfers the documents with the given id to a destination folder.
@@ -351,12 +350,7 @@ func (c *Client) Upload(name, parentId string, src io.Reader) error {
 		Parent:      parentId,
 		VisibleName: name,
 	}
-	err = c.update(meta)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return c.update(meta)
 }
 
 func (c *Client) putBlob(url string, src io.Reader) error {
@@ -374,12 +368,7 @@ func (c *Client) putBlob(url string, src io.Reader) error {
 		return err
 	}
 
-	if res.StatusCode != http.StatusOK {
-		// TODO: error message from response?
-		return fmt.Errorf("upload failed with status %d", res.StatusCode)
-	}
-
-	return nil
+	return rm.ExpectOK(res, "blob upload failed")
 }
 
 // Update updates the metadata for an item.
@@ -397,15 +386,10 @@ func (c *Client) update(i Item) error {
 		return err
 	}
 
-	if len(result) == 0 {
+	if len(result) != 0 {
 		return fmt.Errorf("unexpected response (empty list)")
 	}
-	err = result[0].Err()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return result[0].Err()
 }
 
 func (c *Client) storageRequest(method, endpoint string, payload, dst interface{}) error {
@@ -443,9 +427,9 @@ func (c *Client) storageRequest(method, endpoint string, payload, dst interface{
 	}
 
 	logging.Debug("API request %v %v returned status %v\n", method, endpoint, res.StatusCode)
-	if res.StatusCode != http.StatusOK {
-		// TODO: body can contain plain text error message
-		return fmt.Errorf("storage request failed with status %d", res.StatusCode)
+	err = rm.ExpectOK(res, "storage request failed")
+	if err != nil {
+		return err
 	}
 
 	defer res.Body.Close()
@@ -538,15 +522,15 @@ func (c *Client) requestToken(endpoint, token string, payload interface{}) (stri
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode != http.StatusOK {
-		// attempt to read an error message from the response
+	err = rm.ExpectOK(res, "token request failed")
+	if err != nil {
 		var msg string
 		d, xerr := ioutil.ReadAll(res.Body)
 		if xerr == nil {
 			msg = string(d)
 			msg = strings.TrimSpace(msg)
 		}
-		return "", fmt.Errorf("token request failed with status %d: %q", res.StatusCode, msg)
+		return "", rm.Wrap(err, msg)
 	}
 
 	// The token is returned as a plain string
@@ -584,10 +568,10 @@ func (c *Client) discoverHost(url string) (string, error) {
 		return "", err
 	}
 
-	if res.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("service discovery failed with status %d", res.StatusCode)
+	err = rm.ExpectOK(res, "service discovery failed")
+	if err != nil {
+		return "", err
 	}
-
 	defer res.Body.Close()
 
 	dis := &Discovery{}
