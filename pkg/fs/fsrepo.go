@@ -65,6 +65,8 @@ func (r *repo) Update(m rm.Meta) error {
 		return fmt.Errorf("version mismatch %d != %d", m.Version(), o.Version)
 	}
 
+	// TODO: check the parent
+
 	o.Version += 1
 	o.LastModified = rm.Timestamp{time.Now()}
 

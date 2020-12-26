@@ -253,7 +253,7 @@ func (c *Client) Move(id, dstId string) error {
 	}
 
 	// Check if the parent is an existing folder
-	err := c.checkParent(parentId)
+	err = c.checkParent(dstId)
 	if err != nil {
 		return err
 	}
@@ -328,9 +328,8 @@ func (c *Client) Upload(name, parentId string, src io.Reader) error {
 		return err
 	}
 
-	// TODO: should we delete the item if one of the subsequent requests fail?
-
 	// Use the Put URL to upload the zipped content.
+	// The content will not be visible until we have set its metadata (below).
 	err = c.putBlob(i.BlobURLPut, src)
 
 	// Set the metadata for the new item
