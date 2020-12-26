@@ -224,6 +224,12 @@ func (c *Client) Delete(id string) error {
 	}
 
 	// TODO: if CollectionType, check if empty
+	if item.Type == rm.CollectionType {
+		err = c.checkEmpty(item.ID)
+		if err != nil {
+			return err
+		}
+	}
 
 	wrap := make([]uploadItem, 1)
 	wrap[0] = item.toUpload()
@@ -357,6 +363,23 @@ func (c *Client) checkParent(parentId string) error {
 
 	if p.Type != rm.CollectionType {
 		return fmt.Errorf("parent %q is not a collection", parentId)
+	}
+
+	return nil
+}
+
+// checkEmpty is used for a collection type to determine whether it has any
+// content. Returns an error if the collection is non-empty
+func (c *Client) checkEmpty(id string) error {
+	items, err := c.List()
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		if item.Parent == id {
+			return fmt.Errorf("collection is not empty")
+		}
 	}
 
 	return nil
