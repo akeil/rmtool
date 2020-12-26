@@ -42,6 +42,7 @@ const (
 const maxLayers = 5
 
 // Metadata holds the metadata for a notebook.
+// TODO: move this to `fs` package
 type Metadata struct {
 	// LastModified is the UTC date of the last edit as a Unix timestamp.
 	LastModified Timestamp `json:"lastModified"`
