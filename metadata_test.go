@@ -2,13 +2,20 @@ package rm
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"testing"
 	"time"
 )
 
 func TestReadMetadata(t *testing.T) {
 	path := "./testdata/25e3a0ce-080a-4389-be2a-f6aa45ce0207.metadata"
-	m, err := ReadMetadata(path)
+	var m Metadata
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = json.Unmarshal(data, &m)
 
 	if err != nil {
 		t.Error(err)
@@ -62,8 +69,13 @@ func TestMarshalMetadata(t *testing.T) {
 
 func TestReadContent(t *testing.T) {
 	path := "./testdata/25e3a0ce-080a-4389-be2a-f6aa45ce0207.content"
-	c, err := ReadContent(path)
+	var c Content
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.Error(err)
+	}
 
+	err = json.Unmarshal(data, &c)
 	if err != nil {
 		t.Error(err)
 	}
@@ -84,8 +96,13 @@ func TestReadContent(t *testing.T) {
 
 func TestReadPageMetadata(t *testing.T) {
 	path := "./testdata/25e3a0ce-080a-4389-be2a-f6aa45ce0207/0408f802-a07c-45c7-8382-7f8a36645fda-metadata.json"
-	p, err := ReadPageMetadata(path)
+	var p PageMetadata
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.Error(err)
+	}
 
+	err = json.Unmarshal(data, &p)
 	if err != nil {
 		t.Error(err)
 	}

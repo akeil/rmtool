@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"strconv"
 	"time"
 )
@@ -96,45 +95,6 @@ type LayerMetadata struct {
 	// Name is the display name for this layer.
 	Name string `json:"name"`
 	// TODO: visible y/n?
-}
-
-// ReadMetadata reads a Metadata struct from the given JSON file.
-//
-// Note that you can also use `json.Unmarshal(data, m)`.
-// TODO - remove this?
-func ReadMetadata(path string) (Metadata, error) {
-	var m Metadata
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return m, err
-	}
-
-	err = json.Unmarshal(data, &m)
-	return m, err
-}
-
-// TODO - remove this?
-func ReadContent(path string) (Content, error) {
-	var c Content
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return c, err
-	}
-
-	err = json.Unmarshal(data, &c)
-	return c, err
-}
-
-// TODO - remove this?
-func ReadPageMetadata(path string) (PageMetadata, error) {
-	var p PageMetadata
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return p, err
-	}
-
-	err = json.Unmarshal(data, &p)
-	return p, err
 }
 
 func (t *Timestamp) UnmarshalJSON(b []byte) error {
