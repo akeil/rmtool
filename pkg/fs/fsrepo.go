@@ -68,7 +68,7 @@ func (r *repo) Update(m rm.Meta) error {
 	// TODO: check the parent
 
 	o.Version++
-	o.LastModified = rm.Timestamp{time.Now()}
+	o.LastModified = Timestamp{time.Now()}
 
 	// assumption: we need to set these if we write to the tablet
 	o.Synced = false
@@ -112,8 +112,8 @@ func (r *repo) reader(id string, path ...string) (io.ReadCloser, error) {
 	return f, err
 }
 
-func readMetadata(path string) (rm.Metadata, error) {
-	var m rm.Metadata
+func readMetadata(path string) (Metadata, error) {
+	var m Metadata
 	r, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -133,7 +133,7 @@ func readMetadata(path string) (rm.Metadata, error) {
 
 type metaWrapper struct {
 	id   string
-	i    *rm.Metadata
+	i    *Metadata
 	repo *repo
 }
 

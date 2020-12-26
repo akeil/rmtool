@@ -1,17 +1,13 @@
 package rm
 
 import (
+	"bufio"
+	"fmt"
+	"io"
+	"strings"
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"strconv"
-	"time"
 )
-
-// Timestamp is the datatype for a UNIX timestamp in string format.
-type Timestamp struct {
-	time.Time
-}
 
 // NotebookType is used to distinguish betweeen documents and folders.
 type NotebookType int
@@ -39,51 +35,16 @@ const (
 	Pdf
 )
 
+type TemplateSize int
+
+const (
+	TemplateNoSize TemplateSize = iota
+	TemplateSmall
+	TemplateMedium
+	TemplateLarge
+)
+
 const maxLayers = 5
-
-// Metadata holds the metadata for a notebook.
-// TODO: move this to `fs` package
-type Metadata struct {
-	// LastModified is the UTC date of the last edit as a Unix timestamp.
-	LastModified Timestamp `json:"lastModified"`
-	// Version is incremented with each change to the file, starting at "1".
-	Version uint `json:"version"`
-	// LastOpenedPage is set by the tablet to the page that was last viewed.
-	LastOpenedPage uint `json:"lastOpenedPage"`
-	// Parent is the ID of the parent folder.
-	// It is empty if the notebook is located in the root folder.
-	// It can also be set to the special value "trash" if the notebook is deleted.
-	Parent string `json:"parent"`
-	// Pinned is the bookmark/start for a notebook.
-	Pinned bool `json:"pinned"`
-	// Type tells whether this is a document or a folder.
-	Type NotebookType `json:"type"`
-	// VisibleName is the display name for this item.
-	VisibleName string `json:"visibleName"`
-	// Deleted seems to be used internally by the tablet(?).
-	Deleted bool `json:"deleted"`
-	// MetadataModified seems to be used internally by the tablet(?).
-	MetadataModified bool `json:"metadatamodified"`
-	// Modified seems to be used internally by the tablet(?).
-	Modified bool `json:"modified"`
-	// Synced seems to be used internally by the tablet(?).
-	Synced bool `json:"synced"`
-}
-
-func (m *Metadata) Validate() error {
-	switch m.Type {
-	case DocumentType, CollectionType:
-		// ok
-	default:
-		return NewValidationError("invalid type %v", m.Type)
-	}
-
-	if m.VisibleName == "" {
-		return NewValidationError("visible name must not be emtpty")
-	}
-
-	return nil
-}
 
 // Content holds the data from the remarkable `.content` file.
 // It describes the content for a notebook, specifically the sequence of pages.
@@ -172,40 +133,6 @@ func (l LayerMetadata) Validate() error {
 	}
 
 	return nil
-}
-
-func (t *Timestamp) UnmarshalJSON(b []byte) error {
-	// Expects a string lke this: "1607462787637",
-	// with the last four digits containing nanoseconds.
-	var s string
-	err := json.Unmarshal(b, &s)
-	if err != nil {
-		return err
-	}
-
-	n, err := strconv.Atoi(s)
-	if err != nil {
-		return err
-	}
-
-	secs := int64(n / 1_000)
-	nanos := (int64(n) - (secs * 1_000)) * 1_000_000
-	ts := Timestamp{time.Unix(secs, nanos).UTC()}
-
-	*t = ts
-	return nil
-}
-
-func (t Timestamp) MarshalJSON() ([]byte, error) {
-	nanos := t.UnixNano()
-	millis := nanos / 1_000_000
-
-	s := fmt.Sprintf("%d", millis)
-	buf := bytes.NewBufferString(`"`)
-	buf.WriteString(s)
-	buf.WriteString(`"`)
-
-	return buf.Bytes(), nil
 }
 
 func (n *NotebookType) UnmarshalJSON(b []byte) error {
@@ -339,5 +266,108 @@ func (f FileType) String() string {
 		return "pdf"
 	default:
 		return "UNKNOWN"
+	}
+}
+
+type Pagedata struct {
+	Orientation Orientation
+	Template    string
+	Size        TemplateSize
+	Text        string
+}
+
+// HasTemplate tells if the page has a (visible) background template.
+func (p *Pagedata) HasTemplate() bool {
+	return p.Text != "Blank" && p.Text != ""
+}
+
+func (p *Pagedata) Validate() error {
+	// TODO implement
+	return nil
+}
+
+func ReadPagedata(r io.Reader) ([]Pagedata, error) {
+	pd := make([]Pagedata, 0)
+	s := bufio.NewScanner(r)
+
+	var text string
+	var err error
+	var size TemplateSize
+	var layout Orientation
+	var parts []string
+	for s.Scan() {
+		text = s.Text()
+		err = s.Err()
+		if err != nil {
+			return pd, err
+		}
+		// TODO: assumes that empty lines are allowed - correct?
+		if text == "" {
+			continue
+		}
+
+		// Special case: some templates do not have the orientation prefix
+		switch text {
+		case "Blank",
+			"Isometric",
+			"Perspective1",
+			"Perspective2":
+			pd = append(pd, Pagedata{
+				Orientation: Portrait,
+				Template:    text,
+				Size:        TemplateMedium,
+				Text:        text,
+			})
+		default:
+			// TODO some templates have no size
+			parts = strings.SplitN(text, " ", 3)
+			if len(parts) != 3 {
+				return pd, fmt.Errorf("invalid pagedata line: %q", text)
+			}
+			size = size.FromString(parts[2])
+			layout = layout.fromString(parts[0])
+			pd = append(pd, Pagedata{
+				Orientation: layout,
+				Template:    parts[1],
+				Size:        size,
+				Text:        text,
+			})
+		}
+	}
+
+	return pd, nil
+}
+
+func (t TemplateSize) FromString(s string) TemplateSize {
+	switch s {
+	case "S", "small":
+		return TemplateSmall
+	case "M", "medium", "med":
+		return TemplateMedium
+	case "L", "large":
+		return TemplateLarge
+	}
+	return TemplateNoSize
+}
+
+func (o Orientation) fromString(s string) Orientation {
+	switch s {
+	case "P":
+		return Portrait
+	case "LS":
+		return Landscape
+	default:
+		return Portrait
+	}
+}
+
+func (o Orientation) toString() string {
+	switch o {
+	case Portrait:
+		return "P"
+	case Landscape:
+		return "LS"
+	default:
+		return ""
 	}
 }
