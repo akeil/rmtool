@@ -200,10 +200,12 @@ func (c *Client) fetchBlob(url string, w io.Writer) error {
 // CreateFolder creates a new folder under the given parent folder.
 // The parentId can be empty (root folder) or refer to another folder.
 func (c *Client) CreateFolder(parentId, name string) error {
-	// TODO: if a parent id is given, fetch details and
-	// - check if it exists
-	// - and if it is a folder
-	// => same as for Move
+	// Check if the parent is an existing folder
+	err := c.checkParent(parentId)
+	if err != nil {
+		return err
+	}
+
 	item := Item{
 		ID:          uuid.New().String(),
 		Type:        rm.CollectionType,
@@ -250,14 +252,10 @@ func (c *Client) Move(id, dstId string) error {
 		return nil
 	}
 
-	// We need to check if the parent is an existing folder
-	// (service will not check this)
-	parent, err := c.fetchItem(dstId)
+	// Check if the parent is an existing folder
+	err := c.checkParent(parentId)
 	if err != nil {
 		return err
-	}
-	if parent.Type != rm.CollectionType {
-		return fmt.Errorf("destination %q is not a collection", dstId)
 	}
 
 	item.Parent = dstId
@@ -299,16 +297,10 @@ func (c *Client) Rename(id, name string) error {
 // Upload adds a document to the given parent folder.
 // The parentId can be empty (root folder) or refer to another folder.
 func (c *Client) Upload(name, parentId string, src io.Reader) error {
-	var err error
 	// We need to check the parent folder, server will not check
-	if parentId != "" {
-		p, err := c.fetchItem(parentId)
-		if err != nil {
-			return err
-		}
-		if p.Type != rm.CollectionType {
-			return fmt.Errorf("parent %q is not a collection", parentId)
-		}
+	err := c.checkParent(parentId)
+	if err != nil {
+		return err
 	}
 
 	// Create an "upload request" which will give us the upload URL
@@ -350,6 +342,25 @@ func (c *Client) Upload(name, parentId string, src io.Reader) error {
 		VisibleName: name,
 	}
 	return c.update(meta)
+}
+
+// checkParent checks if a given id can be used as a parent,
+// i.e. it exists and it is a folder.
+func (c *Client) checkParent(parentId string) error {
+	if parentId == "" {
+		return nil
+	}
+
+	p, err := c.fetchItem(parentId)
+	if err != nil {
+		return err
+	}
+
+	if p.Type != rm.CollectionType {
+		return fmt.Errorf("parent %q is not a collection", parentId)
+	}
+
+	return nil
 }
 
 func (c *Client) putBlob(url string, src io.Reader) error {
