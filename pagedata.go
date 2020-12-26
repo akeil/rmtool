@@ -28,6 +28,11 @@ func (p *Pagedata) HasTemplate() bool {
 	return p.Text != "Blank" && p.Text != ""
 }
 
+func (p *Pagedata) Validate() error {
+	// TODO implement
+	return nil
+}
+
 func ReadPagedata(r io.Reader) ([]Pagedata, error) {
 	pd := make([]Pagedata, 0)
 	s := bufio.NewScanner(r)

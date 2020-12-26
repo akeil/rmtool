@@ -124,12 +124,24 @@ func (d *Document) Validate() error {
 	}
 
 	// TODO: validate pagedata
+	for _, pd := range d.pagedata {
+		err = pd.Validate()
+		if err != nil {
+			return err
+		}
+	}
+
+	// len pagedata must match the number of pages
+	if len(d.pagedata) != d.PageCount() {
+		return NewValidationError("number of pagedata entries does not match page count: %v != %v", len(d.pagedata), d.PageCount())
+	}
+
 	// TODO: validate pages
 
 	return nil
 }
 
-// PageCount returns the number of pages in this documents.
+// PageCount returns the number of pages in this document.
 //
 // Note that for PDF and EPUB files, the number of drawings can be less than
 // the number of pages.
@@ -137,7 +149,7 @@ func (d *Document) PageCount() int {
 	return d.content.PageCount
 }
 
-// Pages returns a list of page IDs on the correct oreder.
+// Pages returns a list of page IDs on the correct order.
 func (d *Document) Pages() []string {
 	return d.content.Pages
 }

@@ -39,6 +39,8 @@ const (
 	Pdf
 )
 
+const maxLayers = 5
+
 // Metadata holds the metadata for a notebook.
 type Metadata struct {
 	// LastModified is the UTC date of the last edit as a Unix timestamp.
@@ -120,11 +122,40 @@ type PageMetadata struct {
 	Layers []LayerMetadata `json:"layers"`
 }
 
+func (p PageMetadata) Validate() error {
+	if p.Layers == nil {
+		return NewValidationError("no layers defined")
+	}
+	if len(p.Layers) == 0 {
+		return NewValidationError("no layers defined")
+	}
+	if len(p.Layers) > maxLayers {
+		return NewValidationError("maximum number of layers exceeded")
+	}
+
+	for _, l := range p.Layers {
+		err := l.Validate()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // LayerMetadata describes one layer.
 type LayerMetadata struct {
 	// Name is the display name for this layer.
 	Name string `json:"name"`
 	// TODO: visible y/n?
+}
+
+func (l LayerMetadata) Validate() error {
+	if l.Name == "" {
+		return NewValidationError("layer name must not be empty")
+	}
+
+	return nil
 }
 
 func (t *Timestamp) UnmarshalJSON(b []byte) error {
