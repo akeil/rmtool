@@ -111,6 +111,18 @@ It is given in radians and ranges in two intervals
 from `0.0` to `1.5708` (0 to 90 degrees)
 and from `4.7124` to `6.2832` (270 to 360 degrees).
 
+## Render
+The `render` package contains methods to render drawings to a bitmap (PNG)
+or PDF.
+
+### Status
+This "basically works" but the rendering output does not quite match the
+original.
+
+- Some lines are way to thin/weak, others to strong.
+- When Rendering a drawing as an overlay on an existing PDF,
+  the scale and placement of the drawing is off.
+
 ## API
 The `api` package contains an implementation for the reMarkable cloud API,
 including a client for websocket notifications.
