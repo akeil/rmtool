@@ -2,11 +2,11 @@ package rm
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
-	"bytes"
-	"encoding/json"
 )
 
 // NotebookType is used to distinguish betweeen documents and folders.
