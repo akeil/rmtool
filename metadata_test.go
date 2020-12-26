@@ -106,6 +106,32 @@ func TestMarshalMetadata(t *testing.T) {
 	}
 }
 
+func TestValidateMetadata(t *testing.T) {
+	m := &Metadata{
+		Type:        DocumentType,
+		VisibleName: "abc",
+	}
+
+	err := m.Validate()
+	if err != nil {
+		t.Errorf("Unexpected validation error: %v", err)
+	}
+
+	m.Type = NotebookType(100)
+	err = m.Validate()
+	if err == nil {
+		t.Errorf("Invalid type not detected")
+	}
+	m.Type = CollectionType
+
+	m.VisibleName = ""
+	err = m.Validate()
+	if err == nil {
+		t.Errorf("Invalid VisibleName not detected")
+	}
+	m.VisibleName = "abc"
+}
+
 func TestReadContent(t *testing.T) {
 	path := "./testdata/25e3a0ce-080a-4389-be2a-f6aa45ce0207.content"
 	var c Content

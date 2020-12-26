@@ -69,6 +69,21 @@ type Metadata struct {
 	Synced bool `json:"synced"`
 }
 
+func (m *Metadata) Validate() error {
+	switch m.Type {
+	case DocumentType, CollectionType:
+		// ok
+	default:
+		return NewValidationError("invalid type %v", m.Type)
+	}
+
+	if m.VisibleName == "" {
+		return NewValidationError("visible name must not be emtpty")
+	}
+
+	return nil
+}
+
 // Content holds the data from the remarkable `.content` file.
 // It describes the content for a notebook, specifically the sequence of pages.
 // Collections have an empty content object.

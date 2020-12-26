@@ -180,3 +180,7 @@ func (m metaWrapper) Parent() string {
 func (m metaWrapper) PagePrefix(id string, index int) string {
 	return id
 }
+
+func (m metaWrapper) Validate() error {
+	return m.i.Validate()
+}
