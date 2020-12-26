@@ -61,9 +61,23 @@ func TestMarshalMetadata(t *testing.T) {
 		VisibleName:  "Test Notebook",
 	}
 
-	_, err := json.Marshal(m)
+	data, err := json.Marshal(m)
 	if err != nil {
 		t.Error(err)
+	}
+
+	var re Metadata
+	err = json.Unmarshal(data, &re)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if re.Deleted != m.Deleted {
+		t.Fail()
+	}
+	if re.LastModified != m.LastModified {
+		t.Errorf("Last modified changed in serialization: %v != %v", re.LastModified, m.LastModified)
+		t.Fail()
 	}
 }
 

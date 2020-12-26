@@ -113,7 +113,7 @@ func (t *Timestamp) UnmarshalJSON(b []byte) error {
 
 	secs := int64(n / 1_000)
 	nanos := (int64(n) - (secs * 1_000)) * 1_000_000
-	ts := Timestamp{time.Unix(secs, nanos)}
+	ts := Timestamp{time.Unix(secs, nanos).UTC()}
 
 	*t = ts
 	return nil
