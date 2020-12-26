@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// Timestampp is the datatype for a UNIX timestamp in string format.
+// Timestamp is the datatype for a UNIX timestamp in string format.
 type Timestamp struct {
 	time.Time
 }

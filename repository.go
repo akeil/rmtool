@@ -9,10 +9,13 @@ import (
 	"akeil.net/akeil/rm/internal/logging"
 )
 
-// Repository is the interface for the storage backend.
+// Repository is the interface for a storage backend.
 //
 // It can either represent local files copied from the tablet
 // or notes accessed via the Cloud API.
+//
+// The repository offers methods to work on the metadata of items,
+// allowing operations like rename or bookmark.
 type Repository interface {
 	// List returns a flat list of all entries in the repository.
 	// The list is in no particular order - use BuildTree() to recreate the
@@ -23,12 +26,14 @@ type Repository interface {
 	Update(meta Meta) error
 	// Delete
 	// Create
-
 }
 
 // Meta is the interface for a single entry (a nodebook or folder) in a
 // Repository.
-// these entries are used to access and change metadata for an item.
+// These entries are used to access and change metadata for an item.
+//
+// The Reader() method can be used to download additional content, i.e. the
+// pages and drawings for a notebook.
 type Meta interface {
 	ID() string
 	Version() uint
@@ -42,7 +47,7 @@ type Meta interface {
 	// Reader creates a reader for one of the components associated with an
 	// item, e.g. the drawing for a single page.
 	//
-	// This function is normally used internally by ReadDocument and friends.
+	// This function is typically used internally by ReadDocument and friends.
 	Reader(path ...string) (io.ReadCloser, error)
 	// Writer()
 
@@ -52,6 +57,7 @@ type Meta interface {
 	PagePrefix(pageId string, pageIndex int) string
 }
 
+// ReadDocument is a helper function to read a full Document from a repository entry.
 func ReadDocument(m Meta) (*Document, error) {
 	if m.Type() != DocumentType {
 		return nil, fmt.Errorf("can opnly read document for items with type DocumentType")
@@ -76,6 +82,11 @@ func ReadDocument(m Meta) (*Document, error) {
 	}, nil
 }
 
+// A Document is a notebook, PDF or EPUB with all associated metadata
+// and Drawings.
+//
+// A Document is internally backed by a Repository and can load additional
+// content as it is requested.
 type Document struct {
 	Meta
 	content  *Content
@@ -83,27 +94,36 @@ type Document struct {
 	pages    map[string]*Page
 }
 
+// PageCount returns the number of pages in this documents.
+//
+// Note that for PDF and EPUB files, the number of drawings can be less than
+// the number of pages.
 func (d *Document) PageCount() uint {
 	return d.content.PageCount
 }
 
+// Pages returns a list of page IDs on the correct oreder.
 func (d *Document) Pages() []string {
 	return d.content.Pages
 }
 
+// FileType is one of the supported types of content (Notebook, PDF, EPUB).
 func (d *Document) FileType() FileType {
 	return d.content.FileType
 }
 
+// Orientation is the base layout (Portait or Landscape) for this document.
 func (d *Document) Orientation() Orientation {
 	return d.content.Orientation
 }
 
+// CoverPage is the number of the page that should be used as a cover.
 func (d *Document) CoverPage() int {
 	// fallback on lastOpenedPage ?
 	return d.content.CoverPageNumber
 }
 
+// Page loads meta data associated with the given pageId.
 func (d *Document) Page(pageId string) (*Page, error) {
 	if d.pages != nil {
 		p := d.pages[pageId]
@@ -179,6 +199,11 @@ func (d *Document) Page(pageId string) (*Page, error) {
 	return p, nil
 }
 
+// Drawing loads the handwritten drawing for the given pageId.
+//
+// Note that not all pages have associated drawings.
+// If a page has no drawing...
+// TODO: return a specific type of error
 func (d *Document) Drawing(pageId string) (*Drawing, error) {
 	idx, err := d.pageIndex(pageId)
 	if err != nil {
@@ -200,6 +225,10 @@ func (d *Document) Drawing(pageId string) (*Drawing, error) {
 	return drawing, nil
 }
 
+// AttachmentReader returns a reader for an associated PDF or EPUB files
+// according to FileType().
+//
+// An error is returned if this document has no associated attachment.
 func (d *Document) AttachmentReader() (io.ReadCloser, error) {
 	p := d.ID()
 	switch d.FileType() {
@@ -226,33 +255,37 @@ func (d *Document) pageIndex(pageId string) (int, error) {
 	return 0, fmt.Errorf("invalid page id %q", pageId)
 }
 
-func (p *Document) HasDrawing(pageId string) bool {
-	// TODO: How do we find out?
-	return true
-}
-
+// Page describes a single page within a document.
 type Page struct {
 	index    int
 	meta     PageMetadata
 	pagedata Pagedata
 }
 
+// Number is the 1-based page number.
 func (p *Page) Number() uint {
 	return uint(p.index + 1)
 }
 
+// Orientation is the layout orientation for this specific page.
+// It refers to the orientation of the background template.
 func (p *Page) Orientation() Orientation {
 	return p.pagedata.Orientation
 }
 
+// Template is the name of the background template.
+// It can be used to look up a graphic file for this template.
 func (p *Page) Template() string {
 	return p.pagedata.Text
 }
 
+// HasTemplate tells if this page is associated with a background template.
+// Returns false for the "Blank" template.
 func (p *Page) HasTemplate() bool {
 	return p.pagedata.HasTemplate()
 }
 
+// Layers is the metadata for the layers in this page.
 func (p *Page) Layers() []LayerMetadata {
 	if p.meta.Layers == nil {
 		p.meta.Layers = make([]LayerMetadata, 0)

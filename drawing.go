@@ -1,5 +1,12 @@
 package rm
 
+// Header starting a .rm binary file. This can help recognizing a .rm file.
+const (
+	headerV3  = "reMarkable .lines file, version=3          "
+	headerV5  = "reMarkable .lines file, version=5          "
+	headerLen = 43
+)
+
 // Version defines the version number of a remarkable note.
 type Version int
 
@@ -18,21 +25,19 @@ const (
 )
 
 // BrushType is one of the predefined brush types.
+// The brush types are different between V3 and V5 of the rm format.
 type BrushType uint32
 
 const (
-	// v3 types
-	PaintBrush       BrushType = 0
-	Pencil           BrushType = 1
-	Ballpoint        BrushType = 2
-	Marker           BrushType = 3
-	Fineliner        BrushType = 4
-	Highlighter      BrushType = 5
-	Eraser           BrushType = 6
-	MechanicalPencil BrushType = 7
-	EraseArea        BrushType = 8
-
-	// v5 types
+	PaintBrush         BrushType = 0
+	Pencil             BrushType = 1
+	Ballpoint          BrushType = 2
+	Marker             BrushType = 3
+	Fineliner          BrushType = 4
+	Highlighter        BrushType = 5
+	Eraser             BrushType = 6
+	MechanicalPencil   BrushType = 7
+	EraseArea          BrushType = 8
 	BrushV5            BrushType = 12
 	MechanicalPencilV5 BrushType = 13
 	PencilV5           BrushType = 14
@@ -113,10 +118,3 @@ type Dot struct {
 	// Value range is 0.0 trough 1.0
 	Pressure float32
 }
-
-// Header starting a .rm binary file. This can help recognizing a .rm file.
-const (
-	headerV3  = "reMarkable .lines file, version=3          "
-	headerV5  = "reMarkable .lines file, version=5          "
-	headerLen = 43
-)

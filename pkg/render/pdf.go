@@ -11,6 +11,11 @@ import (
 	"akeil.net/akeil/rm/internal/logging"
 )
 
+const tsFormat = "2006-01-02 15:04:05"
+
+// RenderPDF renders all pages of the given document to a PDF file.
+//
+// The result is written to the given writer.
 func RenderPDF(d *rm.Document, w io.Writer) error {
 	logging.Debug("Render PDF for document %q, type %q", d.ID(), d.FileType())
 	pdf := setupPDF("A4", d)
@@ -50,8 +55,6 @@ func RenderPDFPage(d *rm.Document, pageId string, w io.Writer) error {
 
 	return pdf.Output(w)
 }
-
-const tsFormat = "2006-01-02 15:04:05"
 
 func setupPDF(pageSize string, d *rm.Document) *gofpdf.Fpdf {
 	orientation := "P" // [P]ortrait or [L]andscape

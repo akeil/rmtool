@@ -43,6 +43,10 @@ func newNotifications(url, token string) *Notifications {
 }
 
 // Connect creates a new websocket connection to the notification service.
+//
+// After a connection is made, the notifications client starts to receive
+// messages and dispatches them to the MessageHandler registered via OnMessage.
+//
 // Calling Connect while the client is already connected leads to a reconnect.
 func (n *Notifications) Connect() error {
 	if n.isConnected() {
@@ -92,6 +96,8 @@ func (n *Notifications) onDisconnected() {
 		n.conn.Close()
 		n.conn = nil
 	}
+
+	// TODO: client code should be able to register a handler for this.
 }
 
 // loop is the "empty" write loop.

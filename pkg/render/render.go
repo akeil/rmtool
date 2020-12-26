@@ -35,6 +35,10 @@ func RenderDrawing(d *rm.Drawing, w io.Writer) error {
 	return nil
 }
 
+// RenderPage renders the pageId from the given documents and writes the
+// result to the given writer.
+//
+// Unlike RenderDrawing, this includes the page's background template.
 func RenderPage(doc *rm.Document, pageId string, w io.Writer) error {
 	p, err := doc.Page(pageId)
 	if err != nil {
@@ -46,7 +50,7 @@ func RenderPage(doc *rm.Document, pageId string, w io.Writer) error {
 		return err
 	}
 
-	r := image.Rect(0, 0, 1404, 1872)
+	r := image.Rect(0, 0, rm.MaxWidth, rm.MaxHeight)
 	dst := image.NewRGBA(r)
 
 	if p.HasTemplate() {
@@ -75,8 +79,7 @@ func RenderPage(doc *rm.Document, pageId string, w io.Writer) error {
 // RenderPNG paints the given drawing to a PNG file and writes the PNG data
 // to the given writer.
 func renderPNG(d *rm.Drawing, bg bool, w io.Writer) error {
-	// TODO: use width/height from Drawing/Metadata
-	r := image.Rect(0, 0, 1404, 1872)
+	r := image.Rect(0, 0, rm.MaxWidth, rm.MaxHeight)
 	dst := image.NewRGBA(r)
 
 	if bg {

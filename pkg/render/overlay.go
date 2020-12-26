@@ -87,18 +87,3 @@ func dontPanic(f func()) error {
 	// wait for the result
 	return <-rv
 }
-
-/*
-
-
-func readPDF(src string) error {
-    tpl := gofpdi.ImportPage(pdf, src, 1, "/MediaBox")
-    gofpdi.UseImportedTemplate(pdf, tpl, 20, 50, 150, 0)
-
-    tpl := gofpdi.ImportPageFromStream(pdf, reader, 1, "/TrimBox")
-
-    gofpdi.UseImportedTemplate(pdf, tpl, 20, 50, 150, 0)
-
-    return nil
-}
-*/

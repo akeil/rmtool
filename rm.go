@@ -5,6 +5,9 @@ import (
 	"strings"
 )
 
+// SetLogLevel sets the threshold for logging messages.
+//
+// Level is one of "debug", "info", "warning" or "error".
 func SetLogLevel(level string) {
 	var lvl logging.Level
 	switch strings.ToLower(level) {

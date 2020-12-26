@@ -12,8 +12,10 @@ import (
 // A not can either be a document or a collection (which has child nodes).
 type Node struct {
 	Meta
+	// ParentNode holds a reference to the parent or nul.
 	ParentNode *Node
-	Children   []*Node
+	// Children is a list of all child nodes.
+	Children []*Node
 }
 
 func newNode(m Meta) *Node {
@@ -23,15 +25,18 @@ func newNode(m Meta) *Node {
 	}
 }
 
-// TODO: rename - this node is not "Root" but top-level (parent is root)
-func (n *Node) Root() bool {
+// tell if this node is lovated in the root folder.
+func (n *Node) inRoot() bool {
 	return n.ID() == ""
 }
 
+// Leaf tells if this is a leaf node (without children).
 func (n *Node) Leaf() bool {
-	return n.Type() != CollectionType && !n.Root()
+	return n.Type() != CollectionType && !n.inRoot()
 }
 
+// Path returns the path components for this node.
+// That is, the IDs of its parent and grandparent up to the root node.
 func (n *Node) Path() []string {
 	p := make([]string, 0)
 
@@ -105,7 +110,7 @@ func (n *Node) put(other *Node) bool {
 	return false
 }
 
-// BuildTree creates a tree view of all items in the given storage.
+// BuildTree creates a tree view of all items in the given repository.
 // Returns the root node.
 func BuildTree(r Repository) (*Node, error) {
 	items, err := r.List()
@@ -193,15 +198,15 @@ type NodeFilter func(n *Node) bool
 // Filtered returns a new node that is the root of a subtree starting at this node.
 // The subtree cill contain only nodes that match the given NodeFilter
 // and the parent folders of the matched nodes.
-func (n *Node) Filtered(accept NodeFilter) *Node {
+func (n *Node) Filtered(match NodeFilter) *Node {
 	root := newNode(n.Meta)
 	for _, c := range n.Children {
 		if c.Leaf() {
-			if accept(c) {
+			if match(c) {
 				root.addChild(newNode(c.Meta))
 			}
 		} else {
-			x := c.Filtered(accept)
+			x := c.Filtered(match)
 			if x.hasContent() {
 				root.addChild(x)
 			}
@@ -224,6 +229,8 @@ func (n *Node) hasContent() bool {
 	return false
 }
 
+// implements the Meta interface for "virtual" nodes
+// (root and "trash").
 type nodeMeta struct {
 	id     string
 	parent string

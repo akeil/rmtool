@@ -18,6 +18,7 @@ import (
 	"akeil.net/akeil/rm/internal/logging"
 )
 
+// Default URLs
 const (
 	AuthURL                   = "https://my.remarkable.com"
 	StorageDiscoveryURL       = "https://service-manager-production-dot-remarkable-production.appspot.com/service/json/1/document-storage?environment=production&group=auth0%7C5a68dc51cb30df3877a1d7c4&apiVer=2"
@@ -38,6 +39,7 @@ const (
 	epNotifications = "/notifications/ws/json/1"
 )
 
+// Client represents the ReST API for the reMarkable cloud service.
 type Client struct {
 	discoverStorageURL string
 	discoverNotifURL   string
@@ -49,6 +51,7 @@ type Client struct {
 	client             *http.Client
 }
 
+// NewClient sets up an API client with the given base URLs.
 func NewClient(discoveryStorage, discoverNotif, authBase, deviceToken string) *Client {
 	return &Client{
 		discoverStorageURL: discoveryStorage,
@@ -63,8 +66,8 @@ func NewClient(discoveryStorage, discoverNotif, authBase, deviceToken string) *C
 //
 // This method will retrieve the hostname for the notification service from
 // the discovery URL.
-// If necessary, this method will also call RefreshToken internally to provide
-// an authentication token for the notificatin service.
+// If necessary, this method will also fetch a fresh authentication token for
+// the notification service.
 func (c *Client) NewNotifications() (*Notifications, error) {
 	host, err := c.discoverHost(c.discoverNotifURL)
 	if err != nil {
@@ -85,10 +88,13 @@ func (c *Client) NewNotifications() (*Notifications, error) {
 
 // Storage --------------------------------------------------------------------
 
+// List retrieves the full list of items (notebooks and folders) from the
+// service.
 func (c *Client) List() ([]Item, error) {
 	return c.doList("", false)
 }
 
+// Fetch retrieves a single item from the service.
 func (c *Client) Fetch(id string) (Item, error) {
 	item, err := c.fetchItem(id)
 	if err != nil {
@@ -160,6 +166,8 @@ func (c *Client) fetchItem(id string) (Item, error) {
 	return item, nil
 }
 
+// FetchBlob downloads the zipped content from the BlobURL
+// and writes it to the given writer.
 func (c *Client) fetchBlob(url string, w io.Writer) error {
 	// fetches the "Blob" from a blob URL
 	// this is a Zip archive with the same files that are present on the tablets file system.
@@ -187,8 +195,12 @@ func (c *Client) fetchBlob(url string, w io.Writer) error {
 }
 
 // CreateFolder creates a new folder under the given parent folder.
-// The parentId must be empty (root folder) or refer to a CollectinType item.
+// The parentId can be empty (root folder) or refer to another folder.
 func (c *Client) CreateFolder(parentId, name string) error {
+	// TODO: if a parent id is given, fetch details and
+	// - check if it exists
+	// - and if it is a folder
+	// => same as for Move
 	item := Item{
 		ID:          uuid.New().String(),
 		Type:        rm.CollectionType,
@@ -199,7 +211,7 @@ func (c *Client) CreateFolder(parentId, name string) error {
 	return c.update(item)
 }
 
-// Delete deletes document or folder referred to by the given ID.
+// Delete a document or folder referred to by the given ID.
 func (c *Client) Delete(id string) error {
 	item, err := c.fetchItem(id)
 	if err != nil {
@@ -228,7 +240,7 @@ func (c *Client) Delete(id string) error {
 }
 
 // Move transfers the documents with the given id to a destination folder.
-// The dstId must be empty (root folder) or refer to a CollectinType item.
+// The dstId can be empty (root folder) or refer to another folder.
 func (c *Client) Move(id, dstId string) error {
 	item, err := c.fetchItem(id)
 	if err != nil {
@@ -287,7 +299,7 @@ func (c *Client) Rename(id, name string) error {
 }
 
 // Upload adds a document to the given parent folder.
-// The parentId must be empty (root folder) or refer to a CollectinType item.
+// The parentId can be empty (root folder) or refer to another folder.
 func (c *Client) Upload(name, parentId string, src io.Reader) error {
 	var err error
 	// We need to check the parent folder, server will not check

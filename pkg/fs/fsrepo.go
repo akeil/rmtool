@@ -18,9 +18,13 @@ type repo struct {
 	base string
 }
 
-func NewRepository(base string) rm.Repository {
+// NewRepository creates a repository backed by the local file system.
+//
+// The given path should point to a directory similar to the storage directory
+// on the remarkable tablet.
+func NewRepository(path string) rm.Repository {
 	return &repo{
-		base: base,
+		base: path,
 	}
 }
 
@@ -66,7 +70,7 @@ func (r *repo) Update(m rm.Meta) error {
 
 	// assumption: we need to set these if we write to the tablet
 	o.Synced = false
-	o.Metadatamodified = true
+	o.MetadataModified = true
 
 	// apply the changes
 	o.VisibleName = m.Name()

@@ -19,6 +19,10 @@ type repo struct {
 	dataDir string
 }
 
+// NewRepository creates a Repository with the reMarkable cloud service as
+// backend.
+//
+// The supplied dataDir is used to cache downloaded content.
 func NewRepository(c *Client, dataDir string) rm.Repository {
 	return &repo{
 		client:  c,
