@@ -26,6 +26,8 @@ type Repository interface {
 	Update(meta Meta) error
 	// Delete
 	// Create
+
+	// NewDocumentMeta?
 }
 
 // Meta is the interface for a single entry (a nodebook or folder) in a
@@ -55,6 +57,10 @@ type Meta interface {
 	//
 	// This function is normally used internally by ReadDocument and friends.
 	PagePrefix(pageID string, pageIndex int) string
+
+	// Validate checks the internal state of this item
+	// and returns an error if it is not valid.
+	Validate() error
 }
 
 // ReadDocument is a helper function to read a full Document from a repository entry.
@@ -94,18 +100,31 @@ type Document struct {
 	pages    map[string]*Page
 }
 
-func NewDocument(ft FileType) *Document {
+func NewDocument(m Meta, ft FileType) *Document {
 	return &Document{
+		Meta:     m,
 		content:  NewContent(ft),
 		pagedata: make([]Pagedata, 0),
 	}
 }
 
 func (d *Document) Validate() error {
-	err := d.content.Validate()
+	err := d.Meta.Validate()
 	if err != nil {
 		return err
 	}
+
+	if d.Meta.Type() != DocumentType {
+		return NewValidationError("only DocumentType allowed, found %q", d.Meta.Type())
+	}
+
+	err = d.content.Validate()
+	if err != nil {
+		return err
+	}
+
+	// TODO: validate pagedata
+	// TODO: validate pages
 
 	return nil
 }

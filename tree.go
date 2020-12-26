@@ -274,3 +274,7 @@ func (n nodeMeta) Reader(path ...string) (io.ReadCloser, error) {
 func (n nodeMeta) PagePrefix(id string, index int) string {
 	return ""
 }
+
+func (n nodeMeta) Validate() error {
+	return nil
+}
