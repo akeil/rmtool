@@ -94,11 +94,27 @@ type Document struct {
 	pages    map[string]*Page
 }
 
+func NewDocument(ft FileType) *Document {
+	return &Document{
+		content:  NewContent(ft),
+		pagedata: make([]Pagedata, 0),
+	}
+}
+
+func (d *Document) Validate() error {
+	err := d.content.Validate()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // PageCount returns the number of pages in this documents.
 //
 // Note that for PDF and EPUB files, the number of drawings can be less than
 // the number of pages.
-func (d *Document) PageCount() uint {
+func (d *Document) PageCount() int {
 	return d.content.PageCount
 }
 

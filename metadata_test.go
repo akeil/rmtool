@@ -123,14 +123,48 @@ func TestReadContent(t *testing.T) {
 		t.Errorf("unexpected file type")
 	}
 
-	expectedPageCount := uint(8)
+	expectedPageCount := 8
 	if c.PageCount != expectedPageCount {
 		t.Errorf("unexpected page count: %v != %v", c.PageCount, expectedPageCount)
 	}
 
-	if uint(len(c.Pages)) != expectedPageCount {
+	if len(c.Pages) != expectedPageCount {
 		t.Errorf("unexpected number of page ids")
 	}
+}
+
+// TestValidateContent asserts that a Content struct initialized with NewConent
+// meets the minimum requirements for validation.
+func TestValidateContent(t *testing.T) {
+	c := NewContent(Notebook)
+	err := c.Validate()
+	if err != nil {
+		t.Error(err)
+	}
+
+	c.FileType = FileType(100) // does not exist
+	if c.Validate() == nil {
+		t.Errorf("Invalid FileType not detected")
+	}
+
+	c.FileType = Pdf
+	c.Orientation = Orientation(100)
+	if c.Validate() == nil {
+		t.Errorf("Invalid Orientation not detected")
+	}
+	c.Orientation = Landscape
+
+	c.PageCount = 100
+	if c.Validate() == nil {
+		t.Errorf("Mismatching number of pages not detected")
+	}
+	c.PageCount = 0
+
+	c.Pages = append(c.Pages, "a-page-id")
+	if c.Validate() == nil {
+		t.Errorf("Mismatching number of pages not detected")
+	}
+
 }
 
 func TestReadPageMetadata(t *testing.T) {

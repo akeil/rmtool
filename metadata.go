@@ -77,11 +77,41 @@ type Content struct {
 	// Individual pages can have a different orientation.
 	Orientation Orientation `json:"orientation"`
 	// PageCount is the number of pages in this notebooks.
-	PageCount uint `json:"pageCount"`
+	PageCount int `json:"pageCount"`
 	// Pages is a list of page IDs in the correct order.
 	Pages []string `json:"pages"`
 	// CoverPageNumber is the page that should be used as the cover in the UI.
 	CoverPageNumber int `json:"coverPageNumber"`
+}
+
+func NewContent(f FileType) *Content {
+	return &Content{
+		FileType:    f,
+		Orientation: Portrait,
+		PageCount:   0,
+		Pages:       make([]string, 0),
+	}
+}
+
+func (c *Content) Validate() error {
+	switch c.FileType {
+	case Notebook, Pdf, Epub:
+		// ok
+	default:
+		return NewValidationError("invalid file type %v", c.FileType)
+	}
+
+	switch c.Orientation {
+	case Portrait, Landscape: // ok
+	default:
+		return NewValidationError("invalid orientation %v", c.Orientation)
+	}
+
+	if c.PageCount != len(c.Pages) {
+		return NewValidationError("pageCount does not match number of pages %v != %v", c.PageCount, len(c.Pages))
+	}
+
+	return nil
 }
 
 // PageMetadata holds the layer information for a single page.
