@@ -3,6 +3,7 @@ package rm
 import (
 	"encoding/json"
 	"io/ioutil"
+	"strings"
 	"testing"
 )
 
@@ -86,5 +87,57 @@ func TestReadPageMetadata(t *testing.T) {
 
 	if p.Layers[0].Name != "Layer 1" {
 		t.Errorf("unexpected layer name")
+	}
+}
+
+func TestReadPagedata(t *testing.T) {
+	s := "P Lines medium\nP Lines medium\nP Lines medium"
+	r := strings.NewReader(s)
+
+	pd, err := ReadPagedata(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(pd) != 3 {
+		t.Errorf("Unexpected number of pagedata entries")
+	}
+
+	if pd[1].Orientation != Portrait {
+		t.Errorf("unexpected prefix: %q", pd[1].Orientation)
+	}
+
+	if pd[1].Template != "Lines" {
+		t.Errorf("unexpected template: %q", pd[1].Template)
+	}
+
+	if pd[1].Size != TemplateMedium {
+		t.Errorf("unexpected size: %q", pd[1].Size)
+	}
+}
+
+func TestReadPagedataBlank(t *testing.T) {
+	s := "Blank\nBlank"
+	r := strings.NewReader(s)
+
+	pd, err := ReadPagedata(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(pd) != 2 {
+		t.Errorf("Unexpected number of pagedata entries")
+	}
+
+	if pd[1].Orientation != Portrait {
+		t.Errorf("unexpected prefix: %q", pd[1].Orientation)
+	}
+
+	if pd[1].Template != "Blank" {
+		t.Errorf("unexpected template: %q", pd[1].Template)
+	}
+
+	if pd[1].Size != TemplateMedium {
+		t.Errorf("unexpected size: %q", pd[1].Size)
 	}
 }
