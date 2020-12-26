@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -70,8 +72,6 @@ func (r *repo) reader(id string, version uint, path ...string) (io.ReadCloser, e
 			return nil, err
 		}
 	}
-
-	// TODO: use opportunity to clean the cache from outdated versions?
 
 	// Read the desired entry from the zip file
 	match := strings.Join(path, "/")
@@ -141,11 +141,70 @@ func (r *repo) downloadToCache(id string, version uint) error {
 		return err
 	}
 
+	// TODO: separate goroutine?
+	r.cleanCache()
+
 	return nil
 }
 
 func (r *repo) cachePath(id string, version uint) string {
 	return filepath.Join(r.dataDir, fmt.Sprintf("%v_%v.zip", id, version))
+}
+
+// cleanCache removes outdated versions from the cache.
+func (r *repo) cleanCache() {
+	// Filenames look like this:
+	//
+	//   <ID>_<Version>.zip
+	//
+	// We want to keep only the highest version for each ID.
+
+	// List all cached files.
+	files, err := ioutil.ReadDir(r.dataDir)
+	if err != nil {
+		logging.Warning("Could not list cache directory: %v", err)
+		return
+	}
+
+	// Determine which versions we have for each id.
+	versions := make(map[string][]int)
+	for _, f := range files {
+		base := filepath.Base(f.Name())
+		parts := strings.Split(base, "_")
+		if len(parts) != 2 {
+			logging.Warning("Clean cache: encountered unexpected filename %q", base)
+			continue
+		}
+		id := parts[0]
+		// "123.zip" => 123
+		v, err := strconv.Atoi(strings.TrimSuffix(parts[1], ".zip"))
+		if err != nil {
+			logging.Warning("Clean cache: error retrieving version from filename %q, %v", base, err)
+			continue
+		}
+
+		if versions[id] == nil {
+			versions[id] = make([]int, 0)
+		}
+		versions[id] = append(versions[id], v)
+	}
+
+	// Delete all versions except the highest
+	for id, v := range versions {
+		if len(v) < 2 {
+			continue
+		}
+		sort.Ints(v)
+		for i := 0; i < len(v)-1; i++ {
+			p := r.cachePath(id, uint(v[i]))
+			logging.Info("Remove outdated version from cache: %q", p)
+			err = os.Remove(p)
+			if err != nil {
+				logging.Warning("Unexpected error removing old cache entry: %v", err)
+				continue
+			}
+		}
+	}
 }
 
 // implement the Meta interface for an Item
