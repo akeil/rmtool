@@ -55,10 +55,17 @@ func TestReadMetadata(t *testing.T) {
 func TestMarshalMetadata(t *testing.T) {
 	d := time.Date(2020, 12, 13, 7, 23, 43, 589000000, time.UTC)
 	m := Metadata{
-		Deleted:      true,
-		LastModified: Timestamp{d},
-		Type:         DocumentType,
-		VisibleName:  "Test Notebook",
+		LastModified:     Timestamp{d},
+		Version:          4,
+		LastOpenedPage:   0,
+		Parent:           "parentID",
+		Pinned:           true,
+		Type:             DocumentType,
+		VisibleName:      "Test Notebook",
+		Deleted:          true,
+		MetadataModified: false,
+		Modified:         false,
+		Synced:           false,
 	}
 
 	data, err := json.Marshal(m)
@@ -72,11 +79,29 @@ func TestMarshalMetadata(t *testing.T) {
 		t.Error(err)
 	}
 
-	if re.Deleted != m.Deleted {
-		t.Fail()
-	}
 	if re.LastModified != m.LastModified {
 		t.Errorf("Last modified changed in serialization: %v != %v", re.LastModified, m.LastModified)
+		t.Fail()
+	}
+	if re.Version != m.Version {
+		t.Fail()
+	}
+	if re.LastOpenedPage != m.LastOpenedPage {
+		t.Fail()
+	}
+	if re.Parent != m.Parent {
+		t.Fail()
+	}
+	if re.Pinned != m.Pinned {
+		t.Fail()
+	}
+	if re.Type != m.Type {
+		t.Fail()
+	}
+	if re.VisibleName != m.VisibleName {
+		t.Fail()
+	}
+	if re.Deleted != m.Deleted {
 		t.Fail()
 	}
 }
