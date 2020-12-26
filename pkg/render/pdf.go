@@ -35,7 +35,6 @@ func RenderPDF(d *rm.Document, w io.Writer) error {
 
 func renderDrawingsPDF(pdf *gofpdf.Fpdf, d *rm.Document) error {
 	for i, pageId := range d.Pages() {
-		// TODO: insert a blank page if there is no drawing
 		err := doRenderPDFPage(pdf, d, pageId, i)
 		if err != nil {
 			return err

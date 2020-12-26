@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -94,23 +93,23 @@ func (c *Client) List() ([]Item, error) {
 	return c.doList("", false)
 }
 
-// Fetch retrieves a single item from the service.
-func (c *Client) Fetch(id string) (Item, error) {
+// Fetch retrieves a single item from the service
+// and writes the item's blob data to the given writer.
+//
+// The caller is responsible for closing the writer.
+func (c *Client) Fetch(id string, w io.Writer) (Item, error) {
 	item, err := c.fetchItem(id)
 	if err != nil {
 		return item, err
 	}
 
-	//var w bytes.Buffer
-	// TODO temporary
-	w, err := os.Create("./data/rm-api-blob.zip")
-	if err != nil {
-		return item, err
+	if item.Type == rm.CollectionType {
+		return item, fmt.Errorf("can only fetch document type items")
 	}
-	defer w.Close()
-	c.fetchBlob(item.BlobURLGet, w)
 
-	return item, nil
+	err = c.fetchBlob(item.BlobURLGet, w)
+
+	return item, err
 }
 
 func (c *Client) doList(id string, blob bool) ([]Item, error) {
