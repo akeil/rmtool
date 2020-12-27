@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 )
 
@@ -61,11 +62,15 @@ const (
 )
 
 const maxLayers = 5
+const defaultCoverPage = -1
 
 // Content holds the data from the remarkable `.content` file.
 // It describes the content for a notebook, specifically the sequence of pages.
 // Collections have an empty content object.
 type Content struct {
+	DummyDocument bool `json:"dummyDocument"`
+
+	ExtraMetadata ExtraMetadata `json:"extraMetadata"`
 	// FileType is the type of content (i.e. handwritten Notebook or PDF, EPUB).
 	FileType FileType `json:"fileType"`
 	// Orientation gives the base layout orientation.
@@ -89,21 +94,26 @@ type Content struct {
 	// TextAlignment for EPUB, left or justify
 	TextAlignment TextAlign `json:"textAlignment"`
 	// TextScale for EPUB, default is 1.0,
-	TextScale float32 `json:"textScale"`
+	TextScale float32   `json:"textScale"`
+	Transform Transform `json:"transform"`
 }
 
 func NewContent(f FileType) *Content {
 	return &Content{
-		FileType:    f,
-		Orientation: Portrait,
-		PageCount:   0,
-		Pages:       make([]string, 0),
+		DummyDocument:   false,
+		ExtraMetadata:   NewExtraMetadata(),
+		CoverPageNumber: defaultCoverPage,
+		FileType:        f,
+		Orientation:     Portrait,
+		PageCount:       0,
+		Pages:           make([]string, 0),
 		// default values taken from a sample file
 		FontName:      "",
 		LineHeight:    LineHeightDefault,
 		Margins:       100,
 		TextAlignment: AlignLeft,
 		TextScale:     1.0,
+		Transform:     NewTransform(),
 	}
 }
 
@@ -125,6 +135,14 @@ func (c *Content) Validate() error {
 		return NewValidationError("pageCount does not match number of pages %v != %v", c.PageCount, len(c.Pages))
 	}
 
+	// Cover page may be -1 (=not set)
+	// or an existing page
+	if c.CoverPageNumber != defaultCoverPage {
+		if c.CoverPageNumber < 1 || c.CoverPageNumber > c.PageCount {
+			return NewValidationError("cover page %v is not an existing page", c.CoverPageNumber)
+		}
+	}
+
 	// TODO validate font names
 	// TODO validate LineHeight
 	// TODO validate Margins
@@ -137,6 +155,28 @@ func (c *Content) Validate() error {
 	}
 
 	return nil
+}
+
+type Transform struct {
+	// TODO: these might also be floats
+	// never seen anything other than identity transform with values set to 1 or 0
+	M11 int `json:"m11"`
+	M12 int `json:"m12"`
+	M13 int `json:"m13"`
+	M21 int `json:"m21"`
+	M22 int `json:"m22"`
+	M23 int `json:"m23"`
+	M31 int `json:"m31"`
+	M32 int `json:"m32"`
+	M33 int `json:"m33"`
+}
+
+func NewTransform() Transform {
+	return Transform{
+		M11: 1,
+		M22: 1,
+		M33: 1,
+	}
 }
 
 // PageMetadata holds the layer information for a single page.
@@ -429,6 +469,16 @@ func ReadPagedata(r io.Reader) ([]Pagedata, error) {
 	return pd, nil
 }
 
+func WritePagedata(pd []Pagedata, w io.Writer) error {
+	for _, p := range pd {
+		_, err := w.Write([]byte(p.Text + "\n"))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (t TemplateSize) FromString(s string) TemplateSize {
 	switch s {
 	case "S", "small":
@@ -461,4 +511,154 @@ func (o Orientation) toString() string {
 	default:
 		return ""
 	}
+}
+
+type ExtraMetadata struct {
+	LastBallpointColor       string
+	LastBallpointSize        intStr
+	LastBallpointv2Color     string
+	LastBallpointv2Size      intStr
+	LastBrushColor           string
+	LastBrushThicknessScale  intStr
+	LastCalligraphyColor     string
+	LastCalligraphySize      intStr
+	LastClearPageColor       string
+	LastClearPageSize        intStr
+	LastColor                string
+	LastEraseSectionColor    string
+	LastEraseSectionSize     intStr
+	LastEraserColor          string
+	LastEraserSize           intStr
+	LastEraserThicknessScale intStr
+	LastEraserTool           string //"Eraser"
+	LastFinelinerColor       string
+	LastFinelinerSize        intStr
+	LastFinelinerv2Color     string
+	LastFinelinerv2Size      intStr
+	LastHighlighterColor     string
+	LastHighlighterSize      intStr
+	LastHighlighterv2Color   string
+	LastHighlighterv2Size    intStr
+	LastMarkerColor          string
+	LastMarkerSize           intStr
+	LastMarkerv2Color        string
+	LastMarkerv2Size         intStr
+	LastPaintbrushColor      string
+	LastPaintbrushSize       intStr
+	LastPaintbrushv2Color    string
+	LastPaintbrushv2Size     intStr
+	LastPen                  string // Ballpointv2
+	LastPenColor             string
+	LastPenThicknessScale    intStr
+	LastPencil               string // SharpPencil
+	LastPencilColor          string
+	LastPencilSize           intStr
+	LastPencilThicknessScale intStr
+	LastPencilv2Color        string
+	LastPencilv2Size         intStr
+	LastReservedPenColor     string
+	LastReservedPenSize      intStr
+	LastSelectionToolColor   string
+	LastSelectionToolSize    intStr
+	LastSharpPencilColor     string
+	LastSharpPencilSize      intStr
+	LastSharpPencilv2Color   string
+	LastSharpPencilv2Size    intStr
+	LastSolidPenColor        string
+	LastSolidPenSize         intStr
+	LastTool                 string // Ballpoint
+	LastUndefinedColor       string
+	LastUndefinedSize        intStr
+	LastZoomToolColor        string
+	LastZoomToolSize         intStr
+	ThicknessScale           intStr
+}
+
+func NewExtraMetadata() ExtraMetadata {
+	// default values taken from a sample file
+	return ExtraMetadata{
+		LastBallpointColor:       "Black",
+		LastBallpointSize:        2,
+		LastBallpointv2Color:     "Black",
+		LastBallpointv2Size:      2,
+		LastBrushColor:           "Black",
+		LastBrushThicknessScale:  2,
+		LastCalligraphyColor:     "Black",
+		LastCalligraphySize:      2,
+		LastClearPageColor:       "Black",
+		LastClearPageSize:        2,
+		LastColor:                "Black",
+		LastEraseSectionColor:    "Black",
+		LastEraseSectionSize:     2,
+		LastEraserColor:          "Black",
+		LastEraserSize:           2,
+		LastEraserThicknessScale: 2,
+		LastEraserTool:           "Eraser",
+		LastFinelinerColor:       "Black",
+		LastFinelinerSize:        2,
+		LastFinelinerv2Color:     "Black",
+		LastFinelinerv2Size:      2,
+		LastHighlighterColor:     "Black",
+		LastHighlighterSize:      2,
+		LastHighlighterv2Color:   "Black",
+		LastHighlighterv2Size:    2,
+		LastMarkerColor:          "Black",
+		LastMarkerSize:           2,
+		LastMarkerv2Color:        "Black",
+		LastMarkerv2Size:         2,
+		LastPaintbrushColor:      "Black",
+		LastPaintbrushSize:       2,
+		LastPaintbrushv2Color:    "Black",
+		LastPaintbrushv2Size:     2,
+		LastPen:                  "Ballpointv2",
+		LastPenColor:             "Black",
+		LastPenThicknessScale:    2,
+		LastPencil:               "SharpPencil",
+		LastPencilColor:          "Black",
+		LastPencilSize:           2,
+		LastPencilThicknessScale: 2,
+		LastPencilv2Color:        "Black",
+		LastPencilv2Size:         2,
+		LastReservedPenColor:     "Black",
+		LastReservedPenSize:      2,
+		LastSelectionToolColor:   "Black",
+		LastSelectionToolSize:    2,
+		LastSharpPencilColor:     "Black",
+		LastSharpPencilSize:      2,
+		LastSharpPencilv2Color:   "Black",
+		LastSharpPencilv2Size:    2,
+		LastSolidPenColor:        "Black",
+		LastSolidPenSize:         2,
+		LastTool:                 "Ballpoint",
+		LastUndefinedColor:       "Black",
+		LastUndefinedSize:        1,
+		LastZoomToolColor:        "Black",
+		LastZoomToolSize:         2,
+		ThicknessScale:           2,
+	}
+}
+
+type intStr int
+
+func (is *intStr) UnmarshalJSON(b []byte) error {
+	// expects a string lke this: 1607462787637
+	// with the last for digits containing nanoseconds.
+	var s string
+	err := json.Unmarshal(b, &s)
+	if err != nil {
+		return err
+	}
+
+	v, err := strconv.Atoi(s)
+
+	*is = intStr(v)
+	return nil
+}
+
+func (is intStr) MarshalJSON() ([]byte, error) {
+	buf := bytes.NewBufferString(`"`)
+	buf.WriteString(fmt.Sprintf("%v", is))
+	buf.WriteString(`"`)
+
+	return buf.Bytes(), nil
 }

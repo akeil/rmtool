@@ -98,6 +98,81 @@ func (r *repo) Update(m rm.Meta) error {
 	return os.Rename(f.Name(), p)
 }
 
+func (r *repo) Upload(d *rm.Document) error {
+	tmp, err := ioutil.TempDir("", "rm-upload-*")
+	if err != nil {
+		return err
+	}
+
+	// Set up a factory function to create writers for tempfiles
+	w := func(path ...string) (io.WriteCloser, error) {
+		if len(path) == 0 {
+			return nil, fmt.Errorf("path must not be empty")
+		}
+
+		parts := []string{tmp}
+		parts = append(parts, path...)
+
+		// do we need to create subdirectories?
+		if len(path) > 1 {
+			subDir := filepath.Join(parts[0 : len(parts)-1]...)
+			err = os.MkdirAll(subDir, 0755)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		p := filepath.Join(parts...)
+		f, e := os.Create(p)
+		if e != nil {
+			return nil, e
+		}
+		return f, nil
+	}
+
+	// Write the metadata entry
+	meta := Metadata{
+		LastModified:     Timestamp{time.Now()},
+		Version:          d.Version(),
+		Parent:           d.Parent(),
+		Pinned:           d.Pinned(),
+		Type:             d.Type(),
+		VisibleName:      d.Name(),
+		LastOpenedPage:   0,
+		Deleted:          false,
+		MetadataModified: false,
+		Modified:         false,
+		Synced:           false,
+	}
+
+	mw, err := w(fmt.Sprintf("%v.metadata", d.ID()))
+	if err != nil {
+		return err
+	}
+	defer mw.Close()
+	err = json.NewEncoder(mw).Encode(meta)
+	if err != nil {
+		return err
+	}
+
+	// Let the document write
+	// - *.content
+	// - *.pagedata
+	err = d.Write(w)
+	if err != nil {
+		return err
+	}
+
+	// Create tempfiles for all components
+	// - .pdf, .epub  [opz]
+	// - drawings
+	// - pagemeta
+
+	// move everything to the data dir
+
+	return nil
+}
+
 func (r *repo) reader(id string, path ...string) (io.ReadCloser, error) {
 	parts := []string{r.base}
 	parts = append(parts, path...)

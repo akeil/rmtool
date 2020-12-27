@@ -67,6 +67,12 @@ func TestValidateContent(t *testing.T) {
 	}
 	c.Pages = make([]string, 0)
 
+	c.CoverPageNumber = 0
+	if c.Validate() == nil {
+		t.Errorf("Invalid cover page not detected")
+	}
+	c.CoverPageNumber = -1
+
 	c.TextAlignment = TextAlign(100)
 	if c.Validate() == nil {
 		t.Errorf("Invalid text align not detected")

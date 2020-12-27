@@ -30,6 +30,8 @@ type Repository interface {
 	// NewDocumentMeta?
 }
 
+type WriterFunc func(path ...string) (io.WriteCloser, error)
+
 // Meta is the interface for a single entry (a nodebook or folder) in a
 // Repository.
 // These entries are used to access and change metadata for an item.
@@ -137,6 +139,35 @@ func (d *Document) Validate() error {
 	}
 
 	// TODO: validate pages
+
+	return nil
+}
+
+func (d *Document) Write(w WriterFunc) error {
+
+	cw, err := w(fmt.Sprintf("%v.content", d.ID()))
+	if err != nil {
+		return err
+	}
+	err = json.NewEncoder(cw).Encode(d.content)
+	if err != nil {
+		return err
+	}
+	defer cw.Close()
+
+	pw, err := w(fmt.Sprintf("%v.pagedata", d.ID()))
+	if err != nil {
+		return err
+	}
+	err = WritePagedata(d.pagedata, pw)
+	if err != nil {
+		return err
+	}
+	defer pw.Close()
+
+	// TODO: write pages
+
+	// TODO write thumbnails?
 
 	return nil
 }
