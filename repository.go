@@ -6,6 +6,8 @@ import (
 	"io"
 	"time"
 
+	"github.com/google/uuid"
+
 	"akeil.net/akeil/rm/internal/logging"
 )
 
@@ -102,9 +104,9 @@ type Document struct {
 	pages    map[string]*Page
 }
 
-func NewDocument(m Meta, ft FileType) *Document {
+func NewDocument(t NotebookType, name string, ft FileType) *Document {
 	return &Document{
-		Meta:     m,
+		Meta:     newDocMeta(t, name),
 		content:  NewContent(ft),
 		pagedata: make([]Pagedata, 0),
 	}
@@ -145,6 +147,7 @@ func (d *Document) Validate() error {
 
 func (d *Document) Write(w WriterFunc) error {
 
+	logging.Debug("write content")
 	cw, err := w(fmt.Sprintf("%v.content", d.ID()))
 	if err != nil {
 		return err
@@ -155,6 +158,7 @@ func (d *Document) Write(w WriterFunc) error {
 	}
 	defer cw.Close()
 
+	logging.Debug("write pagedata")
 	pw, err := w(fmt.Sprintf("%v.pagedata", d.ID()))
 	if err != nil {
 		return err
@@ -369,4 +373,83 @@ func (p *Page) Layers() []LayerMetadata {
 		p.meta.Layers = make([]LayerMetadata, 0)
 	}
 	return p.meta.Layers
+}
+
+// docMeta is used to hold metadata for newly created documents.
+type docMeta struct {
+	id           string
+	version      uint
+	nbType       NotebookType
+	name         string
+	pinned       bool
+	lastModified time.Time
+	parent       string
+}
+
+func newDocMeta(t NotebookType, name string) Meta {
+	return &docMeta{
+		id:           uuid.New().String(),
+		nbType:       t,
+		name:         name,
+		lastModified: time.Now(),
+	}
+}
+
+func (d *docMeta) ID() string {
+	return d.id
+}
+
+func (d *docMeta) Version() uint {
+	return d.version
+}
+
+func (d *docMeta) Name() string {
+	return d.name
+}
+
+func (d *docMeta) SetName(n string) {
+	d.name = n
+}
+
+func (d *docMeta) Type() NotebookType {
+	return d.nbType
+}
+
+func (d *docMeta) Pinned() bool {
+	return d.pinned
+}
+
+func (d *docMeta) SetPinned(p bool) {
+	d.pinned = p
+}
+
+func (d *docMeta) LastModified() time.Time {
+	return d.lastModified
+}
+
+func (d *docMeta) Parent() string {
+	return d.parent
+}
+
+func (d *docMeta) Reader(path ...string) (io.ReadCloser, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (d *docMeta) PagePrefix(pageID string, pageIndex int) string {
+	return pageID
+}
+
+func (d *docMeta) Validate() error {
+	switch d.Type() {
+	case DocumentType, CollectionType:
+		// ok
+	default:
+		return NewValidationError("invalid type %v", d.Type())
+	}
+
+	if d.Name() == "" {
+		return NewValidationError("name must not be empty")
+	}
+
+	return nil
 }
