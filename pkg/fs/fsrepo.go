@@ -173,7 +173,11 @@ func (r *repo) Upload(d *rm.Document) error {
 	return nil
 }
 
-func (r *repo) reader(id string, path ...string) (io.ReadCloser, error) {
+func (m repo) PagePrefix(id string, index int) string {
+	return id
+}
+
+func (r *repo) Reader(id string, version uint, path ...string) (io.ReadCloser, error) {
 	parts := []string{r.base}
 	parts = append(parts, path...)
 	p := filepath.Join(parts...)
@@ -212,10 +216,6 @@ type metaWrapper struct {
 	repo *repo
 }
 
-func (m metaWrapper) Reader(path ...string) (io.ReadCloser, error) {
-	return m.repo.reader(m.ID(), path...)
-}
-
 func (m metaWrapper) ID() string {
 	return m.id
 }
@@ -250,10 +250,6 @@ func (m metaWrapper) LastModified() time.Time {
 
 func (m metaWrapper) Parent() string {
 	return m.i.Parent
-}
-
-func (m metaWrapper) PagePrefix(id string, index int) string {
-	return id
 }
 
 func (m metaWrapper) Validate() error {
