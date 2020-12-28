@@ -29,7 +29,21 @@ type Repository interface {
 	// Delete
 	// Create
 
+	// Reader creates a reader for one of the components associated with an
+	// item, e.g. the drawing for a single page.
+	//
+	// This function is typically used internally by ReadDocument and friends.
+	Reader(id string, version uint, path ...string) (io.ReadCloser, error)
+	// Writer()
+
+	// PagePrefix returns the filename prefix for page related paths.
+	//
+	// This function is normally used internally by ReadDocument and friends.
+	PagePrefix(pageID string, pageIndex int) string
+
 	// NewDocumentMeta?
+
+	// WriterFunc
 }
 
 type WriterFunc func(path ...string) (io.WriteCloser, error)
@@ -50,19 +64,7 @@ type Meta interface {
 	SetPinned(p bool)
 	LastModified() time.Time
 	Parent() string
-	// TODO: SetPArent() ?
-
-	// Reader creates a reader for one of the components associated with an
-	// item, e.g. the drawing for a single page.
-	//
-	// This function is typically used internally by ReadDocument and friends.
-	Reader(path ...string) (io.ReadCloser, error)
-	// Writer()
-
-	// PagePrefix returns the filename prefix for page related paths.
-	//
-	// This function is normally used internally by ReadDocument and friends.
-	PagePrefix(pageID string, pageIndex int) string
+	// TODO: SetParent() ?
 
 	// Validate checks the internal state of this item
 	// and returns an error if it is not valid.
@@ -70,13 +72,13 @@ type Meta interface {
 }
 
 // ReadDocument is a helper function to read a full Document from a repository entry.
-func ReadDocument(m Meta) (*Document, error) {
+func ReadDocument(r Repository, m Meta) (*Document, error) {
 	if m.Type() != DocumentType {
-		return nil, fmt.Errorf("can opnly read document for items with type DocumentType")
+		return nil, fmt.Errorf("can only read document for items with type DocumentType")
 	}
 
 	cp := m.ID() + ".content"
-	cr, err := m.Reader(cp)
+	cr, err := r.Reader(m.ID(), m.Version(), cp)
 	if err != nil {
 		return nil, err
 	}
@@ -91,6 +93,7 @@ func ReadDocument(m Meta) (*Document, error) {
 	return &Document{
 		Meta:    m,
 		content: &c,
+		repo:    r,
 	}, nil
 }
 
@@ -104,6 +107,7 @@ type Document struct {
 	content  *Content
 	pagedata []Pagedata
 	pages    map[string]*Page
+	repo     Repository
 }
 
 func NewDocument(name string, ft FileType) *Document {
@@ -224,7 +228,7 @@ func (d *Document) Page(pageID string) (*Page, error) {
 	// lazy load pagedata
 	if d.pagedata == nil {
 		pdp := d.ID() + ".pagedata"
-		pdr, err := d.Reader(pdp)
+		pdr, err := d.reader(pdp)
 		if err != nil {
 			return nil, err
 		}
@@ -244,8 +248,8 @@ func (d *Document) Page(pageID string) (*Page, error) {
 
 	// Load page metadata
 	var pm PageMetadata
-	pmp := d.PagePrefix(d.ID(), idx) + "-metadata.json"
-	pmr, err := d.Reader(d.ID(), pmp)
+	pmp := d.repo.PagePrefix(d.ID(), idx) + "-metadata.json"
+	pmr, err := d.reader(d.ID(), pmp)
 	if err != nil {
 		logging.Debug("No page metadata for page %v at %q", idx, pmp)
 		// xxx-metadata.json seems to be optional.
@@ -294,8 +298,8 @@ func (d *Document) Drawing(pageID string) (*Drawing, error) {
 		return nil, err
 	}
 
-	dp := d.PagePrefix(d.ID(), idx) + ".rm"
-	dr, err := d.Reader(d.ID(), dp)
+	dp := d.repo.PagePrefix(d.ID(), idx) + ".rm"
+	dr, err := d.reader(d.ID(), dp)
 	if err != nil {
 		return nil, err
 	}
@@ -324,7 +328,7 @@ func (d *Document) AttachmentReader() (io.ReadCloser, error) {
 		return nil, fmt.Errorf("document of type %v has no attachment", d.FileType())
 	}
 
-	return d.Reader(p)
+	return d.reader(p)
 }
 
 func (d *Document) pageIndex(pageID string) (int, error) {
@@ -337,6 +341,10 @@ func (d *Document) pageIndex(pageID string) (int, error) {
 	}
 
 	return 0, fmt.Errorf("invalid page id %q", pageID)
+}
+
+func (d *Document) reader(path ...string) (io.ReadCloser, error) {
+	return d.repo.Reader(d.ID(), d.Version(), path...)
 }
 
 // Page describes a single page within a document.
