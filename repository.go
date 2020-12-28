@@ -11,6 +11,10 @@ import (
 	"akeil.net/akeil/rm/internal/logging"
 )
 
+//type ReaderFunc func(path ...string) (io.ReadCloser, error)
+
+type WriterFunc func(path ...string) (io.WriteCloser, error)
+
 // Repository is the interface for a storage backend.
 //
 // It can either represent local files copied from the tablet
@@ -45,8 +49,6 @@ type Repository interface {
 
 	// WriterFunc
 }
-
-type WriterFunc func(path ...string) (io.WriteCloser, error)
 
 // Meta is the interface for a single entry (a nodebook or folder) in a
 // Repository.
@@ -116,6 +118,14 @@ func NewDocument(name string, ft FileType) *Document {
 		content:  NewContent(ft),
 		pagedata: make([]Pagedata, 0),
 	}
+}
+
+func NewPdf(name string, r io.ReadCloser) *Document {
+	return NewDocument(name, Pdf)
+}
+
+func NewEpub(name string, r io.ReadCloser) *Document {
+	return NewDocument(name, Epub)
 }
 
 func (d *Document) Validate() error {
