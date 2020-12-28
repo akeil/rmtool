@@ -50,6 +50,8 @@ type Meta interface {
 	SetPinned(p bool)
 	LastModified() time.Time
 	Parent() string
+	// TODO: SetPArent() ?
+
 	// Reader creates a reader for one of the components associated with an
 	// item, e.g. the drawing for a single page.
 	//
@@ -104,9 +106,9 @@ type Document struct {
 	pages    map[string]*Page
 }
 
-func NewDocument(t NotebookType, name string, ft FileType) *Document {
+func NewDocument(name string, ft FileType) *Document {
 	return &Document{
-		Meta:     newDocMeta(t, name),
+		Meta:     newDocMeta(DocumentType, name),
 		content:  NewContent(ft),
 		pagedata: make([]Pagedata, 0),
 	}

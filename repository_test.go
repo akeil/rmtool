@@ -7,7 +7,7 @@ import (
 
 func TestNewDocument(t *testing.T) {
 	//repo := &testRepo{}
-	d := NewDocument(DocumentType, "my document", Notebook)
+	d := NewDocument("my document", Notebook)
 	err := d.Validate()
 	if err != nil {
 		t.Log("newly created document is not valid")
