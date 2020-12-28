@@ -104,6 +104,8 @@ func (r *repo) Upload(d *rm.Document) error {
 		return err
 	}
 
+	logging.Debug("writing individual parts to temp dir %q", tmp)
+
 	// Set up a factory function to create writers for tempfiles
 	w := func(path ...string) (io.WriteCloser, error) {
 		if len(path) == 0 {
@@ -131,6 +133,7 @@ func (r *repo) Upload(d *rm.Document) error {
 	}
 
 	// Write the metadata entry
+	logging.Debug("write metadata")
 	meta := Metadata{
 		LastModified:     Timestamp{time.Now()},
 		Version:          d.Version(),
@@ -158,7 +161,9 @@ func (r *repo) Upload(d *rm.Document) error {
 	// Let the document write
 	// - *.content
 	// - *.pagedata
-	err = d.Write(w)
+	logging.Debug("write document parts")
+
+	err = d.Write(r, w)
 	if err != nil {
 		return err
 	}

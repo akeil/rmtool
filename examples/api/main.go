@@ -146,7 +146,7 @@ func repository(repo rm.Repository) error {
 
 	item := items[2]
 
-	doc, err := rm.ReadDocument(item)
+	doc, err := rm.ReadDocument(repo, item)
 	if err != nil {
 		return err
 	}
@@ -181,6 +181,11 @@ func upload(repo rm.Repository) error {
 
 	d := rm.NewDocument("my document", rm.Notebook)
 	d.SetPinned(true)
+
+	err := repo.Upload(d)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

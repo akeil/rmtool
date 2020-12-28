@@ -64,7 +64,7 @@ func main() {
 			return nil
 		}
 
-		doc, err := rm.ReadDocument(node)
+		doc, err := rm.ReadDocument(repo, node)
 		if err != nil {
 			log.Printf("Failed to read document %q", node.Name())
 			return err

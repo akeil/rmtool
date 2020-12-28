@@ -41,7 +41,7 @@ type Repository interface {
 	// This function is normally used internally by ReadDocument and friends.
 	PagePrefix(pageID string, pageIndex int) string
 
-	// NewDocumentMeta?
+	Upload(d *Document) error
 
 	// WriterFunc
 }
@@ -133,7 +133,6 @@ func (d *Document) Validate() error {
 		return err
 	}
 
-	// TODO: validate pagedata
 	for _, pd := range d.pagedata {
 		err = pd.Validate()
 		if err != nil {
@@ -151,7 +150,11 @@ func (d *Document) Validate() error {
 	return nil
 }
 
-func (d *Document) Write(w WriterFunc) error {
+func (d *Document) Write(repo Repository, w WriterFunc) error {
+	// Before writing pages, we may have to create default page(s)
+	// - empty Notebook needs a single empty page
+	// - PDF, EPUB need page entries for each page
+	d.createPages()
 
 	logging.Debug("write content")
 	cw, err := w(fmt.Sprintf("%v.content", d.ID()))
@@ -175,11 +178,70 @@ func (d *Document) Write(w WriterFunc) error {
 	}
 	defer pw.Close()
 
-	// TODO: write pages
+	for i, pageID := range d.Pages() {
+		logging.Debug("write page %v", pageID)
+		// TODO relies on all pages being cached
+		p, err := d.Page(pageID)
+		if err != nil {
+			return err
+		}
+		prefix := repo.PagePrefix(pageID, i)
+		pmw, err := w(d.ID(), prefix+"-metadata.json")
+		if err != nil {
+			return err
+		}
+		err = json.NewEncoder(pmw).Encode(p.meta)
+		if err != nil {
+			return err
+		}
+
+		// TODO: write drawings
+	}
 
 	// TODO write thumbnails?
 
 	return nil
+}
+
+func (d *Document) createPages() {
+	if len(d.pagedata) > 0 {
+		// assume that we have pages
+		return
+	}
+
+	logging.Debug("create default pages")
+
+	pageID := uuid.New().String()
+
+	d.content.Pages = append(d.content.Pages, pageID)
+	d.content.PageCount = 1
+
+	idx := 0
+
+	pd := newPagedata()
+	d.pagedata = append(d.pagedata, pd)
+
+	// now a default page
+	pm := PageMetadata{
+		Layers: []LayerMetadata{
+			LayerMetadata{
+				Name: "Layer 1",
+			},
+		},
+	}
+
+	// construct the Page item
+	p := &Page{
+		index:    idx,
+		meta:     pm,
+		pagedata: pd,
+	}
+
+	// cache
+	if d.pages == nil {
+		d.pages = make(map[string]*Page)
+	}
+	d.pages[pageID] = p
 }
 
 // PageCount returns the number of pages in this document.

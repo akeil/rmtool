@@ -110,6 +110,10 @@ func (r *repo) Reader(id string, version uint, path ...string) (io.ReadCloser, e
 	return entry.Open()
 }
 
+func (r *repo) Upload(d *rm.Document) error {
+	return fmt.Errorf("not implemented")
+}
+
 func (r *repo) downloadToCache(id string, version uint) error {
 	// Retreive the BlobURLGet
 	i, err := r.client.fetchItem(id)

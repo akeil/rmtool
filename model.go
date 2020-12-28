@@ -407,6 +407,13 @@ type Pagedata struct {
 	Text        string
 }
 
+// TODO: parse from template string
+func newPagedata() Pagedata {
+	return Pagedata{
+		Text: "Blank",
+	}
+}
+
 // HasTemplate tells if the page has a (visible) background template.
 func (p *Pagedata) HasTemplate() bool {
 	return p.Text != "Blank" && p.Text != ""
