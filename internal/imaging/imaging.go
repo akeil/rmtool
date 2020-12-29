@@ -9,8 +9,8 @@ import (
 )
 
 // Resize creates a copy of the given image, scaled to the given rectangle.
-func Resize(i image.Image, factor float64) image.Image {
-	scaledSize := int(math.Round(factor))
+func Resize(i image.Image, width float64) image.Image {
+	scaledSize := int(math.Round(width))
 	size := image.Rect(0, 0, scaledSize, scaledSize)
 
 	dst := image.NewRGBA(size)

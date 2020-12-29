@@ -151,100 +151,26 @@ func renderLayer(dst draw.Image, l rm.Layer) error {
 	return nil
 }
 
-// renderStroke paints a single stroke on the destination image..
+// renderStroke paints a single stroke on the destination image.
 func renderStroke(dst draw.Image, s rm.Stroke) error {
-	pen := NewBrush(s.BrushType)
-	mask, err := loadBrushMask(pen)
+	col := colors[s.BrushColor]
+	if col == nil {
+		return fmt.Errorf("invalid color %v", s.BrushColor)
+	}
+
+	pen, err := NewBrush(s.BrushType, col)
 	if err != nil {
 		return err
 	}
-
-	c := colors[s.BrushColor]
-	if c == nil {
-		return fmt.Errorf("invalid color %v", s.BrushColor)
-	}
-	color := image.NewUniform(c)
 
 	numDots := len(s.Dots)
 	for i := 1; i < numDots; i++ {
 		start := s.Dots[i-1]
 		end := s.Dots[i]
-		renderSegment(dst, mask, color, pen, start, end)
+		pen.RenderSegment(dst, start, end)
 	}
 
 	return nil
-}
-
-// renderSegment places stamps along the path from start to end dots.
-// Stamps are spaced evenly and overlap.
-func renderSegment(dst draw.Image, mask image.Image, color image.Image, pen Brush, start, end rm.Dot) {
-	// Scale the image according to the brush width
-	width := pen.Width(start.Width, start.Pressure, start.Tilt)
-	scaled := imaging.Resize(mask, width)
-
-	// Apply additional opacity for pressure/speed
-	opacity := pen.Opacity(start.Pressure, start.Speed)
-	opaque := imaging.ApplyOpacity(scaled, opacity)
-
-	// Rotate the brush to align with the path
-	angle := math.Atan2(float64(start.Y-end.Y), float64(start.X-end.X))
-	rotated := imaging.Rotate(angle, opaque)
-
-	r := rotated.Bounds()
-	w, h := r.Max.X-r.Min.X, r.Max.Y-r.Min.Y
-	overlap := pen.Overlap()
-
-	a := math.Abs(float64(start.Y - end.Y))
-	b := math.Abs(float64(start.X - end.X))
-	cSquared := math.Pow(a, float64(2.0)) + math.Pow(b, float64(2.0))
-	c := math.Sqrt(cSquared)
-
-	stampSize := float64(h) / overlap
-	numStamps := math.Ceil((c / stampSize))
-	yFraction := a / numStamps
-	xFraction := b / numStamps
-
-	// left or right?
-	xDirection := float64(1)
-	if start.X > end.X {
-		xDirection = float64(-1)
-	}
-	// up or down?
-	yDirection := float64(1)
-	if start.Y > end.Y {
-		yDirection = float64(-1)
-	}
-
-	p := image.ZP
-	x := float64(start.X)
-	y := float64(start.Y)
-	wHalf := w / 2
-	hHalf := h / 2
-	for i := 0; i < int(numStamps); i++ {
-
-		x0 := int(math.Round(x))
-		y0 := int(math.Round(y))
-		r := image.Rect(x0-wHalf, y0-hHalf, x0+wHalf, y0+hHalf)
-		draw.DrawMask(dst, r, color, p, rotated, p, draw.Over)
-
-		// move along the path for the next iteration
-		x += xFraction * xDirection
-		y += yFraction * yDirection
-	}
-}
-
-// loadBrushMask loads the brush stamp from the file system,
-// converts it to a mask image (gray value converted to alpha channel)
-// and returns an image.
-func loadBrushMask(b Brush) (image.Image, error) {
-	i, err := readPNG("brushes", b.Name())
-	if err != nil {
-		return nil, err
-	}
-
-	mask := imaging.CreateMask(i)
-
-	return mask, nil
 }
 
 var cache = make(map[string]image.Image)
