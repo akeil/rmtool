@@ -8,17 +8,20 @@ import (
 
 	"akeil.net/akeil/rm"
 	"akeil.net/akeil/rm/pkg/api"
-	//"akeil.net/akeil/rm/pkg/fs"
+	"akeil.net/akeil/rm/pkg/fs"
 )
 
 func main() {
 	rm.SetLogLevel("debug")
+	var err error
 
-	client, err := setup()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	/*
+		client, err := setup()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	*/
 	/*
 		err = register(client)
 		if err != nil {
@@ -35,7 +38,20 @@ func main() {
 		}
 	*/
 
-	err = repository(client)
+	//dataDir := "/tmp/remarkable"
+	//repo := api.NewRepository(client, dataDir)
+	srcDir := "/tmp/xochitl"
+	repo := fs.NewRepository(srcDir)
+
+	/*
+		err = repository(repo)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	*/
+
+	err = upload(repo)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -118,13 +134,7 @@ func notifications(c *api.Client) error {
 	return nil
 }
 
-func repository(c *api.Client) error {
-	dataDir := "/tmp/remarkable"
-	repo := api.NewRepository(c, dataDir)
-
-	//srcDir := "/tmp/xochitl"
-	//repo := fs.NewRepository(srcDir)
-
+func repository(repo rm.Repository) error {
 	items, err := repo.List()
 	if err != nil {
 		return err
@@ -136,7 +146,7 @@ func repository(c *api.Client) error {
 
 	item := items[2]
 
-	doc, err := rm.ReadDocument(item)
+	doc, err := rm.ReadDocument(repo, item)
 	if err != nil {
 		return err
 	}
@@ -160,6 +170,19 @@ func repository(c *api.Client) error {
 
 	item.SetPinned(true)
 	err = repo.Update(item)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func upload(repo rm.Repository) error {
+
+	d := rm.NewDocument("my document", rm.Notebook)
+	d.SetPinned(true)
+
+	err := repo.Upload(d)
 	if err != nil {
 		return err
 	}

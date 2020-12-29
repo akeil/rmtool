@@ -71,6 +71,21 @@ func (i Item) Err() error {
 	return errors.New(i.Message)
 }
 
+func (i Item) Validate() error {
+	switch i.Type {
+	case rm.DocumentType, rm.CollectionType:
+		// ok
+	default:
+		return rm.NewValidationError("invalid type %v", i.Type)
+	}
+
+	if i.VisibleName == "" {
+		return rm.NewValidationError("visible name must not be emtpty")
+	}
+
+	return nil
+}
+
 // reduced variant of `item` with only the updateable fields.
 type uploadItem struct {
 	ID             string

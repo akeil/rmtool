@@ -68,7 +68,7 @@ func (r *repo) Update(m rm.Meta) error {
 	// TODO: check the parent
 
 	o.Version++
-	o.LastModified = rm.Timestamp{time.Now()}
+	o.LastModified = Timestamp{time.Now()}
 
 	// assumption: we need to set these if we write to the tablet
 	o.Synced = false
@@ -98,7 +98,91 @@ func (r *repo) Update(m rm.Meta) error {
 	return os.Rename(f.Name(), p)
 }
 
-func (r *repo) reader(id string, path ...string) (io.ReadCloser, error) {
+func (r *repo) Upload(d *rm.Document) error {
+	tmp, err := ioutil.TempDir("", "rm-upload-*")
+	if err != nil {
+		return err
+	}
+
+	logging.Debug("writing individual parts to temp dir %q", tmp)
+
+	// Set up a factory function to create writers for tempfiles
+	w := func(path ...string) (io.WriteCloser, error) {
+		if len(path) == 0 {
+			return nil, fmt.Errorf("path must not be empty")
+		}
+
+		parts := []string{tmp}
+		parts = append(parts, path...)
+
+		// do we need to create subdirectories?
+		if len(path) > 1 {
+			subDir := filepath.Join(parts[0 : len(parts)-1]...)
+			err = os.MkdirAll(subDir, 0755)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		p := filepath.Join(parts...)
+		f, e := os.Create(p)
+		if e != nil {
+			return nil, e
+		}
+		return f, nil
+	}
+
+	// Write the metadata entry
+	logging.Debug("write metadata")
+	meta := Metadata{
+		LastModified:     Timestamp{time.Now()},
+		Version:          d.Version(),
+		Parent:           d.Parent(),
+		Pinned:           d.Pinned(),
+		Type:             d.Type(),
+		VisibleName:      d.Name(),
+		LastOpenedPage:   0,
+		Deleted:          false,
+		MetadataModified: false,
+		Modified:         false,
+		Synced:           false,
+	}
+
+	mw, err := w(fmt.Sprintf("%v.metadata", d.ID()))
+	if err != nil {
+		return err
+	}
+	defer mw.Close()
+	err = json.NewEncoder(mw).Encode(meta)
+	if err != nil {
+		return err
+	}
+
+	// Let the document write
+	// - *.content
+	// - *.pagedata
+	logging.Debug("write document parts")
+
+	err = d.Write(r, w)
+	if err != nil {
+		return err
+	}
+
+	// Create tempfiles for all components
+	// - .pdf, .epub  [opz]
+	// - drawings
+	// - pagemeta
+
+	// move everything to the data dir
+
+	return nil
+}
+
+func (m repo) PagePrefix(id string, index int) string {
+	return id
+}
+
+func (r *repo) Reader(id string, version uint, path ...string) (io.ReadCloser, error) {
 	parts := []string{r.base}
 	parts = append(parts, path...)
 	p := filepath.Join(parts...)
@@ -112,8 +196,8 @@ func (r *repo) reader(id string, path ...string) (io.ReadCloser, error) {
 	return f, err
 }
 
-func readMetadata(path string) (rm.Metadata, error) {
-	var m rm.Metadata
+func readMetadata(path string) (Metadata, error) {
+	var m Metadata
 	r, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -133,12 +217,8 @@ func readMetadata(path string) (rm.Metadata, error) {
 
 type metaWrapper struct {
 	id   string
-	i    *rm.Metadata
+	i    *Metadata
 	repo *repo
-}
-
-func (m metaWrapper) Reader(path ...string) (io.ReadCloser, error) {
-	return m.repo.reader(m.ID(), path...)
 }
 
 func (m metaWrapper) ID() string {
@@ -177,6 +257,6 @@ func (m metaWrapper) Parent() string {
 	return m.i.Parent
 }
 
-func (m metaWrapper) PagePrefix(id string, index int) string {
-	return id
+func (m metaWrapper) Validate() error {
+	return m.i.Validate()
 }

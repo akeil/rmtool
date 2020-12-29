@@ -35,6 +35,18 @@ func IsNotFound(err error) bool {
 	return ok
 }
 
+type validationError struct {
+	message string
+}
+
+func (v validationError) Error() string {
+	return v.message
+}
+
+func NewValidationError(msg string, v ...interface{}) error {
+	return validationError{fmt.Sprintf(msg, v...)}
+}
+
 // ExpectOK checks if the given http response has status "200 - OK"
 // and returns an error with the given message if not.
 func ExpectOK(res *http.Response, msg string) error {

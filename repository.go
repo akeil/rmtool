@@ -6,8 +6,12 @@ import (
 	"io"
 	"time"
 
+	"github.com/google/uuid"
+
 	"akeil.net/akeil/rm/internal/logging"
 )
+
+type WriterFunc func(path ...string) (io.WriteCloser, error)
 
 // Repository is the interface for a storage backend.
 //
@@ -26,6 +30,20 @@ type Repository interface {
 	Update(meta Meta) error
 	// Delete
 	// Create
+
+	// Reader creates a reader for one of the components associated with an
+	// item, e.g. the drawing for a single page.
+	//
+	// This function is typically used internally by ReadDocument and friends.
+	Reader(id string, version uint, path ...string) (io.ReadCloser, error)
+	// Writer()
+
+	// PagePrefix returns the filename prefix for page related paths.
+	//
+	// This function is normally used internally by ReadDocument and friends.
+	PagePrefix(pageID string, pageIndex int) string
+
+	Upload(d *Document) error
 }
 
 // Meta is the interface for a single entry (a nodebook or folder) in a
@@ -44,27 +62,21 @@ type Meta interface {
 	SetPinned(p bool)
 	LastModified() time.Time
 	Parent() string
-	// Reader creates a reader for one of the components associated with an
-	// item, e.g. the drawing for a single page.
-	//
-	// This function is typically used internally by ReadDocument and friends.
-	Reader(path ...string) (io.ReadCloser, error)
-	// Writer()
+	// TODO: SetParent() ?
 
-	// PagePrefix returns the filename prefix for page related paths.
-	//
-	// This function is normally used internally by ReadDocument and friends.
-	PagePrefix(pageID string, pageIndex int) string
+	// Validate checks the internal state of this item
+	// and returns an error if it is not valid.
+	Validate() error
 }
 
 // ReadDocument is a helper function to read a full Document from a repository entry.
-func ReadDocument(m Meta) (*Document, error) {
+func ReadDocument(r Repository, m Meta) (*Document, error) {
 	if m.Type() != DocumentType {
-		return nil, fmt.Errorf("can opnly read document for items with type DocumentType")
+		return nil, fmt.Errorf("can only read document for items with type DocumentType")
 	}
 
 	cp := m.ID() + ".content"
-	cr, err := m.Reader(cp)
+	cr, err := r.Reader(m.ID(), m.Version(), cp)
 	if err != nil {
 		return nil, err
 	}
@@ -79,6 +91,7 @@ func ReadDocument(m Meta) (*Document, error) {
 	return &Document{
 		Meta:    m,
 		content: &c,
+		repo:    r,
 	}, nil
 }
 
@@ -92,17 +105,162 @@ type Document struct {
 	content  *Content
 	pagedata []Pagedata
 	pages    map[string]*Page
+	repo     Repository
 }
 
-// PageCount returns the number of pages in this documents.
+func NewDocument(name string, ft FileType) *Document {
+	return &Document{
+		Meta:     newDocMeta(DocumentType, name),
+		content:  NewContent(ft),
+		pagedata: make([]Pagedata, 0),
+	}
+}
+
+func NewPdf(name string, r io.ReadCloser) *Document {
+	return NewDocument(name, Pdf)
+}
+
+func NewEpub(name string, r io.ReadCloser) *Document {
+	return NewDocument(name, Epub)
+}
+
+func (d *Document) Validate() error {
+	err := d.Meta.Validate()
+	if err != nil {
+		return err
+	}
+
+	if d.Meta.Type() != DocumentType {
+		return NewValidationError("only DocumentType allowed, found %q", d.Meta.Type())
+	}
+
+	err = d.content.Validate()
+	if err != nil {
+		return err
+	}
+
+	for _, pd := range d.pagedata {
+		err = pd.Validate()
+		if err != nil {
+			return err
+		}
+	}
+
+	// len pagedata must match the number of pages
+	if len(d.pagedata) != d.PageCount() {
+		return NewValidationError("number of pagedata entries does not match page count: %v != %v", len(d.pagedata), d.PageCount())
+	}
+
+	// TODO: validate pages
+
+	return nil
+}
+
+func (d *Document) Write(repo Repository, w WriterFunc) error {
+	// Before writing pages, we may have to create default page(s)
+	// - empty Notebook needs a single empty page
+	// - PDF, EPUB need page entries for each page
+	d.createPages()
+
+	logging.Debug("write content")
+	cw, err := w(fmt.Sprintf("%v.content", d.ID()))
+	if err != nil {
+		return err
+	}
+	err = json.NewEncoder(cw).Encode(d.content)
+	if err != nil {
+		return err
+	}
+	defer cw.Close()
+
+	logging.Debug("write pagedata")
+	pw, err := w(fmt.Sprintf("%v.pagedata", d.ID()))
+	if err != nil {
+		return err
+	}
+	err = WritePagedata(d.pagedata, pw)
+	if err != nil {
+		return err
+	}
+	defer pw.Close()
+
+	for i, pageID := range d.Pages() {
+		logging.Debug("write page %v", pageID)
+		// TODO relies on all pages being cached
+		p, err := d.Page(pageID)
+		if err != nil {
+			return err
+		}
+		prefix := repo.PagePrefix(pageID, i)
+		pmw, err := w(d.ID(), prefix+"-metadata.json")
+		if err != nil {
+			return err
+		}
+		err = json.NewEncoder(pmw).Encode(p.meta)
+		if err != nil {
+			return err
+		}
+
+		// TODO: write drawings
+	}
+
+	// TODO: write attached PDF or EPUB
+
+	// TODO write thumbnails?
+
+	return nil
+}
+
+func (d *Document) createPages() {
+	if len(d.pagedata) > 0 {
+		// assume that we have pages
+		return
+	}
+
+	logging.Debug("create default pages")
+
+	pageID := uuid.New().String()
+
+	d.content.Pages = append(d.content.Pages, pageID)
+	d.content.PageCount = 1
+
+	idx := 0
+
+	pd := newPagedata()
+	d.pagedata = append(d.pagedata, pd)
+
+	// now a default page
+	pm := PageMetadata{
+		Layers: []LayerMetadata{
+			LayerMetadata{
+				Name: "Layer 1",
+			},
+		},
+	}
+
+	// construct the Page item
+	p := &Page{
+		index:    idx,
+		meta:     pm,
+		pagedata: pd,
+	}
+
+	// cache
+	if d.pages == nil {
+		d.pages = make(map[string]*Page)
+	}
+	d.pages[pageID] = p
+}
+
+// PageCount returns the number of pages in this document.
 //
 // Note that for PDF and EPUB files, the number of drawings can be less than
 // the number of pages.
-func (d *Document) PageCount() uint {
+func (d *Document) PageCount() int {
 	return d.content.PageCount
 }
 
-// Pages returns a list of page IDs on the correct oreder.
+// Pages returns a list of page IDs on the correct order.
 func (d *Document) Pages() []string {
 	return d.content.Pages
 }
@@ -140,7 +298,7 @@ func (d *Document) Page(pageID string) (*Page, error) {
 	// lazy load pagedata
 	if d.pagedata == nil {
 		pdp := d.ID() + ".pagedata"
-		pdr, err := d.Reader(pdp)
+		pdr, err := d.reader(pdp)
 		if err != nil {
 			return nil, err
 		}
@@ -160,8 +318,8 @@ func (d *Document) Page(pageID string) (*Page, error) {
 
 	// Load page metadata
 	var pm PageMetadata
-	pmp := d.PagePrefix(d.ID(), idx) + "-metadata.json"
-	pmr, err := d.Reader(d.ID(), pmp)
+	pmp := d.repo.PagePrefix(d.ID(), idx) + "-metadata.json"
+	pmr, err := d.reader(d.ID(), pmp)
 	if err != nil {
 		logging.Debug("No page metadata for page %v at %q", idx, pmp)
 		// xxx-metadata.json seems to be optional.
@@ -210,8 +368,8 @@ func (d *Document) Drawing(pageID string) (*Drawing, error) {
 		return nil, err
 	}
 
-	dp := d.PagePrefix(d.ID(), idx) + ".rm"
-	dr, err := d.Reader(d.ID(), dp)
+	dp := d.repo.PagePrefix(d.ID(), idx) + ".rm"
+	dr, err := d.reader(d.ID(), dp)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +398,7 @@ func (d *Document) AttachmentReader() (io.ReadCloser, error) {
 		return nil, fmt.Errorf("document of type %v has no attachment", d.FileType())
 	}
 
-	return d.Reader(p)
+	return d.reader(p)
 }
 
 func (d *Document) pageIndex(pageID string) (int, error) {
@@ -253,6 +411,10 @@ func (d *Document) pageIndex(pageID string) (int, error) {
 	}
 
 	return 0, fmt.Errorf("invalid page id %q", pageID)
+}
+
+func (d *Document) reader(path ...string) (io.ReadCloser, error) {
+	return d.repo.Reader(d.ID(), d.Version(), path...)
 }
 
 // Page describes a single page within a document.
@@ -291,4 +453,83 @@ func (p *Page) Layers() []LayerMetadata {
 		p.meta.Layers = make([]LayerMetadata, 0)
 	}
 	return p.meta.Layers
+}
+
+// docMeta is used to hold metadata for newly created documents.
+type docMeta struct {
+	id           string
+	version      uint
+	nbType       NotebookType
+	name         string
+	pinned       bool
+	lastModified time.Time
+	parent       string
+}
+
+func newDocMeta(t NotebookType, name string) Meta {
+	return &docMeta{
+		id:           uuid.New().String(),
+		nbType:       t,
+		name:         name,
+		lastModified: time.Now(),
+	}
+}
+
+func (d *docMeta) ID() string {
+	return d.id
+}
+
+func (d *docMeta) Version() uint {
+	return d.version
+}
+
+func (d *docMeta) Name() string {
+	return d.name
+}
+
+func (d *docMeta) SetName(n string) {
+	d.name = n
+}
+
+func (d *docMeta) Type() NotebookType {
+	return d.nbType
+}
+
+func (d *docMeta) Pinned() bool {
+	return d.pinned
+}
+
+func (d *docMeta) SetPinned(p bool) {
+	d.pinned = p
+}
+
+func (d *docMeta) LastModified() time.Time {
+	return d.lastModified
+}
+
+func (d *docMeta) Parent() string {
+	return d.parent
+}
+
+func (d *docMeta) Reader(path ...string) (io.ReadCloser, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (d *docMeta) PagePrefix(pageID string, pageIndex int) string {
+	return pageID
+}
+
+func (d *docMeta) Validate() error {
+	switch d.Type() {
+	case DocumentType, CollectionType:
+		// ok
+	default:
+		return NewValidationError("invalid type %v", d.Type())
+	}
+
+	if d.Name() == "" {
+		return NewValidationError("name must not be empty")
+	}
+
+	return nil
 }

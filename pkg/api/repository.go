@@ -61,7 +61,11 @@ func (r *repo) Update(m rm.Meta) error {
 	return r.client.update(item)
 }
 
-func (r *repo) reader(id string, version uint, path ...string) (io.ReadCloser, error) {
+func (m *repo) PagePrefix(id string, index int) string {
+	return fmt.Sprintf("%d", index)
+}
+
+func (r *repo) Reader(id string, version uint, path ...string) (io.ReadCloser, error) {
 
 	// Attempt to read from cache, download if not exists or corrupt
 	p := r.cachePath(id, version)
@@ -104,6 +108,10 @@ func (r *repo) reader(id string, version uint, path ...string) (io.ReadCloser, e
 	// return a reader for the file entry
 	// closing the reader should close the zip reader
 	return entry.Open()
+}
+
+func (r *repo) Upload(d *rm.Document) error {
+	return fmt.Errorf("not implemented")
 }
 
 func (r *repo) downloadToCache(id string, version uint) error {
@@ -235,10 +243,6 @@ type metaWrapper struct {
 	r *repo
 }
 
-func (m metaWrapper) Reader(path ...string) (io.ReadCloser, error) {
-	return m.r.reader(m.ID(), m.Version(), path...)
-}
-
 func (m metaWrapper) ID() string {
 	return m.i.ID
 }
@@ -275,6 +279,6 @@ func (m metaWrapper) Parent() string {
 	return m.i.Parent
 }
 
-func (m metaWrapper) PagePrefix(id string, index int) string {
-	return fmt.Sprintf("%d", index)
+func (m metaWrapper) Validate() error {
+	return m.i.Validate()
 }
