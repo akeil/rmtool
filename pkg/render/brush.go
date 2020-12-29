@@ -76,7 +76,7 @@ func (b *Ballpoint) Width(base, pressure, tilt float32) float64 {
 
 	// make sure lines have a minimum width
 	// TODO: tke BrushSize into account
-	mindWidth := 3.5
+	minWidth := 3.5
 	w = math.Max(w, minWidth)
 
 	// high pressure lines are a little bit wider
@@ -167,9 +167,7 @@ func (m *Marker) Name() string {
 }
 
 func (m *Marker) Opacity(pressure, speed float32) float64 {
-	// marker has almost no sensitivity to pressure
-	x := math.Pow(float64(pressure), 2)
-	return x + 0.9
+	return 1.0
 }
 
 func (b *Marker) Width(base, pressure, tilt float32) float64 {
@@ -177,7 +175,7 @@ func (b *Marker) Width(base, pressure, tilt float32) float64 {
 }
 
 func (m *Marker) Overlap() float64 {
-	return 4.0
+	return 6.0
 }
 
 // Highlighter ----------------------------------------------------------------
