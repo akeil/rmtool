@@ -6,8 +6,11 @@ import (
 	"image/draw"
 	"math"
 
+	"github.com/llgcode/draw2d/draw2dimg"
+
 	"akeil.net/akeil/rm"
 	"akeil.net/akeil/rm/internal/imaging"
+	"akeil.net/akeil/rm/internal/logging"
 )
 
 // see:
@@ -35,7 +38,10 @@ func NewBrush(t rm.BrushType, c color.Color) (Brush, error) {
 		return loadFineliner(c)
 	case rm.Highlighter, rm.HighlighterV5:
 		return loadHighlighter(c)
+	case rm.PaintBrush, rm.PaintBrushV5:
+		return loadPaintbrush(c)
 	default:
+		logging.Warning("unsupported brush type %v", t)
 		return loadBasePen(c)
 	}
 }
@@ -58,7 +64,7 @@ func loadBasePen(c color.Color) (Brush, error) {
 }
 
 func (b *BasePen) Name() string {
-	return "minus"
+	return "ballpoint"
 }
 
 func (b *BasePen) Opacity(pressure, speed float32) float64 {
@@ -77,7 +83,7 @@ func (b *BasePen) RenderSegment(dst draw.Image, start, end rm.Dot) {
 	width := float64(start.Width)
 	opacity := 1.0
 	mask := prepareMask(b.mask, width, opacity, start, end)
-	overlap := 1.0
+	overlap := 2.0
 	drawPath(dst, mask, b.fill, start, end, overlap)
 }
 
@@ -417,4 +423,44 @@ func drawPath(dst draw.Image, mask image.Image, fill image.Image, start, end rm.
 		x += xFraction * xDirection
 		y += yFraction * yDirection
 	}
+}
+
+// Paintbrush -----------------------------------------------------------------
+
+type Paintbrush struct {
+	color color.Color
+}
+
+func loadPaintbrush(c color.Color) (Brush, error) {
+	return &Paintbrush{
+		color: c,
+	}, nil
+}
+
+func (p *Paintbrush) Name() string {
+	return "paintbrush"
+}
+
+func (p *Paintbrush) Opacity(pressure, speed float32) float64 {
+	return 1.0
+}
+
+func (p *Paintbrush) Width(base, pressure, tilt float32) float64 {
+	return float64(base)
+}
+
+func (p *Paintbrush) Overlap() float64 {
+	return 1.0
+}
+
+func (p *Paintbrush) RenderSegment(dst draw.Image, start, end rm.Dot) {
+	gc := draw2dimg.NewGraphicContext(dst)
+
+	gc.SetStrokeColor(p.color)
+	gc.SetLineWidth(float64(start.Width))
+
+	gc.BeginPath()
+	gc.MoveTo(float64(start.X), float64(start.Y))
+	gc.LineTo(float64(end.X), float64(end.Y))
+	gc.Stroke()
 }

@@ -38,7 +38,7 @@ const (
 	Eraser             BrushType = 6
 	MechanicalPencil   BrushType = 7
 	EraseArea          BrushType = 8
-	BrushV5            BrushType = 12
+	PaintBrushV5       BrushType = 12
 	MechanicalPencilV5 BrushType = 13
 	PencilV5           BrushType = 14
 	BallpointV5        BrushType = 15
