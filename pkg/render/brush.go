@@ -118,13 +118,14 @@ type Pencil struct {
 }
 
 func (p *Pencil) Name() string {
-	return "pencil-2"
+	return "pencil"
 }
 
 func (p *Pencil) Opacity(pressure, speed float32) float64 {
 	// pencil has high sensitivity to pressure
-	x := math.Pow(float64(pressure), 4)
-	return x*0.9 + 0.1
+	//x := math.Pow(float64(pressure), 4)
+	//return x*0.9 + 0.1
+	return 1.0
 }
 
 func (b *Pencil) Width(base, pressure, tilt float32) float64 {
@@ -132,7 +133,7 @@ func (b *Pencil) Width(base, pressure, tilt float32) float64 {
 }
 
 func (p *Pencil) Overlap() float64 {
-	return 3.0
+	return 4.0
 }
 
 // Mechanical Pencil ----------------------------------------------------------
@@ -145,8 +146,9 @@ func (m *MechanicalPencil) Name() string {
 
 func (m *MechanicalPencil) Opacity(pressure, speed float32) float64 {
 	// pencil has medium sensitivity to pressure
-	x := math.Pow(float64(pressure), 4)
-	return x*0.8 + 0.2
+	//x := math.Pow(float64(pressure), 4)
+	//return x*0.8 + 0.2
+	return 1.0
 }
 
 func (b *MechanicalPencil) Width(base, pressure, tilt float32) float64 {
@@ -154,7 +156,7 @@ func (b *MechanicalPencil) Width(base, pressure, tilt float32) float64 {
 }
 
 func (m *MechanicalPencil) Overlap() float64 {
-	return 2.0
+	return 4.0
 }
 
 // Marker ---------------------------------------------------------------------

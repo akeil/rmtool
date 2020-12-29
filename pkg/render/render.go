@@ -180,10 +180,7 @@ func renderStroke(dst draw.Image, s rm.Stroke) error {
 func renderSegment(dst draw.Image, mask image.Image, color image.Image, pen Brush, start, end rm.Dot) {
 	// Scale the image according to the brush width
 	width := pen.Width(start.Width, start.Pressure, start.Tilt)
-	fmt.Printf("W: %v => %v\n", start.Width, width)
-	scaledSize := int(math.Round(width))
-	scale := image.Rect(0, 0, scaledSize, scaledSize)
-	scaled := imaging.Resize(mask, scale)
+	scaled := imaging.Resize(mask, width)
 
 	// Apply additional opacity for pressure/speed
 	opacity := pen.Opacity(start.Pressure, start.Speed)
@@ -193,7 +190,8 @@ func renderSegment(dst draw.Image, mask image.Image, color image.Image, pen Brus
 	angle := math.Atan2(float64(start.Y-end.Y), float64(start.X-end.X))
 	rotated := imaging.Rotate(angle, opaque)
 
-	w, h := scaledSize, scaledSize
+	r := rotated.Bounds()
+	w, h := r.Max.X-r.Min.X, r.Max.Y-r.Min.Y
 	overlap := pen.Overlap()
 
 	a := math.Abs(float64(start.Y - end.Y))
