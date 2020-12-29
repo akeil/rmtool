@@ -11,8 +11,6 @@ import (
 	"akeil.net/akeil/rm/internal/logging"
 )
 
-//type ReaderFunc func(path ...string) (io.ReadCloser, error)
-
 type WriterFunc func(path ...string) (io.WriteCloser, error)
 
 // Repository is the interface for a storage backend.
@@ -46,8 +44,6 @@ type Repository interface {
 	PagePrefix(pageID string, pageIndex int) string
 
 	Upload(d *Document) error
-
-	// WriterFunc
 }
 
 // Meta is the interface for a single entry (a nodebook or folder) in a
@@ -207,6 +203,8 @@ func (d *Document) Write(repo Repository, w WriterFunc) error {
 
 		// TODO: write drawings
 	}
+
+	// TODO: write attached PDF or EPUB
 
 	// TODO write thumbnails?
 
