@@ -14,7 +14,8 @@ func Resize(i image.Image, factor float64) image.Image {
 	size := image.Rect(0, 0, scaledSize, scaledSize)
 
 	dst := image.NewRGBA(size)
-	s := draw.BiLinear
+	// nearst neighbour preserves pixel-struture of masks (i.e. for Pencil)
+	s := draw.NearestNeighbor
 	s.Scale(dst, size, i, i.Bounds(), draw.Over, nil)
 	return dst
 }

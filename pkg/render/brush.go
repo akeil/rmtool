@@ -123,9 +123,10 @@ func (p *Pencil) Name() string {
 
 func (p *Pencil) Opacity(pressure, speed float32) float64 {
 	// pencil has high sensitivity to pressure
-	//x := math.Pow(float64(pressure), 4)
-	//return x*0.9 + 0.1
-	return 1.0
+	x := math.Pow(float64(pressure), 4)
+	y := 0.1
+	return x*y + 1 - y
+	//return 1.0
 }
 
 func (b *Pencil) Width(base, pressure, tilt float32) float64 {
@@ -133,7 +134,7 @@ func (b *Pencil) Width(base, pressure, tilt float32) float64 {
 }
 
 func (p *Pencil) Overlap() float64 {
-	return 4.0
+	return 1.5
 }
 
 // Mechanical Pencil ----------------------------------------------------------
