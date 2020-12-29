@@ -75,7 +75,9 @@ func (b *Ballpoint) Width(base, pressure, tilt float32) float64 {
 	w := float64(base)
 
 	// make sure lines have a minimum width
-	w = math.Max(w, 3.5)
+	// TODO: tke BrushSize into account
+	mindWidth := 3.5
+	w = math.Max(w, minWidth)
 
 	// high pressure lines are a little bit wider
 	x := math.Pow(float64(pressure), 2)
@@ -90,6 +92,7 @@ func (b *Ballpoint) Overlap() float64 {
 
 // Fineliner ------------------------------------------------------------------
 
+// Fineliner has no sensitivity to pressure or tilt.
 type Fineliner struct{}
 
 func (f *Fineliner) Name() string {
@@ -101,11 +104,12 @@ func (f *Fineliner) Opacity(pressure, speed float32) float64 {
 }
 
 func (b *Fineliner) Width(base, pressure, tilt float32) float64 {
-	return float64(base)
+	mindWidth := 3.0
+	return math.Max(float64(base), mindWidth)
 }
 
 func (f *Fineliner) Overlap() float64 {
-	return 4.0
+	return 3.0
 }
 
 // Pencil ---------------------------------------------------------------------
