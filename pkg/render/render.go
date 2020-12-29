@@ -11,6 +11,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"akeil.net/akeil/rm"
 	"akeil.net/akeil/rm/internal/imaging"
@@ -178,7 +179,8 @@ func renderStroke(dst draw.Image, s rm.Stroke) error {
 // Stamps are spaced evenly and overlap.
 func renderSegment(dst draw.Image, mask image.Image, color image.Image, pen Brush, start, end rm.Dot) {
 	// Scale the image according to the brush width
-	width := float64(start.Width)
+	width := pen.Width(start.Width, start.Pressure, start.Tilt)
+	fmt.Printf("W: %v => %v\n", start.Width, width)
 	scaledSize := int(math.Round(width))
 	scale := image.Rect(0, 0, scaledSize, scaledSize)
 	scaled := imaging.Resize(mask, scale)
@@ -248,8 +250,12 @@ func loadBrushMask(b Brush) (image.Image, error) {
 }
 
 var cache = make(map[string]image.Image)
+var cacheMx sync.Mutex
 
 func readPNG(subdir, name string) (image.Image, error) {
+	cacheMx.Lock()
+	defer cacheMx.Unlock()
+
 	key := subdir + "/" + name
 	cached := cache[key]
 	if cached != nil {

@@ -12,6 +12,7 @@ import (
 type Brush interface {
 	Name() string
 	Opacity(pressure, speed float32) float64
+	Width(base, pressure, tilt float32) float64
 	Overlap() float64
 }
 
@@ -45,12 +46,17 @@ func (b *BasePen) Opacity(pressure, speed float32) float64 {
 	return 1.0
 }
 
+func (b *BasePen) Width(base, pressure, tilt float32) float64 {
+	return float64(base)
+}
+
 func (b *BasePen) Overlap() float64 {
 	return 1.0
 }
 
 // Ballpoint ------------------------------------------------------------------
 
+// The Ballpoint pen has some sensitivity for pressure
 type Ballpoint struct {
 }
 
@@ -59,12 +65,27 @@ func (b *Ballpoint) Name() string {
 }
 
 func (b *Ballpoint) Opacity(pressure, speed float32) float64 {
-	// ballpoint has low sensitivity for pressure
+	// giving some opacity makes linkes look smaller
 	x := math.Pow(float64(pressure), 2)
-	return x*0.2 + 0.8
+	y := 0.2
+	return (x * y) + (1.0 - y)
 }
+
+func (b *Ballpoint) Width(base, pressure, tilt float32) float64 {
+	w := float64(base)
+
+	// make sure lines have a minimum width
+	w = math.Max(w, 3.5)
+
+	// high pressure lines are a little bit wider
+	x := math.Pow(float64(pressure), 2)
+	y := 0.3
+
+	return w + w*y*x
+}
+
 func (b *Ballpoint) Overlap() float64 {
-	return 4.0
+	return 2.0
 }
 
 // Fineliner ------------------------------------------------------------------
@@ -77,6 +98,10 @@ func (f *Fineliner) Name() string {
 
 func (f *Fineliner) Opacity(pressure, speed float32) float64 {
 	return 1.0
+}
+
+func (b *Fineliner) Width(base, pressure, tilt float32) float64 {
+	return float64(base)
 }
 
 func (f *Fineliner) Overlap() float64 {
@@ -98,6 +123,10 @@ func (p *Pencil) Opacity(pressure, speed float32) float64 {
 	return x*0.9 + 0.1
 }
 
+func (b *Pencil) Width(base, pressure, tilt float32) float64 {
+	return float64(base)
+}
+
 func (p *Pencil) Overlap() float64 {
 	return 3.0
 }
@@ -114,6 +143,10 @@ func (m *MechanicalPencil) Opacity(pressure, speed float32) float64 {
 	// pencil has medium sensitivity to pressure
 	x := math.Pow(float64(pressure), 4)
 	return x*0.8 + 0.2
+}
+
+func (b *MechanicalPencil) Width(base, pressure, tilt float32) float64 {
+	return float64(base)
 }
 
 func (m *MechanicalPencil) Overlap() float64 {
@@ -135,6 +168,10 @@ func (m *Marker) Opacity(pressure, speed float32) float64 {
 	return x + 0.9
 }
 
+func (b *Marker) Width(base, pressure, tilt float32) float64 {
+	return float64(base)
+}
+
 func (m *Marker) Overlap() float64 {
 	return 4.0
 }
@@ -150,6 +187,10 @@ func (h *Highlighter) Name() string {
 func (h *Highlighter) Opacity(pressure, speed float32) float64 {
 	// marker has no sensitivity to pressure
 	return 0.1
+}
+
+func (b *Highlighter) Width(base, pressure, tilt float32) float64 {
+	return float64(base)
 }
 
 func (h *Highlighter) Overlap() float64 {

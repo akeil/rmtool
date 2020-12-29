@@ -70,8 +70,8 @@ func main() {
 			return err
 		}
 
-		//pngs(storage, n)
-		err = pdf(doc)
+		err = pngs(doc)
+		// err = pdf(doc)
 		if err != nil {
 			log.Printf("Failed to render PDF for notebook %q", doc.ID())
 		}
@@ -86,7 +86,7 @@ func main() {
 	log.Println("exit ok")
 }
 
-func pngs(storage rm.Repository, doc *rm.Document) {
+func pngs(doc *rm.Document) error {
 	var wg sync.WaitGroup
 	for i, p := range doc.Pages() {
 		wg.Add(1)
@@ -111,6 +111,7 @@ func pngs(storage rm.Repository, doc *rm.Document) {
 	}
 
 	wg.Wait()
+	return nil
 }
 
 func pdf(n *rm.Document) error {

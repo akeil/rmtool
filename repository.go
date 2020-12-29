@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -106,6 +107,7 @@ type Document struct {
 	pagedata []Pagedata
 	pages    map[string]*Page
 	repo     Repository
+	pagesMx  sync.Mutex
 }
 
 func NewDocument(name string, ft FileType) *Document {
@@ -283,6 +285,9 @@ func (d *Document) CoverPage() int {
 
 // Page loads meta data associated with the given pageID.
 func (d *Document) Page(pageID string) (*Page, error) {
+	d.pagesMx.Lock()
+	defer d.pagesMx.Unlock()
+
 	if d.pages != nil {
 		p := d.pages[pageID]
 		if p != nil {
