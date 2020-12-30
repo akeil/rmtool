@@ -136,7 +136,7 @@ func validateBrushType(b BrushType) error {
 		Eraser,
 		MechanicalPencil,
 		EraseArea,
-		BrushV5,
+		PaintBrushV5,
 		MechanicalPencilV5,
 		PencilV5,
 		BallpointV5,

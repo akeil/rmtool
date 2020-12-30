@@ -9,10 +9,14 @@ import (
 )
 
 // Resize creates a copy of the given image, scaled to the given rectangle.
-func Resize(i image.Image, r image.Rectangle) image.Image {
-	dst := image.NewRGBA(r)
-	s := draw.BiLinear
-	s.Scale(dst, r, i, i.Bounds(), draw.Over, nil)
+func Resize(i image.Image, width float64) image.Image {
+	scaledSize := int(math.Round(width))
+	size := image.Rect(0, 0, scaledSize, scaledSize)
+
+	dst := image.NewRGBA(size)
+	// nearst neighbour preserves pixel-struture of masks (i.e. for Pencil)
+	s := draw.NearestNeighbor
+	s.Scale(dst, size, i, i.Bounds(), draw.Over, nil)
 	return dst
 }
 

@@ -37,8 +37,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	var repo rm.Repository
+	rc := render.NewContext("./data")
 
+	var repo rm.Repository
 	// filesystem
 	repo = fs.NewRepository(dir)
 
@@ -70,8 +71,8 @@ func main() {
 			return err
 		}
 
-		//pngs(storage, n)
-		err = pdf(doc)
+		err = pngs(rc, doc)
+		// err = pdf(rc, doc)
 		if err != nil {
 			log.Printf("Failed to render PDF for notebook %q", doc.ID())
 		}
@@ -86,7 +87,7 @@ func main() {
 	log.Println("exit ok")
 }
 
-func pngs(storage rm.Repository, doc *rm.Document) {
+func pngs(rc *render.Context, doc *rm.Document) error {
 	var wg sync.WaitGroup
 	for i, p := range doc.Pages() {
 		wg.Add(1)
@@ -101,7 +102,7 @@ func pngs(storage rm.Repository, doc *rm.Document) {
 			defer f.Close()
 
 			w := bufio.NewWriter(f)
-			err = render.Page(doc, p, w)
+			err = rc.Page(doc, p, w)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -111,9 +112,10 @@ func pngs(storage rm.Repository, doc *rm.Document) {
 	}
 
 	wg.Wait()
+	return nil
 }
 
-func pdf(n *rm.Document) error {
+func pdf(rc *render.Context, n *rm.Document) error {
 	// render to pdf
 	p := filepath.Join("./out", n.Name()+".pdf")
 	f, err := os.Create(p)
@@ -123,7 +125,7 @@ func pdf(n *rm.Document) error {
 	defer f.Close()
 
 	w := bufio.NewWriter(f)
-	return render.PDF(n, w)
+	return rc.PDF(n, w)
 }
 
 func setup() (*api.Client, error) {
