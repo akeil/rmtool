@@ -17,14 +17,19 @@ const tsFormat = "2006-01-02 15:04:05"
 //
 // The result is written to the given writer.
 func PDF(d *rm.Document, w io.Writer) error {
+	r := NewContext("./data")
+	return renderPDF(r, d, w)
+}
+
+func renderPDF(c *Context, d *rm.Document, w io.Writer) error {
 	logging.Debug("Render PDF for document %q, type %q", d.ID(), d.FileType())
 	pdf := setupPDF("A4", d)
 
 	var err error
 	if d.FileType() == rm.Pdf {
-		err = overlayPDF(d, pdf)
+		err = overlayPDF(c, d, pdf)
 	} else {
-		err = renderDrawingsPDF(pdf, d)
+		err = renderDrawingsPDF(c, pdf, d)
 	}
 
 	if err != nil {
@@ -33,9 +38,9 @@ func PDF(d *rm.Document, w io.Writer) error {
 	return pdf.Output(w)
 }
 
-func renderDrawingsPDF(pdf *gofpdf.Fpdf, d *rm.Document) error {
+func renderDrawingsPDF(c *Context, pdf *gofpdf.Fpdf, d *rm.Document) error {
 	for i, pageID := range d.Pages() {
-		err := doRenderPDFPage(pdf, d, pageID, i)
+		err := doRenderPDFPage(c, pdf, d, pageID, i)
 		if err != nil {
 			return err
 		}
@@ -45,10 +50,10 @@ func renderDrawingsPDF(pdf *gofpdf.Fpdf, d *rm.Document) error {
 }
 
 // PDFPage renders a single drawing into a single one-page PDF.
-func PDFPage(d *rm.Document, pageID string, w io.Writer) error {
+func PDFPage(c *Context, d *rm.Document, pageID string, w io.Writer) error {
 	pdf := setupPDF("A4", nil)
 
-	err := doRenderPDFPage(pdf, d, pageID, 0)
+	err := doRenderPDFPage(c, pdf, d, pageID, 0)
 	if err != nil {
 		return err
 	}
@@ -89,7 +94,7 @@ func setupPDF(pageSize string, d *rm.Document) *gofpdf.Fpdf {
 	return pdf
 }
 
-func doRenderPDFPage(pdf *gofpdf.Fpdf, doc *rm.Document, pageID string, i int) error {
+func doRenderPDFPage(c *Context, pdf *gofpdf.Fpdf, doc *rm.Document, pageID string, i int) error {
 	d, err := doc.Drawing(pageID)
 	if err != nil {
 		return err
@@ -101,16 +106,16 @@ func doRenderPDFPage(pdf *gofpdf.Fpdf, doc *rm.Document, pageID string, i int) e
 
 	// TODO: add the background template
 
-	return renderDrawingToPDF(pdf, d)
+	return renderDrawingToPDF(c, pdf, d)
 }
 
-func renderDrawingToPDF(pdf *gofpdf.Fpdf, d *rm.Drawing) error {
+func renderDrawingToPDF(c *Context, pdf *gofpdf.Fpdf, d *rm.Drawing) error {
 	name := uuid.New().String()
 	opts := gofpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}
 
 	// render to PNG
 	var buf bytes.Buffer
-	err := renderPNG(d, false, &buf)
+	err := renderPNG(c, d, false, &buf)
 	if err != nil {
 		return err
 	}

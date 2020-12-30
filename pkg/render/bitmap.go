@@ -2,7 +2,6 @@ package render
 
 import (
 	"bufio"
-	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
@@ -18,29 +17,18 @@ import (
 	"akeil.net/akeil/rm/internal/logging"
 )
 
-var colors = map[rm.BrushColor]color.Color{
-	rm.Black: color.Black,
-	rm.Gray:  color.RGBA{127, 127, 127, 255},
-	rm.White: color.White,
-}
 var bgColor = color.White
-
-// Drawing paints the given drawing and writes the result to the given
-// writer.
-func Drawing(d *rm.Drawing, w io.Writer) error {
-	err := renderPNG(d, true, w)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
 
 // Page renders the page from the given document and writes the
 // result to the given writer.
 //
 // Unlike RenderDrawing, this includes the page's background template.
 func Page(doc *rm.Document, pageID string, w io.Writer) error {
+	r := NewContext("./data")
+	return renderPage(r, doc, pageID, w)
+}
+
+func renderPage(c *Context, doc *rm.Document, pageID string, w io.Writer) error {
 	p, err := doc.Page(pageID)
 	if err != nil {
 		return err
@@ -51,8 +39,8 @@ func Page(doc *rm.Document, pageID string, w io.Writer) error {
 		return err
 	}
 
-	r := image.Rect(0, 0, rm.MaxWidth, rm.MaxHeight)
-	dst := image.NewRGBA(r)
+	rect := image.Rect(0, 0, rm.MaxWidth, rm.MaxHeight)
+	dst := image.NewRGBA(rect)
 
 	if p.HasTemplate() {
 		err = renderTemplate(dst, p.Template(), p.Orientation())
@@ -61,7 +49,7 @@ func Page(doc *rm.Document, pageID string, w io.Writer) error {
 		}
 	}
 
-	err = renderLayers(dst, d)
+	err = renderLayers(c, dst, d)
 	if err != nil {
 		return err
 	}
@@ -79,7 +67,7 @@ func Page(doc *rm.Document, pageID string, w io.Writer) error {
 
 // RenderPNG paints the given drawing to a PNG file and writes the PNG data
 // to the given writer.
-func renderPNG(d *rm.Drawing, bg bool, w io.Writer) error {
+func renderPNG(c *Context, d *rm.Drawing, bg bool, w io.Writer) error {
 	r := image.Rect(0, 0, rm.MaxWidth, rm.MaxHeight)
 	dst := image.NewRGBA(r)
 
@@ -87,7 +75,7 @@ func renderPNG(d *rm.Drawing, bg bool, w io.Writer) error {
 		renderBackground(dst)
 	}
 
-	err := renderLayers(dst, d)
+	err := renderLayers(c, dst, d)
 	if err != nil {
 		return err
 	}
@@ -100,9 +88,9 @@ func renderPNG(d *rm.Drawing, bg bool, w io.Writer) error {
 	return nil
 }
 
-func renderLayers(dst draw.Image, d *rm.Drawing) error {
+func renderLayers(c *Context, dst draw.Image, d *rm.Drawing) error {
 	for _, l := range d.Layers {
-		err := renderLayer(dst, l)
+		err := renderLayer(c, dst, l)
 		if err != nil {
 			return err
 		}
@@ -134,7 +122,7 @@ func renderBackground(dst draw.Image) {
 }
 
 // renderLayer paints all strokes from the given layer onto the destination image.
-func renderLayer(dst draw.Image, l rm.Layer) error {
+func renderLayer(c *Context, dst draw.Image, l rm.Layer) error {
 	for _, s := range l.Strokes {
 		// The erased content is deleted,
 		// but eraser strokes are recorded.
@@ -142,7 +130,7 @@ func renderLayer(dst draw.Image, l rm.Layer) error {
 			continue
 		}
 
-		err := renderStroke(dst, s)
+		err := renderStroke(c, dst, s)
 		if err != nil {
 			return err
 		}
@@ -152,18 +140,13 @@ func renderLayer(dst draw.Image, l rm.Layer) error {
 }
 
 // renderStroke paints a single stroke on the destination image.
-func renderStroke(dst draw.Image, s rm.Stroke) error {
-	col := colors[s.BrushColor]
-	if col == nil {
-		return fmt.Errorf("invalid color %v", s.BrushColor)
-	}
-
-	pen, err := loadBrush(s.BrushType, col)
+func renderStroke(c *Context, dst draw.Image, s rm.Stroke) error {
+	brush, err := c.loadBrush(s.BrushType, s.BrushColor)
 	if err != nil {
 		return err
 	}
 
-	pen.RenderStroke(dst, s)
+	brush.RenderStroke(dst, s)
 	return nil
 }
 

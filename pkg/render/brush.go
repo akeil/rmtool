@@ -1,21 +1,18 @@
 package render
 
 import (
-	"encoding/json"
-	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
-	"image/png"
+
 	"math"
-	"os"
+
 	"sync"
 
 	"github.com/llgcode/draw2d/draw2dimg"
 
 	"akeil.net/akeil/rm"
 	"akeil.net/akeil/rm/internal/imaging"
-	"akeil.net/akeil/rm/internal/logging"
 )
 
 // see:
@@ -23,28 +20,6 @@ import (
 
 type Brush interface {
 	RenderStroke(dst draw.Image, s rm.Stroke)
-}
-
-func loadBrush(t rm.BrushType, c color.Color) (Brush, error) {
-	switch t {
-	case rm.Ballpoint, rm.BallpointV5:
-		return loadBallpoint(c)
-	case rm.Pencil, rm.PencilV5:
-		return loadPencil(c)
-	case rm.MechanicalPencil, rm.MechanicalPencilV5:
-		return loadMechanicalPencil(c)
-	case rm.Marker, rm.MarkerV5:
-		return loadMarker(c)
-	case rm.Fineliner, rm.FinelinerV5:
-		return loadFineliner(c)
-	case rm.Highlighter, rm.HighlighterV5:
-		return loadHighlighter(c)
-	case rm.PaintBrush, rm.PaintBrushV5:
-		return loadPaintbrush(c)
-	default:
-		logging.Warning("unsupported brush type %v", t)
-		return loadBasePen(c)
-	}
 }
 
 var (
@@ -59,8 +34,8 @@ type BasePen struct {
 	fill image.Image
 }
 
-func loadBasePen(c color.Color) (Brush, error) {
-	i, err := loadSprite("arrow")
+func loadBasePen(ctx *Context, c color.Color) (Brush, error) {
+	i, err := ctx.loadBrushMask("arrow")
 	if err != nil {
 		return nil, err
 	}
@@ -91,8 +66,8 @@ type Ballpoint struct {
 	fill image.Image
 }
 
-func loadBallpoint(c color.Color) (Brush, error) {
-	i, err := loadSprite("ballpoint")
+func loadBallpoint(ctx *Context, c color.Color) (Brush, error) {
+	i, err := ctx.loadBrushMask("ballpoint")
 	if err != nil {
 		return nil, err
 	}
@@ -134,8 +109,8 @@ type Fineliner struct {
 	fill image.Image
 }
 
-func loadFineliner(c color.Color) (Brush, error) {
-	i, err := loadSprite("fineliner")
+func loadFineliner(ctx *Context, c color.Color) (Brush, error) {
+	i, err := ctx.loadBrushMask("fineliner")
 	if err != nil {
 		return nil, err
 	}
@@ -165,8 +140,8 @@ type Pencil struct {
 	fill image.Image
 }
 
-func loadPencil(c color.Color) (Brush, error) {
-	i, err := loadSprite("pencil")
+func loadPencil(ctx *Context, c color.Color) (Brush, error) {
+	i, err := ctx.loadBrushMask("pencil")
 	if err != nil {
 		return nil, err
 	}
@@ -201,8 +176,8 @@ type MechanicalPencil struct {
 	fill image.Image
 }
 
-func loadMechanicalPencil(c color.Color) (Brush, error) {
-	i, err := loadSprite("mech-pencil")
+func loadMechanicalPencil(ctx *Context, c color.Color) (Brush, error) {
+	i, err := ctx.loadBrushMask("mech-pencil")
 	if err != nil {
 		return nil, err
 	}
@@ -232,8 +207,8 @@ type Marker struct {
 	fill image.Image
 }
 
-func loadMarker(c color.Color) (Brush, error) {
-	i, err := loadSprite("marker")
+func loadMarker(ctx *Context, c color.Color) (Brush, error) {
+	i, err := ctx.loadBrushMask("marker")
 	if err != nil {
 		return nil, err
 	}
@@ -263,8 +238,8 @@ type Highlighter struct {
 	fill image.Image
 }
 
-func loadHighlighter(c color.Color) (Brush, error) {
-	i, err := loadSprite("highlighter")
+func loadHighlighter(ctx *Context, c color.Color) (Brush, error) {
+	i, err := ctx.loadBrushMask("highlighter")
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +282,7 @@ type Paintbrush struct {
 	color color.Color
 }
 
-func loadPaintbrush(c color.Color) (Brush, error) {
+func loadPaintbrush(ctx *Context, c color.Color) (Brush, error) {
 	return &Paintbrush{
 		color: c,
 	}, nil
@@ -395,66 +370,4 @@ func drawPath(dst draw.Image, mask image.Image, fill image.Image, start, end rm.
 		x += xFraction * xDirection
 		y += yFraction * yDirection
 	}
-}
-
-func loadSprite(name string) (image.Image, error) {
-	var err error
-
-	spriteMx.Lock()
-	if sprites == nil {
-		err = loadSpritesheet()
-		if err != nil {
-			spriteMx.Unlock()
-			return nil, err
-		}
-	}
-	spriteMx.Unlock()
-
-	idx := spriteIndex[name]
-	if idx == nil {
-		return nil, fmt.Errorf("no sprite image for brush %q", name)
-	} else if len(idx) != 4 {
-		return nil, fmt.Errorf("invalid sprite entry for brush %q", name)
-	}
-
-	r := image.Rect(idx[0], idx[1], idx[2], idx[3])
-	// TODO: check bounds?
-	return sprites.SubImage(r), nil
-}
-
-func loadSpritesheet() error {
-	pj := spriteSrc + ".json"
-	pi := spriteSrc + ".png"
-
-	// index map
-	logging.Debug("Load sprite index from %q", pj)
-	j, err := os.Open(pj)
-	if err != nil {
-		return err
-	}
-	defer j.Close()
-	err = json.NewDecoder(j).Decode(&spriteIndex)
-	if err != nil {
-		return err
-	}
-
-	// image
-	logging.Debug("Load spritesheet from %q", pi)
-	i, err := os.Open(pi)
-	if err != nil {
-		return err
-	}
-	defer i.Close()
-	img, err := png.Decode(i)
-	if err != nil {
-		return err
-	}
-
-	sprites = image.NewRGBA(img.Bounds())
-	for x := 0; x < sprites.Bounds().Dx(); x++ {
-		for y := 0; y < sprites.Bounds().Dy(); y++ {
-			sprites.Set(x, y, img.At(x, y))
-		}
-	}
-	return err
 }
