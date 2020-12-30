@@ -12,8 +12,27 @@ import (
 	"sync"
 
 	"akeil.net/akeil/rm"
+	"akeil.net/akeil/rm/internal/imaging"
 	"akeil.net/akeil/rm/internal/logging"
 )
+
+var brushNames = map[rm.BrushType]string{
+	rm.Ballpoint:          "ballpoint",
+	rm.BallpointV5:        "ballpoint",
+	rm.Pencil:             "pencil",
+	rm.PencilV5:           "pencil",
+	rm.MechanicalPencil:   "mech-pencil",
+	rm.MechanicalPencilV5: "mech-pencil",
+	rm.Marker:             "marker",
+	rm.MarkerV5:           "marker",
+	rm.Fineliner:          "fineliner",
+	rm.FinelinerV5:        "fineliner",
+	rm.Highlighter:        "highlighter",
+	rm.HighlighterV5:      "highlighter",
+	rm.PaintBrush:         "ballpoint", // TODO add mask image and change name
+	rm.PaintBrushV5:       "ballpoint", // TODO add mask image and change name
+	rm.CalligraphyV5:      "ballpoint", // TODO add mask image and change name
+}
 
 type Context struct {
 	dataDir     string
@@ -53,24 +72,35 @@ func (c *Context) loadBrush(bt rm.BrushType, bc rm.BrushColor) (Brush, error) {
 		return nil, fmt.Errorf("invalid color %v", bc)
 	}
 
+	name := brushNames[bt]
+	if name == "" {
+		return nil, fmt.Errorf("unsupported brush type %v", bt)
+	}
+
+	i, err := c.loadBrushMask(name)
+	if err != nil {
+		return nil, err
+	}
+	mask := imaging.CreateMask(i)
+
 	switch bt {
 	case rm.Ballpoint, rm.BallpointV5:
-		return loadBallpoint(c, col)
+		return loadBallpoint(mask, col), nil
 	case rm.Pencil, rm.PencilV5:
-		return loadPencil(c, col)
+		return loadPencil(mask, col), nil
 	case rm.MechanicalPencil, rm.MechanicalPencilV5:
-		return loadMechanicalPencil(c, col)
+		return loadMechanicalPencil(mask, col), nil
 	case rm.Marker, rm.MarkerV5:
-		return loadMarker(c, col)
+		return loadMarker(mask, col), nil
 	case rm.Fineliner, rm.FinelinerV5:
-		return loadFineliner(c, col)
+		return loadFineliner(mask, col), nil
 	case rm.Highlighter, rm.HighlighterV5:
-		return loadHighlighter(c, col)
+		return loadHighlighter(mask, col), nil
 	case rm.PaintBrush, rm.PaintBrushV5:
-		return loadPaintbrush(c, col)
+		return loadPaintbrush(col), nil
 	default:
 		logging.Warning("unsupported brush type %v", bt)
-		return loadBasePen(c, col)
+		return loadBasePen(mask, col), nil
 	}
 }
 

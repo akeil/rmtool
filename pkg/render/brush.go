@@ -24,16 +24,11 @@ type BasePen struct {
 	fill image.Image
 }
 
-func loadBasePen(ctx *Context, c color.Color) (Brush, error) {
-	i, err := ctx.loadBrushMask("arrow")
-	if err != nil {
-		return nil, err
-	}
-
+func loadBasePen(mask image.Image, c color.Color) Brush {
 	return &BasePen{
-		mask: imaging.CreateMask(i),
+		mask: mask,
 		fill: image.NewUniform(c),
-	}, nil
+	}
 }
 
 func (b *BasePen) RenderStroke(dst draw.Image, s rm.Stroke) {
@@ -56,16 +51,11 @@ type Ballpoint struct {
 	fill image.Image
 }
 
-func loadBallpoint(ctx *Context, c color.Color) (Brush, error) {
-	i, err := ctx.loadBrushMask("ballpoint")
-	if err != nil {
-		return nil, err
-	}
-
+func loadBallpoint(mask image.Image, c color.Color) Brush {
 	return &Ballpoint{
-		mask: imaging.CreateMask(i),
+		mask: mask,
 		fill: image.NewUniform(c),
-	}, nil
+	}
 }
 
 func (b *Ballpoint) RenderStroke(dst draw.Image, s rm.Stroke) {
@@ -99,16 +89,11 @@ type Fineliner struct {
 	fill image.Image
 }
 
-func loadFineliner(ctx *Context, c color.Color) (Brush, error) {
-	i, err := ctx.loadBrushMask("fineliner")
-	if err != nil {
-		return nil, err
-	}
-
+func loadFineliner(mask image.Image, c color.Color) Brush {
 	return &Fineliner{
-		mask: imaging.CreateMask(i),
+		mask: mask,
 		fill: image.NewUniform(c),
-	}, nil
+	}
 }
 
 func (f *Fineliner) RenderStroke(dst draw.Image, s rm.Stroke) {
@@ -130,16 +115,11 @@ type Pencil struct {
 	fill image.Image
 }
 
-func loadPencil(ctx *Context, c color.Color) (Brush, error) {
-	i, err := ctx.loadBrushMask("pencil")
-	if err != nil {
-		return nil, err
-	}
-
+func loadPencil(mask image.Image, c color.Color) Brush {
 	return &Pencil{
-		mask: imaging.CreateMask(i),
+		mask: mask,
 		fill: image.NewUniform(c),
-	}, nil
+	}
 }
 
 func (p *Pencil) RenderStroke(dst draw.Image, s rm.Stroke) {
@@ -166,16 +146,11 @@ type MechanicalPencil struct {
 	fill image.Image
 }
 
-func loadMechanicalPencil(ctx *Context, c color.Color) (Brush, error) {
-	i, err := ctx.loadBrushMask("mech-pencil")
-	if err != nil {
-		return nil, err
-	}
-
+func loadMechanicalPencil(mask image.Image, c color.Color) Brush {
 	return &MechanicalPencil{
-		mask: imaging.CreateMask(i),
+		mask: mask,
 		fill: image.NewUniform(c),
-	}, nil
+	}
 }
 
 func (m *MechanicalPencil) RenderStroke(dst draw.Image, s rm.Stroke) {
@@ -197,16 +172,11 @@ type Marker struct {
 	fill image.Image
 }
 
-func loadMarker(ctx *Context, c color.Color) (Brush, error) {
-	i, err := ctx.loadBrushMask("marker")
-	if err != nil {
-		return nil, err
-	}
-
+func loadMarker(mask image.Image, c color.Color) Brush {
 	return &Marker{
-		mask: imaging.CreateMask(i),
+		mask: mask,
 		fill: image.NewUniform(c),
-	}, nil
+	}
 }
 
 func (m *Marker) RenderStroke(dst draw.Image, s rm.Stroke) {
@@ -228,16 +198,11 @@ type Highlighter struct {
 	fill image.Image
 }
 
-func loadHighlighter(ctx *Context, c color.Color) (Brush, error) {
-	i, err := ctx.loadBrushMask("highlighter")
-	if err != nil {
-		return nil, err
-	}
-
+func loadHighlighter(mask image.Image, c color.Color) Brush {
 	return &Highlighter{
-		mask: imaging.CreateMask(i),
+		mask: mask,
 		fill: image.NewUniform(c),
-	}, nil
+	}
 }
 
 func (h *Highlighter) RenderStroke(dst draw.Image, s rm.Stroke) {
@@ -272,10 +237,10 @@ type Paintbrush struct {
 	color color.Color
 }
 
-func loadPaintbrush(ctx *Context, c color.Color) (Brush, error) {
+func loadPaintbrush(c color.Color) Brush {
 	return &Paintbrush{
 		color: c,
-	}, nil
+	}
 }
 
 func (p *Paintbrush) RenderStroke(dst draw.Image, s rm.Stroke) {

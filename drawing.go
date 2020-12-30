@@ -45,7 +45,7 @@ const (
 	MarkerV5           BrushType = 16
 	FinelinerV5        BrushType = 17
 	HighlighterV5      BrushType = 18
-	//CalligraphyV5 = ?
+	CalligraphyV5      BrushType = 21
 )
 
 // BrushSize represents the base brush sizes.
