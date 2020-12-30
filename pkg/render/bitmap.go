@@ -1,20 +1,15 @@
 package render
 
 import (
-	"bufio"
 	"image"
 	"image/color"
 	"image/draw"
 	"image/png"
 	"io"
 	"math"
-	"os"
-	"path/filepath"
-	"sync"
 
 	"akeil.net/akeil/rm"
 	"akeil.net/akeil/rm/internal/imaging"
-	"akeil.net/akeil/rm/internal/logging"
 )
 
 var bgColor = color.White
@@ -43,7 +38,7 @@ func renderPage(c *Context, doc *rm.Document, pageID string, w io.Writer) error 
 	dst := image.NewRGBA(rect)
 
 	if p.HasTemplate() {
-		err = renderTemplate(dst, p.Template(), p.Orientation())
+		err = renderTemplate(c, dst, p.Template(), p.Orientation())
 		if err != nil {
 			return err
 		}
@@ -98,8 +93,8 @@ func renderLayers(c *Context, dst draw.Image, d *rm.Drawing) error {
 	return nil
 }
 
-func renderTemplate(dst draw.Image, tpl string, layout rm.Orientation) error {
-	i, err := readPNG("templates", tpl)
+func renderTemplate(c *Context, dst draw.Image, tpl string, layout rm.Orientation) error {
+	i, err := c.loadTemplate(tpl)
 	if err != nil {
 		return err
 	}
@@ -148,42 +143,6 @@ func renderStroke(c *Context, dst draw.Image, s rm.Stroke) error {
 
 	brush.RenderStroke(dst, s)
 	return nil
-}
-
-var cache = make(map[string]image.Image)
-var cacheMx sync.Mutex
-
-func readPNG(subdir, name string) (image.Image, error) {
-	cacheMx.Lock()
-	defer cacheMx.Unlock()
-
-	key := subdir + "/" + name
-	cached := cache[key]
-	if cached != nil {
-		return cached, nil
-	}
-
-	// TODO: data-dir from config
-	d := "./data"
-	n := name + ".png"
-	p := filepath.Join(d, subdir, n)
-	logging.Debug("Load PNG %q\n", p)
-
-	f, err := os.Open(p)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	r := bufio.NewReader(f)
-	i, _, err := image.Decode(r)
-	if err != nil {
-		return nil, err
-	}
-
-	cache[key] = i
-
-	return i, nil
 }
 
 func rad(deg float64) float64 {

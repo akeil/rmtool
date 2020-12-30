@@ -40,6 +40,8 @@ type Context struct {
 	sprites     *image.RGBA
 	spriteIndex map[string][]int
 	spriteMx    sync.Mutex
+	tpl         map[string]template
+	tplMx       sync.Mutex
 }
 
 func NewContext(dataDir string) *Context {
@@ -166,4 +168,73 @@ func (c *Context) lazyLoadSpritesheet() error {
 	}
 
 	return nil
+}
+
+func (c *Context) loadTemplate(name string) (image.Image, error) {
+	err := c.lazyLoadTemplateIndex()
+	if err != nil {
+		return nil, err
+	}
+
+	/*
+		t, ok := c.tpl[name]
+		if !ok {
+			return nil, fmt.Errorf("no template file found for %q", name)
+		}
+	*/
+	p := filepath.Join(c.dataDir, "templates", name+".png")
+	logging.Debug("Load template image from %q", p)
+
+	f, err := os.Open(p)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	img, err := png.Decode(f)
+	if err != nil {
+		return nil, err
+	}
+
+	return img, nil
+}
+
+func (c *Context) lazyLoadTemplateIndex() error {
+	c.tplMx.Lock()
+	c.tplMx.Unlock()
+	if c.tpl != nil {
+		return nil
+	}
+
+	p := filepath.Join(c.dataDir, "templates", "templates.json")
+	logging.Debug("Load template index from %q", p)
+	f, err := os.Open(p)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	var dst map[string][]template
+
+	err = json.NewDecoder(f).Decode(&dst)
+	if err != nil {
+		return err
+	}
+
+	c.tpl = make(map[string]template)
+	data := dst["templates"]
+	if data == nil {
+		return fmt.Errorf("unexpected JSON in %q - missing 'templates' member", p)
+	}
+	for _, t := range data {
+		c.tpl[t.Name] = t
+	}
+
+	return nil
+}
+
+type template struct {
+	Name      string `json:"name"`
+	Filename  string `json:"filename"`
+	Landscape bool   `json:"Landscape"`
 }
