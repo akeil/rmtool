@@ -106,6 +106,7 @@ func pngs(rc *render.Context, doc *rm.Document) error {
 			if err != nil {
 				log.Fatal(err)
 			}
+			log.Printf("write %v", out)
 			w.Flush()
 
 		}(i, p)

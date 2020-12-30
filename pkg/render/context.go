@@ -105,8 +105,9 @@ func (c *Context) loadBrush(bt rm.BrushType, bc rm.BrushColor) (Brush, error) {
 	switch bt {
 	case rm.Ballpoint, rm.BallpointV5:
 		return &Ballpoint{
-			mask: mask,
-			fill: image.NewUniform(col),
+			mask:  mask,
+			fill:  image.NewUniform(col),
+			color: col,
 		}, nil
 	case rm.Pencil, rm.PencilV5:
 		return &Pencil{
@@ -125,8 +126,9 @@ func (c *Context) loadBrush(bt rm.BrushType, bc rm.BrushColor) (Brush, error) {
 		}, nil
 	case rm.Fineliner, rm.FinelinerV5:
 		return &Fineliner{
-			mask: mask,
-			fill: image.NewUniform(col),
+			mask:  mask,
+			fill:  image.NewUniform(col),
+			color: col,
 		}, nil
 	case rm.Highlighter, rm.HighlighterV5:
 		return &Highlighter{

@@ -6,6 +6,7 @@ import (
 	"image/draw"
 	"math"
 
+	"github.com/llgcode/draw2d"
 	"github.com/llgcode/draw2d/draw2dimg"
 
 	"akeil.net/akeil/rm"
@@ -40,21 +41,24 @@ func (b *BasePen) renderSegment(dst draw.Image, start, end rm.Dot) {
 	opacity := 1.0
 	mask := prepareMask(b.mask, width, opacity, start, end)
 	overlap := 2.0
-	drawPath(dst, mask, b.fill, start, end, overlap)
+	drawStamp(dst, mask, b.fill, start, end, overlap)
 }
 
 // Ballpoint ------------------------------------------------------------------
 
 // The Ballpoint pen has some sensitivity for pressure
 type Ballpoint struct {
-	mask image.Image
-	fill image.Image
+	mask  image.Image
+	fill  image.Image
+	color color.Color
 }
 
 func (b *Ballpoint) RenderStroke(dst draw.Image, s rm.Stroke) {
-	walkDots(dst, s, b.renderSegment)
+	drawPath(dst, s, b.color)
+	//walkDots(dst, s, b.renderSegment)
 }
 
+// TODO: unused - delete?
 func (b *Ballpoint) renderSegment(dst draw.Image, start, end rm.Dot) {
 	// make sure lines have a minimum width
 	// TODO: tke BrushSize into account
@@ -71,19 +75,21 @@ func (b *Ballpoint) renderSegment(dst draw.Image, start, end rm.Dot) {
 
 	mask := prepareMask(b.mask, width, opacity, start, end)
 	overlap := 2.0
-	drawPath(dst, mask, b.fill, start, end, overlap)
+	drawStamp(dst, mask, b.fill, start, end, overlap)
 }
 
 // Fineliner ------------------------------------------------------------------
 
 // Fineliner has no sensitivity to pressure or tilt.
 type Fineliner struct {
-	mask image.Image
-	fill image.Image
+	mask  image.Image
+	fill  image.Image
+	color color.Color
 }
 
 func (f *Fineliner) RenderStroke(dst draw.Image, s rm.Stroke) {
-	walkDots(dst, s, f.renderSegment)
+	drawPath(dst, s, f.color)
+	//walkDots(dst, s, f.renderSegment)
 }
 
 func (f *Fineliner) renderSegment(dst draw.Image, start, end rm.Dot) {
@@ -91,7 +97,7 @@ func (f *Fineliner) renderSegment(dst draw.Image, start, end rm.Dot) {
 	opacity := 1.0
 	mask := prepareMask(f.mask, width, opacity, start, end)
 	overlap := 3.0
-	drawPath(dst, mask, f.fill, start, end, overlap)
+	drawStamp(dst, mask, f.fill, start, end, overlap)
 }
 
 // Pencil ---------------------------------------------------------------------
@@ -115,7 +121,7 @@ func (p *Pencil) renderSegment(dst draw.Image, start, end rm.Dot) {
 
 	mask := prepareMask(p.mask, width, opacity, start, end)
 	overlap := 1.5
-	drawPath(dst, mask, p.fill, start, end, overlap)
+	drawStamp(dst, mask, p.fill, start, end, overlap)
 }
 
 // Mechanical Pencil ----------------------------------------------------------
@@ -134,7 +140,7 @@ func (m *MechanicalPencil) renderSegment(dst draw.Image, start, end rm.Dot) {
 	opacity := 1.0
 	mask := prepareMask(m.mask, width, opacity, start, end)
 	overlap := 4.0
-	drawPath(dst, mask, m.fill, start, end, overlap)
+	drawStamp(dst, mask, m.fill, start, end, overlap)
 }
 
 // Marker ---------------------------------------------------------------------
@@ -153,7 +159,7 @@ func (m *Marker) renderSegment(dst draw.Image, start, end rm.Dot) {
 	opacity := 1.0
 	mask := prepareMask(m.mask, width, opacity, start, end)
 	overlap := 4.0
-	drawPath(dst, mask, m.fill, start, end, overlap)
+	drawStamp(dst, mask, m.fill, start, end, overlap)
 }
 
 // Highlighter ----------------------------------------------------------------
@@ -186,7 +192,7 @@ func (h *Highlighter) renderSegment(dst draw.Image, start, end rm.Dot) {
 	opacity := 1.0
 	mask := prepareMask(h.mask, width, opacity, start, end)
 	overlap := 1.0
-	drawPath(dst, mask, h.fill, start, end, overlap)
+	drawStamp(dst, mask, h.fill, start, end, overlap)
 }
 
 // Paintbrush -----------------------------------------------------------------
@@ -196,19 +202,7 @@ type Paintbrush struct {
 }
 
 func (p *Paintbrush) RenderStroke(dst draw.Image, s rm.Stroke) {
-	walkDots(dst, s, p.renderSegment)
-}
-
-func (p *Paintbrush) renderSegment(dst draw.Image, start, end rm.Dot) {
-	gc := draw2dimg.NewGraphicContext(dst)
-
-	gc.SetStrokeColor(p.fill)
-	gc.SetLineWidth(float64(start.Width))
-
-	gc.BeginPath()
-	gc.MoveTo(float64(start.X), float64(start.Y))
-	gc.LineTo(float64(end.X), float64(end.Y))
-	gc.Stroke()
+	drawPath(dst, s, p.fill)
 }
 
 // Rendering Helpers ----------------------------------------------------------
@@ -236,7 +230,9 @@ func prepareMask(mask image.Image, width, opacity float64, start, end rm.Dot) im
 	return i
 }
 
-func drawPath(dst draw.Image, mask image.Image, fill image.Image, start, end rm.Dot, overlap float64) {
+// draw a single line from start to end with a "stamp" image.
+// The stamp image is repeated along the line, taking the overlap factor into account.
+func drawStamp(dst draw.Image, mask image.Image, fill image.Image, start, end rm.Dot, overlap float64) {
 	r := mask.Bounds()
 	w, h := r.Max.X-r.Min.X, r.Max.Y-r.Min.Y
 
@@ -276,5 +272,69 @@ func drawPath(dst draw.Image, mask image.Image, fill image.Image, start, end rm.
 		// move along the path for the next iteration
 		x += xFraction * xDirection
 		y += yFraction * yDirection
+	}
+}
+
+// Draw the given stroke with basic draw2d path functions.
+// This works well for brushes with little variance in line width
+// and which do not have the need for texture.
+func drawPath(dst draw.Image, s rm.Stroke, c color.Color) {
+	// guard - we'll access by index later
+	if len(s.Dots) == 0 {
+		return
+	}
+
+	gc := draw2dimg.NewGraphicContext(dst)
+	defer gc.Close()
+
+	gc.SetStrokeColor(c)
+	gc.SetLineCap(draw2d.RoundCap)
+	gc.SetLineJoin(draw2d.RoundJoin)
+
+	d := s.Dots[0]
+	x := float64(d.X)
+	y := float64(d.Y)
+	w := float64(d.Width)
+	gc.BeginPath()
+	gc.SetLineWidth(w)
+	gc.MoveTo(x, y)
+
+	// Remove precision from float values
+	coarse := func(v float64) float64 {
+		return math.Round(v*100) / 100
+	}
+	// We'll close and stroke sub-segments of the stroke whenver the width changes.
+	// For this, we need to remember position and width of the previous dot.
+	xPrev := x
+	yPrev := x
+	wPrev := w
+
+	// starts with the *second* dot
+	for i := 1; i < len(s.Dots); i++ {
+		d = s.Dots[i]
+		x = float64(d.X)
+		y = float64(d.Y)
+		w := float64(d.Width)
+
+		// We cannot stroke paths with variable width.
+		// So everytime width changes, stroke the current path
+		// and start a new one with the changed width.
+		if coarse(w) != coarse(wPrev) {
+			gc.Stroke()
+
+			gc.BeginPath()
+			gc.SetLineWidth(w)
+			gc.MoveTo(xPrev, yPrev)
+		}
+
+		gc.LineTo(x, y)
+
+		xPrev = x
+		yPrev = y
+		wPrev = w
+	}
+
+	if !gc.IsEmpty() {
+		gc.Stroke()
 	}
 }
