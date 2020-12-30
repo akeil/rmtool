@@ -41,6 +41,7 @@ type Context struct {
 	spriteIndex map[string][]int
 	spriteMx    sync.Mutex
 	tpl         map[string]template
+	tplCache    map[string]image.Image
 	tplMx       sync.Mutex
 }
 
@@ -171,12 +172,26 @@ func (c *Context) lazyLoadSpritesheet() error {
 }
 
 func (c *Context) loadTemplate(name string) (image.Image, error) {
-	err := c.lazyLoadTemplateIndex()
-	if err != nil {
-		return nil, err
+	c.tplMx.Lock()
+	defer c.tplMx.Unlock()
+	if c.tplCache == nil {
+		c.tplCache = make(map[string]image.Image)
+	}
+	cached := c.tplCache[name]
+	if cached != nil {
+		return cached, nil
 	}
 
 	/*
+		TODO: apparently, we do not need the index
+			  filename is directly contained in pagedata
+			  Maybe 'orientation' is important?
+
+		err := c.lazyLoadTemplateIndex()
+		if err != nil {
+			return nil, err
+		}
+
 		t, ok := c.tpl[name]
 		if !ok {
 			return nil, fmt.Errorf("no template file found for %q", name)
@@ -195,13 +210,12 @@ func (c *Context) loadTemplate(name string) (image.Image, error) {
 	if err != nil {
 		return nil, err
 	}
+	c.tplCache[name] = img
 
 	return img, nil
 }
 
 func (c *Context) lazyLoadTemplateIndex() error {
-	c.tplMx.Lock()
-	c.tplMx.Unlock()
 	if c.tpl != nil {
 		return nil
 	}
