@@ -158,7 +158,7 @@ func renderStroke(dst draw.Image, s rm.Stroke) error {
 		return fmt.Errorf("invalid color %v", s.BrushColor)
 	}
 
-	pen, err := NewBrush(s.BrushType, col)
+	pen, err := loadBrush(s.BrushType, col)
 	if err != nil {
 		return err
 	}

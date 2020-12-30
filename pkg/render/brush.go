@@ -20,7 +20,7 @@ type Brush interface {
 	RenderStroke(dst draw.Image, s rm.Stroke)
 }
 
-func NewBrush(t rm.BrushType, c color.Color) (Brush, error) {
+func loadBrush(t rm.BrushType, c color.Color) (Brush, error) {
 	switch t {
 	case rm.Ballpoint, rm.BallpointV5:
 		return loadBallpoint(c)
@@ -264,14 +264,28 @@ func loadHighlighter(c color.Color) (Brush, error) {
 }
 
 func (h *Highlighter) RenderStroke(dst draw.Image, s rm.Stroke) {
-	walkDots(dst, s, h.renderSegment)
+	// The highlighter has a uniform opacity per stroke.
+	// This means overlapping segments do not add up their opacity values.
+
+	// To achieve this, render all segments in full opacity on a temp image...
+	r := dst.Bounds()
+	tmp := image.NewRGBA(r)
+	walkDots(tmp, s, h.renderSegment)
+
+	// ... then transfer the temp image with desired opacity onto the actual
+	// destination.
+	opacity := 0.4
+	a := uint8(math.Round(255 * opacity))
+	mask := image.NewUniform(color.Alpha{a})
+	p := image.ZP
+	draw.DrawMask(dst, r, tmp, p, mask, p, draw.Over)
 }
 
 func (h *Highlighter) renderSegment(dst draw.Image, start, end rm.Dot) {
 	width := float64(start.Width)
-	opacity := 0.1
+	opacity := 1.0
 	mask := prepareMask(h.mask, width, opacity, start, end)
-	overlap := 3.0
+	overlap := 1.0
 	drawPath(dst, mask, h.fill, start, end, overlap)
 }
 
