@@ -1,10 +1,15 @@
 package render
 
 import (
+	"encoding/json"
+	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
+	"image/png"
 	"math"
+	"os"
+	"sync"
 
 	"github.com/llgcode/draw2d/draw2dimg"
 
@@ -42,13 +47,20 @@ func loadBrush(t rm.BrushType, c color.Color) (Brush, error) {
 	}
 }
 
+var (
+	sprites     *image.RGBA
+	spriteIndex map[string][]int
+	spriteMx    sync.Mutex
+	spriteSrc   = "data/sprites"
+)
+
 type BasePen struct {
 	mask image.Image
 	fill image.Image
 }
 
 func loadBasePen(c color.Color) (Brush, error) {
-	i, err := readPNG("brushes", "ballpoint")
+	i, err := loadSprite("arrow")
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +92,7 @@ type Ballpoint struct {
 }
 
 func loadBallpoint(c color.Color) (Brush, error) {
-	i, err := readPNG("brushes", "ballpoint")
+	i, err := loadSprite("ballpoint")
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +135,7 @@ type Fineliner struct {
 }
 
 func loadFineliner(c color.Color) (Brush, error) {
-	i, err := readPNG("brushes", "fineliner")
+	i, err := loadSprite("fineliner")
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +166,7 @@ type Pencil struct {
 }
 
 func loadPencil(c color.Color) (Brush, error) {
-	i, err := readPNG("brushes", "pencil")
+	i, err := loadSprite("pencil")
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +202,7 @@ type MechanicalPencil struct {
 }
 
 func loadMechanicalPencil(c color.Color) (Brush, error) {
-	i, err := readPNG("brushes", "mech-pencil")
+	i, err := loadSprite("mech-pencil")
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +233,7 @@ type Marker struct {
 }
 
 func loadMarker(c color.Color) (Brush, error) {
-	i, err := readPNG("brushes", "marker")
+	i, err := loadSprite("marker")
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +264,7 @@ type Highlighter struct {
 }
 
 func loadHighlighter(c color.Color) (Brush, error) {
-	i, err := readPNG("brushes", "highlighter")
+	i, err := loadSprite("highlighter")
 	if err != nil {
 		return nil, err
 	}
@@ -331,14 +343,15 @@ func walkDots(dst draw.Image, s rm.Stroke, r segmentRenderer) {
 
 func prepareMask(mask image.Image, width, opacity float64, start, end rm.Dot) image.Image {
 	i := imaging.Resize(mask, width)
-
 	if opacity != 1.0 {
 		i = imaging.ApplyOpacity(i, opacity)
 	}
 
-	// Rotate the brush to align with the path
+	// Rotate the brush to align with the path.
+	// Brush images are alinged "left to right", i.e. the "front" is on the left.
 	angle := math.Atan2(float64(start.Y-end.Y), float64(start.X-end.X))
 	return imaging.Rotate(angle, i)
+	return i
 }
 
 func drawPath(dst draw.Image, mask image.Image, fill image.Image, start, end rm.Dot, overlap float64) {
@@ -382,4 +395,66 @@ func drawPath(dst draw.Image, mask image.Image, fill image.Image, start, end rm.
 		x += xFraction * xDirection
 		y += yFraction * yDirection
 	}
+}
+
+func loadSprite(name string) (image.Image, error) {
+	var err error
+
+	spriteMx.Lock()
+	if sprites == nil {
+		err = loadSpritesheet()
+		if err != nil {
+			spriteMx.Unlock()
+			return nil, err
+		}
+	}
+	spriteMx.Unlock()
+
+	idx := spriteIndex[name]
+	if idx == nil {
+		return nil, fmt.Errorf("no sprite image for brush %q", name)
+	} else if len(idx) != 4 {
+		return nil, fmt.Errorf("invalid sprite entry for brush %q", name)
+	}
+
+	r := image.Rect(idx[0], idx[1], idx[2], idx[3])
+	// TODO: check bounds?
+	return sprites.SubImage(r), nil
+}
+
+func loadSpritesheet() error {
+	pj := spriteSrc + ".json"
+	pi := spriteSrc + ".png"
+
+	// index map
+	logging.Debug("Load sprite index from %q", pj)
+	j, err := os.Open(pj)
+	if err != nil {
+		return err
+	}
+	defer j.Close()
+	err = json.NewDecoder(j).Decode(&spriteIndex)
+	if err != nil {
+		return err
+	}
+
+	// image
+	logging.Debug("Load spritesheet from %q", pi)
+	i, err := os.Open(pi)
+	if err != nil {
+		return err
+	}
+	defer i.Close()
+	img, err := png.Decode(i)
+	if err != nil {
+		return err
+	}
+
+	sprites = image.NewRGBA(img.Bounds())
+	for x := 0; x < sprites.Bounds().Dx(); x++ {
+		for y := 0; y < sprites.Bounds().Dy(); y++ {
+			sprites.Set(x, y, img.At(x, y))
+		}
+	}
+	return err
 }
