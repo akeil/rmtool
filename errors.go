@@ -43,6 +43,7 @@ func (v validationError) Error() string {
 	return v.message
 }
 
+// NewValidationError creates an error of from the given format string.
 func NewValidationError(msg string, v ...interface{}) error {
 	return validationError{fmt.Sprintf(msg, v...)}
 }

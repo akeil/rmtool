@@ -61,7 +61,7 @@ func (r *repo) Update(m rm.Meta) error {
 	return r.client.update(item)
 }
 
-func (m *repo) PagePrefix(id string, index int) string {
+func (r *repo) PagePrefix(id string, index int) string {
 	return fmt.Sprintf("%d", index)
 }
 

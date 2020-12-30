@@ -178,7 +178,7 @@ func (r *repo) Upload(d *rm.Document) error {
 	return nil
 }
 
-func (m repo) PagePrefix(id string, index int) string {
+func (r repo) PagePrefix(id string, index int) string {
 	return id
 }
 

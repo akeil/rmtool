@@ -34,6 +34,9 @@ var brushNames = map[rm.BrushType]string{
 	rm.CalligraphyV5:      "ballpoint", // TODO add mask image and change name
 }
 
+// Context holds parameters and cached data for rendering operations.
+//
+// If multiple drawings are rendered, they should use the same Context.
 type Context struct {
 	dataDir     string
 	colors      map[rm.BrushColor]color.Color
@@ -45,6 +48,10 @@ type Context struct {
 	tplMx       sync.Mutex
 }
 
+// NewContext sets up a new rendering context.
+//
+// dataDir should point to a directory with a spritesheet for the brushes
+// and a subdirectory 'templates' with page backgrounds.
 func NewContext(dataDir string) *Context {
 	var colors = map[rm.BrushColor]color.Color{
 		rm.Black: color.Black,
