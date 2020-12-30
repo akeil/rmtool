@@ -4,10 +4,7 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-
 	"math"
-
-	"sync"
 
 	"github.com/llgcode/draw2d/draw2dimg"
 
@@ -21,13 +18,6 @@ import (
 type Brush interface {
 	RenderStroke(dst draw.Image, s rm.Stroke)
 }
-
-var (
-	sprites     *image.RGBA
-	spriteIndex map[string][]int
-	spriteMx    sync.Mutex
-	spriteSrc   = "data/sprites"
-)
 
 type BasePen struct {
 	mask image.Image

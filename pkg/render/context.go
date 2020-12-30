@@ -129,8 +129,8 @@ func (c *Context) lazyLoadSpritesheet() error {
 
 	// make the image an RGBA (allows SubImage(...)
 	c.sprites = image.NewRGBA(img.Bounds())
-	for x := 0; x < sprites.Bounds().Dx(); x++ {
-		for y := 0; y < sprites.Bounds().Dy(); y++ {
+	for x := 0; x < c.sprites.Bounds().Dx(); x++ {
+		for y := 0; y < c.sprites.Bounds().Dy(); y++ {
 			c.sprites.Set(x, y, img.At(x, y))
 		}
 	}
