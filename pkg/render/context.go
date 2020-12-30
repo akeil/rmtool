@@ -34,11 +34,17 @@ var brushNames = map[rm.BrushType]string{
 	rm.CalligraphyV5:      "ballpoint", // TODO add mask image and change name
 }
 
+var defaultColors = map[rm.BrushColor]color.Color{
+	rm.Black: color.Black,
+	rm.Gray:  color.RGBA{127, 127, 127, 255},
+	rm.White: color.White,
+}
+
 // Context holds parameters and cached data for rendering operations.
 //
 // If multiple drawings are rendered, they should use the same Context.
 type Context struct {
-	dataDir     string
+	DataDir     string
 	colors      map[rm.BrushColor]color.Color
 	sprites     *image.RGBA
 	spriteIndex map[string][]int
@@ -53,15 +59,14 @@ type Context struct {
 // dataDir should point to a directory with a spritesheet for the brushes
 // and a subdirectory 'templates' with page backgrounds.
 func NewContext(dataDir string) *Context {
-	var colors = map[rm.BrushColor]color.Color{
-		rm.Black: color.Black,
-		rm.Gray:  color.RGBA{127, 127, 127, 255},
-		rm.White: color.White,
-	}
 	return &Context{
-		dataDir: "data",
-		colors:  colors,
+		DataDir: "data",
 	}
+}
+
+func DefaultContext() *Context {
+	// TODO hardcoded path - choose a more sensible value
+	return NewContext("./data")
 }
 
 // Page draws a single page to a PNG and writes it to the given writer.
@@ -77,7 +82,11 @@ func (c *Context) PDF(doc *rm.Document, w io.Writer) error {
 }
 
 func (c *Context) loadBrush(bt rm.BrushType, bc rm.BrushColor) (Brush, error) {
-	col := c.colors[bc]
+	lookup := c.colors
+	if lookup == nil {
+		lookup = defaultColors
+	}
+	col := lookup[bc]
 	if col == nil {
 		return nil, fmt.Errorf("invalid color %v", bc)
 	}
@@ -95,19 +104,39 @@ func (c *Context) loadBrush(bt rm.BrushType, bc rm.BrushColor) (Brush, error) {
 
 	switch bt {
 	case rm.Ballpoint, rm.BallpointV5:
-		return loadBallpoint(mask, col), nil
+		return &Ballpoint{
+			mask: mask,
+			fill: image.NewUniform(col),
+		}, nil
 	case rm.Pencil, rm.PencilV5:
-		return loadPencil(mask, col), nil
+		return &Pencil{
+			mask: mask,
+			fill: image.NewUniform(col),
+		}, nil
 	case rm.MechanicalPencil, rm.MechanicalPencilV5:
-		return loadMechanicalPencil(mask, col), nil
+		return &MechanicalPencil{
+			mask: mask,
+			fill: image.NewUniform(col),
+		}, nil
 	case rm.Marker, rm.MarkerV5:
-		return loadMarker(mask, col), nil
+		return &Marker{
+			mask: mask,
+			fill: image.NewUniform(col),
+		}, nil
 	case rm.Fineliner, rm.FinelinerV5:
-		return loadFineliner(mask, col), nil
+		return &Fineliner{
+			mask: mask,
+			fill: image.NewUniform(col),
+		}, nil
 	case rm.Highlighter, rm.HighlighterV5:
-		return loadHighlighter(mask, col), nil
+		return &Highlighter{
+			mask: mask,
+			fill: image.NewUniform(col),
+		}, nil
 	case rm.PaintBrush, rm.PaintBrushV5:
-		return loadPaintbrush(col), nil
+		return &Paintbrush{
+			fill: image.NewUniform(col),
+		}, nil
 	default:
 		logging.Warning("unsupported brush type %v", bt)
 		return loadBasePen(mask, col), nil
@@ -129,7 +158,12 @@ func (c *Context) loadBrushMask(name string) (image.Image, error) {
 	}
 
 	rect := image.Rect(idx[0], idx[1], idx[2], idx[3])
-	// TODO: check bounds?
+
+	// sanity check
+	if rect.Dx() > c.sprites.Bounds().Dx() || rect.Dy() > c.sprites.Bounds().Dy() {
+		return nil, fmt.Errorf("sprite bounds not within spritesheet dimensions")
+	}
+
 	return c.sprites.SubImage(rect), nil
 }
 
@@ -142,7 +176,7 @@ func (c *Context) lazyLoadSpritesheet() error {
 	}
 
 	// index map
-	pj := filepath.Join(c.dataDir, "sprites.json")
+	pj := filepath.Join(c.DataDir, "sprites.json")
 	logging.Debug("Load sprite index from %q", pj)
 	j, err := os.Open(pj)
 	if err != nil {
@@ -155,14 +189,7 @@ func (c *Context) lazyLoadSpritesheet() error {
 	}
 
 	// image
-	pi := filepath.Join(c.dataDir, "sprites.png")
-	logging.Debug("Load spritesheet from %q", pi)
-	i, err := os.Open(pi)
-	if err != nil {
-		return err
-	}
-	defer i.Close()
-	img, err := png.Decode(i)
+	img, err := readPNG(c.DataDir, "sprites.png")
 	if err != nil {
 		return err
 	}
@@ -204,19 +231,11 @@ func (c *Context) loadTemplate(name string) (image.Image, error) {
 			return nil, fmt.Errorf("no template file found for %q", name)
 		}
 	*/
-	p := filepath.Join(c.dataDir, "templates", name+".png")
-	logging.Debug("Load template image from %q", p)
-
-	f, err := os.Open(p)
+	img, err := readPNG(c.DataDir, "templates", name+".png")
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
 
-	img, err := png.Decode(f)
-	if err != nil {
-		return nil, err
-	}
 	c.tplCache[name] = img
 
 	return img, nil
@@ -227,7 +246,7 @@ func (c *Context) lazyLoadTemplateIndex() error {
 		return nil
 	}
 
-	p := filepath.Join(c.dataDir, "templates", "templates.json")
+	p := filepath.Join(c.DataDir, "templates", "templates.json")
 	logging.Debug("Load template index from %q", p)
 	f, err := os.Open(p)
 	if err != nil {
@@ -258,4 +277,17 @@ type template struct {
 	Name      string `json:"name"`
 	Filename  string `json:"filename"`
 	Landscape bool   `json:"Landscape"`
+}
+
+func readPNG(path ...string) (image.Image, error) {
+	p := filepath.Join(path...)
+	logging.Debug("Read PNG image from %q", p)
+
+	f, err := os.Open(p)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	return png.Decode(f)
 }

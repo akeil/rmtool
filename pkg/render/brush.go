@@ -51,13 +51,6 @@ type Ballpoint struct {
 	fill image.Image
 }
 
-func loadBallpoint(mask image.Image, c color.Color) Brush {
-	return &Ballpoint{
-		mask: mask,
-		fill: image.NewUniform(c),
-	}
-}
-
 func (b *Ballpoint) RenderStroke(dst draw.Image, s rm.Stroke) {
 	walkDots(dst, s, b.renderSegment)
 }
@@ -89,13 +82,6 @@ type Fineliner struct {
 	fill image.Image
 }
 
-func loadFineliner(mask image.Image, c color.Color) Brush {
-	return &Fineliner{
-		mask: mask,
-		fill: image.NewUniform(c),
-	}
-}
-
 func (f *Fineliner) RenderStroke(dst draw.Image, s rm.Stroke) {
 	walkDots(dst, s, f.renderSegment)
 }
@@ -113,13 +99,6 @@ func (f *Fineliner) renderSegment(dst draw.Image, start, end rm.Dot) {
 type Pencil struct {
 	mask image.Image
 	fill image.Image
-}
-
-func loadPencil(mask image.Image, c color.Color) Brush {
-	return &Pencil{
-		mask: mask,
-		fill: image.NewUniform(c),
-	}
 }
 
 func (p *Pencil) RenderStroke(dst draw.Image, s rm.Stroke) {
@@ -146,13 +125,6 @@ type MechanicalPencil struct {
 	fill image.Image
 }
 
-func loadMechanicalPencil(mask image.Image, c color.Color) Brush {
-	return &MechanicalPencil{
-		mask: mask,
-		fill: image.NewUniform(c),
-	}
-}
-
 func (m *MechanicalPencil) RenderStroke(dst draw.Image, s rm.Stroke) {
 	walkDots(dst, s, m.renderSegment)
 }
@@ -172,13 +144,6 @@ type Marker struct {
 	fill image.Image
 }
 
-func loadMarker(mask image.Image, c color.Color) Brush {
-	return &Marker{
-		mask: mask,
-		fill: image.NewUniform(c),
-	}
-}
-
 func (m *Marker) RenderStroke(dst draw.Image, s rm.Stroke) {
 	walkDots(dst, s, m.renderSegment)
 }
@@ -196,13 +161,6 @@ func (m *Marker) renderSegment(dst draw.Image, start, end rm.Dot) {
 type Highlighter struct {
 	mask image.Image
 	fill image.Image
-}
-
-func loadHighlighter(mask image.Image, c color.Color) Brush {
-	return &Highlighter{
-		mask: mask,
-		fill: image.NewUniform(c),
-	}
 }
 
 func (h *Highlighter) RenderStroke(dst draw.Image, s rm.Stroke) {
@@ -234,13 +192,7 @@ func (h *Highlighter) renderSegment(dst draw.Image, start, end rm.Dot) {
 // Paintbrush -----------------------------------------------------------------
 
 type Paintbrush struct {
-	color color.Color
-}
-
-func loadPaintbrush(c color.Color) Brush {
-	return &Paintbrush{
-		color: c,
-	}
+	fill color.Color
 }
 
 func (p *Paintbrush) RenderStroke(dst draw.Image, s rm.Stroke) {
@@ -250,7 +202,7 @@ func (p *Paintbrush) RenderStroke(dst draw.Image, s rm.Stroke) {
 func (p *Paintbrush) renderSegment(dst draw.Image, start, end rm.Dot) {
 	gc := draw2dimg.NewGraphicContext(dst)
 
-	gc.SetStrokeColor(p.color)
+	gc.SetStrokeColor(p.fill)
 	gc.SetLineWidth(float64(start.Width))
 
 	gc.BeginPath()

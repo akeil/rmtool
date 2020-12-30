@@ -56,7 +56,7 @@ func overlayPDF(c *Context, doc *rm.Document, pdf *gofpdf.Fpdf) error {
 		}
 
 		logging.Debug("overlay the drawing for page %v", i)
-		err = renderDrawingToPDF(c, pdf, d)
+		err = drawingToPDF(c, pdf, d)
 		if err != nil {
 			return err
 		}
@@ -71,7 +71,7 @@ func dontPanic(f func()) error {
 	rv := make(chan error, 0)
 
 	go func() {
-		// this will "catch" any panic and send its mssage to the error  channel
+		// this will "catch" any panic and send its mssage to the error channel
 		defer func() {
 			x := recover()
 			if x != nil {

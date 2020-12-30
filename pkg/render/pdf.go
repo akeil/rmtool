@@ -17,7 +17,7 @@ const tsFormat = "2006-01-02 15:04:05"
 //
 // The result is written to the given writer.
 func PDF(d *rm.Document, w io.Writer) error {
-	r := NewContext("./data")
+	r := DefaultContext()
 	return renderPDF(r, d, w)
 }
 
@@ -29,7 +29,7 @@ func renderPDF(c *Context, d *rm.Document, w io.Writer) error {
 	if d.FileType() == rm.Pdf {
 		err = overlayPDF(c, d, pdf)
 	} else {
-		err = renderDrawingsPDF(c, pdf, d)
+		err = drawingsPDF(c, pdf, d)
 	}
 
 	if err != nil {
@@ -38,7 +38,7 @@ func renderPDF(c *Context, d *rm.Document, w io.Writer) error {
 	return pdf.Output(w)
 }
 
-func renderDrawingsPDF(c *Context, pdf *gofpdf.Fpdf, d *rm.Document) error {
+func drawingsPDF(c *Context, pdf *gofpdf.Fpdf, d *rm.Document) error {
 	for i, pageID := range d.Pages() {
 		err := doRenderPDFPage(c, pdf, d, pageID, i)
 		if err != nil {
@@ -106,20 +106,26 @@ func doRenderPDFPage(c *Context, pdf *gofpdf.Fpdf, doc *rm.Document, pageID stri
 
 	// TODO: add the background template
 
-	return renderDrawingToPDF(c, pdf, d)
+	return drawingToPDF(c, pdf, d)
 }
 
-func renderDrawingToPDF(c *Context, pdf *gofpdf.Fpdf, d *rm.Drawing) error {
-	name := uuid.New().String()
+// drawingToPDF renders the given Drawing to a bitmap and places it on the
+// current page of the given PDF.
+//
+// This function is used to render a drawing onto an empty page
+// AND to overlay an existing page with the drawing.
+func drawingToPDF(c *Context, pdf *gofpdf.Fpdf, d *rm.Drawing) error {
+	id := uuid.New().String()
 	opts := gofpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}
 
-	// render to PNG
+	// render to in-memory PNG
 	var buf bytes.Buffer
 	err := renderPNG(c, d, false, &buf)
 	if err != nil {
 		return err
 	}
-	pdf.RegisterImageOptionsReader(name, opts, &buf)
+	// pdf.ImageOptions(...) will read frm the registered reader
+	pdf.RegisterImageOptionsReader(id, opts, &buf)
 
 	// The drawing will be scaled to the (usable) page width
 	wPage, _ := pdf.GetPageSize()
@@ -132,7 +138,7 @@ func renderDrawingToPDF(c *Context, pdf *gofpdf.Fpdf, d *rm.Drawing) error {
 	flow := false
 	link := 0
 	linkStr := ""
-	pdf.ImageOptions(name, x, y, w, h, flow, opts, link, linkStr)
+	pdf.ImageOptions(id, x, y, w, h, flow, opts, link, linkStr)
 
 	return nil
 }

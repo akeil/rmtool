@@ -19,7 +19,7 @@ var bgColor = color.White
 //
 // Unlike RenderDrawing, this includes the page's background template.
 func Page(doc *rm.Document, pageID string, w io.Writer) error {
-	r := NewContext("./data")
+	r := DefaultContext()
 	return renderPage(r, doc, pageID, w)
 }
 
@@ -83,16 +83,12 @@ func renderPNG(c *Context, d *rm.Drawing, bg bool, w io.Writer) error {
 	return nil
 }
 
-func renderLayers(c *Context, dst draw.Image, d *rm.Drawing) error {
-	for _, l := range d.Layers {
-		err := renderLayer(c, dst, l)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
+// renderTemplate paints the named background template on the given destination
+// image.
+//
+// The background image is loaded from the given Context.
+//
+// An error is returned ff the template cannot be loaded.
 func renderTemplate(c *Context, dst draw.Image, tpl string, layout rm.Orientation) error {
 	i, err := c.loadTemplate(tpl)
 	if err != nil {
@@ -116,32 +112,25 @@ func renderBackground(dst draw.Image) {
 	draw.Draw(dst, dst.Bounds(), bg, p, draw.Over)
 }
 
-// renderLayer paints all strokes from the given layer onto the destination image.
-func renderLayer(c *Context, dst draw.Image, l rm.Layer) error {
-	for _, s := range l.Strokes {
-		// The erased content is deleted,
-		// but eraser strokes are recorded.
-		if s.BrushType == rm.Eraser {
-			continue
-		}
+// renderLayoers paints all layers on the destination image.
+func renderLayers(c *Context, dst draw.Image, d *rm.Drawing) error {
+	for _, l := range d.Layers {
+		for _, s := range l.Strokes {
+			// The erased content is deleted,
+			// but eraser strokes are recorded.
+			if s.BrushType == rm.Eraser {
+				continue
+			}
 
-		err := renderStroke(c, dst, s)
-		if err != nil {
-			return err
+			brush, err := c.loadBrush(s.BrushType, s.BrushColor)
+			if err != nil {
+				return err
+			}
+
+			brush.RenderStroke(dst, s)
 		}
 	}
 
-	return nil
-}
-
-// renderStroke paints a single stroke on the destination image.
-func renderStroke(c *Context, dst draw.Image, s rm.Stroke) error {
-	brush, err := c.loadBrush(s.BrushType, s.BrushColor)
-	if err != nil {
-		return err
-	}
-
-	brush.RenderStroke(dst, s)
 	return nil
 }
 
