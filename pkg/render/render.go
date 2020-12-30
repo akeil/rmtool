@@ -163,13 +163,7 @@ func renderStroke(dst draw.Image, s rm.Stroke) error {
 		return err
 	}
 
-	numDots := len(s.Dots)
-	for i := 1; i < numDots; i++ {
-		start := s.Dots[i-1]
-		end := s.Dots[i]
-		pen.RenderSegment(dst, start, end)
-	}
-
+	pen.RenderStroke(dst, s)
 	return nil
 }
 

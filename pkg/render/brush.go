@@ -17,7 +17,7 @@ import (
 // https://github.com/lschwetlick/maxio/blob/master/rm_tools/rM2svg.py
 
 type Brush interface {
-	RenderSegment(dst draw.Image, start, end rm.Dot)
+	RenderStroke(dst draw.Image, s rm.Stroke)
 }
 
 func NewBrush(t rm.BrushType, c color.Color) (Brush, error) {
@@ -59,7 +59,11 @@ func loadBasePen(c color.Color) (Brush, error) {
 	}, nil
 }
 
-func (b *BasePen) RenderSegment(dst draw.Image, start, end rm.Dot) {
+func (b *BasePen) RenderStroke(dst draw.Image, s rm.Stroke) {
+	walkDots(dst, s, b.renderSegment)
+}
+
+func (b *BasePen) renderSegment(dst draw.Image, start, end rm.Dot) {
 	width := float64(start.Width)
 	opacity := 1.0
 	mask := prepareMask(b.mask, width, opacity, start, end)
@@ -87,7 +91,11 @@ func loadBallpoint(c color.Color) (Brush, error) {
 	}, nil
 }
 
-func (b *Ballpoint) RenderSegment(dst draw.Image, start, end rm.Dot) {
+func (b *Ballpoint) RenderStroke(dst draw.Image, s rm.Stroke) {
+	walkDots(dst, s, b.renderSegment)
+}
+
+func (b *Ballpoint) renderSegment(dst draw.Image, start, end rm.Dot) {
 	// make sure lines have a minimum width
 	// TODO: tke BrushSize into account
 	minWidth := 3.0
@@ -126,7 +134,11 @@ func loadFineliner(c color.Color) (Brush, error) {
 	}, nil
 }
 
-func (f *Fineliner) RenderSegment(dst draw.Image, start, end rm.Dot) {
+func (f *Fineliner) RenderStroke(dst draw.Image, s rm.Stroke) {
+	walkDots(dst, s, f.renderSegment)
+}
+
+func (f *Fineliner) renderSegment(dst draw.Image, start, end rm.Dot) {
 	width := float64(start.Width)
 	opacity := 1.0
 	mask := prepareMask(f.mask, width, opacity, start, end)
@@ -153,7 +165,11 @@ func loadPencil(c color.Color) (Brush, error) {
 	}, nil
 }
 
-func (p *Pencil) RenderSegment(dst draw.Image, start, end rm.Dot) {
+func (p *Pencil) RenderStroke(dst draw.Image, s rm.Stroke) {
+	walkDots(dst, s, p.renderSegment)
+}
+
+func (p *Pencil) renderSegment(dst draw.Image, start, end rm.Dot) {
 	width := float64(start.Width)
 
 	// pencil has high sensitivity to pressure
@@ -185,7 +201,11 @@ func loadMechanicalPencil(c color.Color) (Brush, error) {
 	}, nil
 }
 
-func (m *MechanicalPencil) RenderSegment(dst draw.Image, start, end rm.Dot) {
+func (m *MechanicalPencil) RenderStroke(dst draw.Image, s rm.Stroke) {
+	walkDots(dst, s, m.renderSegment)
+}
+
+func (m *MechanicalPencil) renderSegment(dst draw.Image, start, end rm.Dot) {
 	width := float64(start.Width)
 	opacity := 1.0
 	mask := prepareMask(m.mask, width, opacity, start, end)
@@ -212,7 +232,11 @@ func loadMarker(c color.Color) (Brush, error) {
 	}, nil
 }
 
-func (m *Marker) RenderSegment(dst draw.Image, start, end rm.Dot) {
+func (m *Marker) RenderStroke(dst draw.Image, s rm.Stroke) {
+	walkDots(dst, s, m.renderSegment)
+}
+
+func (m *Marker) renderSegment(dst draw.Image, start, end rm.Dot) {
 	width := float64(start.Width)
 	opacity := 1.0
 	mask := prepareMask(m.mask, width, opacity, start, end)
@@ -239,7 +263,11 @@ func loadHighlighter(c color.Color) (Brush, error) {
 	}, nil
 }
 
-func (h *Highlighter) RenderSegment(dst draw.Image, start, end rm.Dot) {
+func (h *Highlighter) RenderStroke(dst draw.Image, s rm.Stroke) {
+	walkDots(dst, s, h.renderSegment)
+}
+
+func (h *Highlighter) renderSegment(dst draw.Image, start, end rm.Dot) {
 	width := float64(start.Width)
 	opacity := 0.1
 	mask := prepareMask(h.mask, width, opacity, start, end)
@@ -259,7 +287,11 @@ func loadPaintbrush(c color.Color) (Brush, error) {
 	}, nil
 }
 
-func (p *Paintbrush) RenderSegment(dst draw.Image, start, end rm.Dot) {
+func (p *Paintbrush) RenderStroke(dst draw.Image, s rm.Stroke) {
+	walkDots(dst, s, p.renderSegment)
+}
+
+func (p *Paintbrush) renderSegment(dst draw.Image, start, end rm.Dot) {
 	gc := draw2dimg.NewGraphicContext(dst)
 
 	gc.SetStrokeColor(p.color)
@@ -272,6 +304,16 @@ func (p *Paintbrush) RenderSegment(dst draw.Image, start, end rm.Dot) {
 }
 
 // Rendering Helpers ----------------------------------------------------------
+
+type segmentRenderer func(dst draw.Image, start, end rm.Dot)
+
+func walkDots(dst draw.Image, s rm.Stroke, r segmentRenderer) {
+	for i := 1; i < len(s.Dots); i++ {
+		start := s.Dots[i-1]
+		end := s.Dots[i]
+		r(dst, start, end)
+	}
+}
 
 func prepareMask(mask image.Image, width, opacity float64, start, end rm.Dot) image.Image {
 	i := imaging.Resize(mask, width)
