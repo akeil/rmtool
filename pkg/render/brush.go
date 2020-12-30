@@ -17,10 +17,6 @@ import (
 // https://github.com/lschwetlick/maxio/blob/master/rm_tools/rM2svg.py
 
 type Brush interface {
-	Name() string
-	Opacity(pressure, speed float32) float64
-	Width(base, pressure, tilt float32) float64
-	Overlap() float64
 	RenderSegment(dst draw.Image, start, end rm.Dot)
 }
 
@@ -63,22 +59,6 @@ func loadBasePen(c color.Color) (Brush, error) {
 	}, nil
 }
 
-func (b *BasePen) Name() string {
-	return "ballpoint"
-}
-
-func (b *BasePen) Opacity(pressure, speed float32) float64 {
-	return 1.0
-}
-
-func (b *BasePen) Width(base, pressure, tilt float32) float64 {
-	return float64(base)
-}
-
-func (b *BasePen) Overlap() float64 {
-	return 1.0
-}
-
 func (b *BasePen) RenderSegment(dst draw.Image, start, end rm.Dot) {
 	width := float64(start.Width)
 	opacity := 1.0
@@ -107,39 +87,20 @@ func loadBallpoint(c color.Color) (Brush, error) {
 	}, nil
 }
 
-func (b *Ballpoint) Name() string {
-	return "ballpoint"
-}
-
-func (b *Ballpoint) Opacity(pressure, speed float32) float64 {
-	// giving some opacity makes linkes look smaller
-	x := math.Pow(float64(pressure), 2)
-	y := 0.2
-	return (x * y) + (1.0 - y)
-}
-
-func (b *Ballpoint) Width(base, pressure, tilt float32) float64 {
-	w := float64(base)
-
+func (b *Ballpoint) RenderSegment(dst draw.Image, start, end rm.Dot) {
 	// make sure lines have a minimum width
 	// TODO: tke BrushSize into account
 	minWidth := 3.0
-	w = math.Max(w, minWidth)
-
+	w := math.Max(float64(start.Width), minWidth)
 	// high pressure lines are a little bit wider
-	x := math.Pow(float64(pressure), 2)
+	x := math.Pow(float64(start.Pressure), 2)
 	y := 0.3
+	width := w + w*y*x
 
-	return w + w*y*x
-}
+	k := math.Pow(float64(start.Pressure), 2)
+	l := 0.2
+	opacity := (k * l) + (1.0 - l)
 
-func (b *Ballpoint) Overlap() float64 {
-	return 2.0
-}
-
-func (b *Ballpoint) RenderSegment(dst draw.Image, start, end rm.Dot) {
-	width := b.Width(start.Width, start.Pressure, start.Tilt)
-	opacity := b.Opacity(start.Pressure, start.Speed)
 	mask := prepareMask(b.mask, width, opacity, start, end)
 	overlap := 2.0
 	drawPath(dst, mask, b.fill, start, end, overlap)
@@ -163,23 +124,6 @@ func loadFineliner(c color.Color) (Brush, error) {
 		mask: imaging.CreateMask(i),
 		fill: image.NewUniform(c),
 	}, nil
-}
-
-func (f *Fineliner) Name() string {
-	return "fineliner"
-}
-
-func (f *Fineliner) Opacity(pressure, speed float32) float64 {
-	return 1.0
-}
-
-func (b *Fineliner) Width(base, pressure, tilt float32) float64 {
-	mindWidth := 3.0
-	return math.Max(float64(base), mindWidth)
-}
-
-func (f *Fineliner) Overlap() float64 {
-	return 3.0
 }
 
 func (f *Fineliner) RenderSegment(dst draw.Image, start, end rm.Dot) {
@@ -209,29 +153,14 @@ func loadPencil(c color.Color) (Brush, error) {
 	}, nil
 }
 
-func (p *Pencil) Name() string {
-	return "pencil"
-}
-
-func (p *Pencil) Opacity(pressure, speed float32) float64 {
-	// pencil has high sensitivity to pressure
-	x := math.Pow(float64(pressure), 4)
-	y := 0.1
-	return x*y + 1 - y
-	//return 1.0
-}
-
-func (p *Pencil) Width(base, pressure, tilt float32) float64 {
-	return float64(base)
-}
-
-func (p *Pencil) Overlap() float64 {
-	return 1.5
-}
-
 func (p *Pencil) RenderSegment(dst draw.Image, start, end rm.Dot) {
 	width := float64(start.Width)
-	opacity := p.Opacity(start.Pressure, start.Speed)
+
+	// pencil has high sensitivity to pressure
+	x := math.Pow(float64(start.Pressure), 4)
+	y := 0.1
+	opacity := x*y + 1 - y
+
 	mask := prepareMask(p.mask, width, opacity, start, end)
 	overlap := 1.5
 	drawPath(dst, mask, p.fill, start, end, overlap)
@@ -254,25 +183,6 @@ func loadMechanicalPencil(c color.Color) (Brush, error) {
 		mask: imaging.CreateMask(i),
 		fill: image.NewUniform(c),
 	}, nil
-}
-
-func (m *MechanicalPencil) Name() string {
-	return "mech-pencil"
-}
-
-func (m *MechanicalPencil) Opacity(pressure, speed float32) float64 {
-	// pencil has medium sensitivity to pressure
-	//x := math.Pow(float64(pressure), 4)
-	//return x*0.8 + 0.2
-	return 1.0
-}
-
-func (m *MechanicalPencil) Width(base, pressure, tilt float32) float64 {
-	return float64(base)
-}
-
-func (m *MechanicalPencil) Overlap() float64 {
-	return 4.0
 }
 
 func (m *MechanicalPencil) RenderSegment(dst draw.Image, start, end rm.Dot) {
@@ -302,27 +212,11 @@ func loadMarker(c color.Color) (Brush, error) {
 	}, nil
 }
 
-func (m *Marker) Name() string {
-	return "marker"
-}
-
-func (m *Marker) Opacity(pressure, speed float32) float64 {
-	return 1.0
-}
-
-func (m *Marker) Width(base, pressure, tilt float32) float64 {
-	return float64(base)
-}
-
-func (m *Marker) Overlap() float64 {
-	return 6.0
-}
-
 func (m *Marker) RenderSegment(dst draw.Image, start, end rm.Dot) {
 	width := float64(start.Width)
 	opacity := 1.0
 	mask := prepareMask(m.mask, width, opacity, start, end)
-	overlap := 6.0
+	overlap := 4.0
 	drawPath(dst, mask, m.fill, start, end, overlap)
 }
 
@@ -345,23 +239,6 @@ func loadHighlighter(c color.Color) (Brush, error) {
 	}, nil
 }
 
-func (h *Highlighter) Name() string {
-	return "highlighter"
-}
-
-func (h *Highlighter) Opacity(pressure, speed float32) float64 {
-	// marker has no sensitivity to pressure
-	return 0.1
-}
-
-func (b *Highlighter) Width(base, pressure, tilt float32) float64 {
-	return float64(base)
-}
-
-func (h *Highlighter) Overlap() float64 {
-	return 3.0
-}
-
 func (h *Highlighter) RenderSegment(dst draw.Image, start, end rm.Dot) {
 	width := float64(start.Width)
 	opacity := 0.1
@@ -369,6 +246,32 @@ func (h *Highlighter) RenderSegment(dst draw.Image, start, end rm.Dot) {
 	overlap := 3.0
 	drawPath(dst, mask, h.fill, start, end, overlap)
 }
+
+// Paintbrush -----------------------------------------------------------------
+
+type Paintbrush struct {
+	color color.Color
+}
+
+func loadPaintbrush(c color.Color) (Brush, error) {
+	return &Paintbrush{
+		color: c,
+	}, nil
+}
+
+func (p *Paintbrush) RenderSegment(dst draw.Image, start, end rm.Dot) {
+	gc := draw2dimg.NewGraphicContext(dst)
+
+	gc.SetStrokeColor(p.color)
+	gc.SetLineWidth(float64(start.Width))
+
+	gc.BeginPath()
+	gc.MoveTo(float64(start.X), float64(start.Y))
+	gc.LineTo(float64(end.X), float64(end.Y))
+	gc.Stroke()
+}
+
+// Rendering Helpers ----------------------------------------------------------
 
 func prepareMask(mask image.Image, width, opacity float64, start, end rm.Dot) image.Image {
 	i := imaging.Resize(mask, width)
@@ -423,44 +326,4 @@ func drawPath(dst draw.Image, mask image.Image, fill image.Image, start, end rm.
 		x += xFraction * xDirection
 		y += yFraction * yDirection
 	}
-}
-
-// Paintbrush -----------------------------------------------------------------
-
-type Paintbrush struct {
-	color color.Color
-}
-
-func loadPaintbrush(c color.Color) (Brush, error) {
-	return &Paintbrush{
-		color: c,
-	}, nil
-}
-
-func (p *Paintbrush) Name() string {
-	return "paintbrush"
-}
-
-func (p *Paintbrush) Opacity(pressure, speed float32) float64 {
-	return 1.0
-}
-
-func (p *Paintbrush) Width(base, pressure, tilt float32) float64 {
-	return float64(base)
-}
-
-func (p *Paintbrush) Overlap() float64 {
-	return 1.0
-}
-
-func (p *Paintbrush) RenderSegment(dst draw.Image, start, end rm.Dot) {
-	gc := draw2dimg.NewGraphicContext(dst)
-
-	gc.SetStrokeColor(p.color)
-	gc.SetLineWidth(float64(start.Width))
-
-	gc.BeginPath()
-	gc.MoveTo(float64(start.X), float64(start.Y))
-	gc.LineTo(float64(end.X), float64(end.Y))
-	gc.Stroke()
 }
