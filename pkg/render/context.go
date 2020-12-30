@@ -36,7 +36,7 @@ var brushNames = map[rm.BrushType]string{
 
 var defaultColors = map[rm.BrushColor]color.Color{
 	rm.Black: color.Black,
-	rm.Gray:  color.RGBA{127, 127, 127, 255},
+	rm.Gray:  color.RGBA{150, 150, 150, 255},
 	rm.White: color.White,
 }
 

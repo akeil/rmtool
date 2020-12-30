@@ -301,13 +301,14 @@ func drawPath(dst draw.Image, s rm.Stroke, c color.Color) {
 
 	// Remove precision from float values
 	coarse := func(v float64) float64 {
-		return math.Round(v*100) / 100
+		return math.Round(v*10) / 10
 	}
 	// We'll close and stroke sub-segments of the stroke whenver the width changes.
 	// For this, we need to remember position and width of the previous dot.
 	xPrev := x
 	yPrev := x
 	wPrev := w
+	points := 0
 
 	// starts with the *second* dot
 	for i := 1; i < len(s.Dots); i++ {
@@ -319,22 +320,24 @@ func drawPath(dst draw.Image, s rm.Stroke, c color.Color) {
 		// We cannot stroke paths with variable width.
 		// So everytime width changes, stroke the current path
 		// and start a new one with the changed width.
-		if coarse(w) != coarse(wPrev) {
+		if coarse(w) != coarse(wPrev) && points > 0 {
 			gc.Stroke()
 
 			gc.BeginPath()
 			gc.SetLineWidth(w)
 			gc.MoveTo(xPrev, yPrev)
+			points = 0
 		}
 
 		gc.LineTo(x, y)
+		points++
 
 		xPrev = x
 		yPrev = y
 		wPrev = w
 	}
 
-	if !gc.IsEmpty() {
+	if points > 0 {
 		gc.Stroke()
 	}
 }
