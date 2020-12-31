@@ -19,17 +19,12 @@ var bgColor = color.White
 //
 // Unlike RenderDrawing, this includes the page's background template.
 func Page(doc *rm.Document, pageID string, w io.Writer) error {
-	r := DefaultContext()
-	return renderPage(r, doc, pageID, w)
+	c := DefaultContext()
+	return renderPage(c, doc, pageID, w)
 }
 
 func renderPage(c *Context, doc *rm.Document, pageID string, w io.Writer) error {
-	p, err := doc.Page(pageID)
-	if err != nil {
-		return err
-	}
-
-	d, err := doc.Drawing(pageID)
+	pg, err := doc.Page(pageID)
 	if err != nil {
 		return err
 	}
@@ -37,11 +32,16 @@ func renderPage(c *Context, doc *rm.Document, pageID string, w io.Writer) error 
 	rect := image.Rect(0, 0, rm.MaxWidth, rm.MaxHeight)
 	dst := image.NewRGBA(rect)
 
-	if p.HasTemplate() {
-		err = renderTemplate(c, dst, p.Template(), p.Orientation())
+	if pg.HasTemplate() {
+		err = renderTemplate(c, dst, pg.Template(), pg.Orientation())
 		if err != nil {
 			return err
 		}
+	}
+
+	d, err := doc.Drawing(pageID)
+	if err != nil {
+		return err
 	}
 
 	err = renderLayers(c, dst, d)
@@ -49,22 +49,14 @@ func renderPage(c *Context, doc *rm.Document, pageID string, w io.Writer) error 
 		return err
 	}
 
-	// Now that we are done with transparency...
-	grayscale := imaging.ToGray(dst)
-
-	err = png.Encode(w, grayscale)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return png.Encode(w, dst)
 }
 
 // RenderPNG paints the given drawing to a PNG file and writes the PNG data
 // to the given writer.
 func renderPNG(c *Context, d *rm.Drawing, bg bool, w io.Writer) error {
-	r := image.Rect(0, 0, rm.MaxWidth, rm.MaxHeight)
-	dst := image.NewRGBA(r)
+	rect := image.Rect(0, 0, rm.MaxWidth, rm.MaxHeight)
+	dst := image.NewRGBA(rect)
 
 	if bg {
 		renderBackground(dst)
@@ -75,12 +67,7 @@ func renderPNG(c *Context, d *rm.Drawing, bg bool, w io.Writer) error {
 		return err
 	}
 
-	err = png.Encode(w, dst)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return png.Encode(w, dst)
 }
 
 // renderTemplate paints the named background template on the given destination
@@ -90,17 +77,16 @@ func renderPNG(c *Context, d *rm.Drawing, bg bool, w io.Writer) error {
 //
 // An error is returned ff the template cannot be loaded.
 func renderTemplate(c *Context, dst draw.Image, tpl string, layout rm.Orientation) error {
-	i, err := c.loadTemplate(tpl)
+	img, err := c.loadTemplate(tpl)
 	if err != nil {
 		return err
 	}
 
 	if layout == rm.Landscape {
-		i = imaging.Rotate(rad(90), i)
+		img = imaging.Rotate(rad(90), img)
 	}
 
-	p := image.ZP
-	draw.Draw(dst, dst.Bounds(), i, p, draw.Over)
+	draw.Draw(dst, dst.Bounds(), img, image.ZP, draw.Over)
 
 	return nil
 }
@@ -108,8 +94,7 @@ func renderTemplate(c *Context, dst draw.Image, tpl string, layout rm.Orientatio
 // renderBackground fills the complete destination image with the background color (white).
 func renderBackground(dst draw.Image) {
 	bg := image.NewUniform(bgColor)
-	p := image.ZP
-	draw.Draw(dst, dst.Bounds(), bg, p, draw.Over)
+	draw.Draw(dst, dst.Bounds(), bg, image.ZP, draw.Over)
 }
 
 // renderLayoers paints all layers on the destination image.

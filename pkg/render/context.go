@@ -96,11 +96,11 @@ func (c *Context) loadBrush(bt rm.BrushType, bc rm.BrushColor) (Brush, error) {
 		return nil, fmt.Errorf("unsupported brush type %v", bt)
 	}
 
-	i, err := c.loadBrushMask(name)
+	img, err := c.loadBrushMask(name)
 	if err != nil {
 		return nil, err
 	}
-	mask := imaging.CreateMask(i)
+	mask := imaging.CreateMask(img)
 
 	switch bt {
 	case rm.Ballpoint, rm.BallpointV5:
@@ -178,14 +178,14 @@ func (c *Context) lazyLoadSpritesheet() error {
 	}
 
 	// index map
-	pj := filepath.Join(c.DataDir, "sprites.json")
-	logging.Debug("Load sprite index from %q", pj)
-	j, err := os.Open(pj)
+	jsonPath := filepath.Join(c.DataDir, "sprites.json")
+	logging.Debug("Load sprite index from %q", jsonPath)
+	jsonFile, err := os.Open(jsonPath)
 	if err != nil {
 		return err
 	}
-	defer j.Close()
-	err = json.NewDecoder(j).Decode(&c.spriteIndex)
+	defer jsonFile.Close()
+	err = json.NewDecoder(jsonFile).Decode(&c.spriteIndex)
 	if err != nil {
 		return err
 	}
@@ -196,7 +196,7 @@ func (c *Context) lazyLoadSpritesheet() error {
 		return err
 	}
 
-	// make the image an RGBA (allows SubImage(...)
+	// type Image to type RGBA (allows SubImage(...)
 	c.sprites = image.NewRGBA(img.Bounds())
 	for x := 0; x < c.sprites.Bounds().Dx(); x++ {
 		for y := 0; y < c.sprites.Bounds().Dy(); y++ {

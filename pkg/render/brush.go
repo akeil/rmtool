@@ -15,6 +15,7 @@ import (
 
 // see:
 // https://github.com/lschwetlick/maxio/blob/master/rm_tools/rM2svg.py
+// https://gitlab.com/wrobell/remt/-/blob/master/remt/drawer.py
 
 type Brush interface {
 	RenderStroke(dst draw.Image, s rm.Stroke)
@@ -55,27 +56,6 @@ type Ballpoint struct {
 
 func (b *Ballpoint) RenderStroke(dst draw.Image, s rm.Stroke) {
 	drawPath(dst, s, b.color)
-	//walkDots(dst, s, b.renderSegment)
-}
-
-// TODO: unused - delete?
-func (b *Ballpoint) renderSegment(dst draw.Image, start, end rm.Dot) {
-	// make sure lines have a minimum width
-	// TODO: tke BrushSize into account
-	minWidth := 3.0
-	w := math.Max(float64(start.Width), minWidth)
-	// high pressure lines are a little bit wider
-	x := math.Pow(float64(start.Pressure), 2)
-	y := 0.3
-	width := w + w*y*x
-
-	k := math.Pow(float64(start.Pressure), 2)
-	l := 0.2
-	opacity := (k * l) + (1.0 - l)
-
-	mask := prepareMask(b.mask, width, opacity, start, end)
-	overlap := 2.0
-	drawStamp(dst, mask, b.fill, start, end, overlap)
 }
 
 // Fineliner ------------------------------------------------------------------
@@ -89,15 +69,6 @@ type Fineliner struct {
 
 func (f *Fineliner) RenderStroke(dst draw.Image, s rm.Stroke) {
 	drawPath(dst, s, f.color)
-	//walkDots(dst, s, f.renderSegment)
-}
-
-func (f *Fineliner) renderSegment(dst draw.Image, start, end rm.Dot) {
-	width := float64(start.Width)
-	opacity := 1.0
-	mask := prepareMask(f.mask, width, opacity, start, end)
-	overlap := 3.0
-	drawStamp(dst, mask, f.fill, start, end, overlap)
 }
 
 // Pencil ---------------------------------------------------------------------
@@ -112,6 +83,9 @@ func (p *Pencil) RenderStroke(dst draw.Image, s rm.Stroke) {
 }
 
 func (p *Pencil) renderSegment(dst draw.Image, start, end rm.Dot) {
+	// TODO: pencil rendering does not look good
+	// *desity* of pixels in stamp should vary with tilt and pressure - how to to it?
+
 	width := float64(start.Width)
 
 	// pencil has high sensitivity to pressure
@@ -170,21 +144,23 @@ type Highlighter struct {
 }
 
 func (h *Highlighter) RenderStroke(dst draw.Image, s rm.Stroke) {
+	// TODO - poor performance? -> Needs measure.
+
 	// The highlighter has a uniform opacity per stroke.
 	// This means overlapping segments do not add up their opacity values.
 
 	// To achieve this, render all segments in full opacity on a temp image...
-	r := dst.Bounds()
-	tmp := image.NewRGBA(r)
+	rect := dst.Bounds()
+	tmp := image.NewRGBA(rect)
 	walkDots(tmp, s, h.renderSegment)
 
 	// ... then transfer the temp image with desired opacity onto the actual
 	// destination.
 	opacity := 0.4
-	a := uint8(math.Round(255 * opacity))
-	mask := image.NewUniform(color.Alpha{a})
-	p := image.ZP
-	draw.DrawMask(dst, r, tmp, p, mask, p, draw.Over)
+	alpha := uint8(math.Round(255 * opacity))
+	mask := image.NewUniform(color.Alpha{alpha})
+
+	draw.DrawMask(dst, rect, tmp, image.ZP, mask, image.ZP, draw.Over)
 }
 
 func (h *Highlighter) renderSegment(dst draw.Image, start, end rm.Dot) {
@@ -202,6 +178,7 @@ type Paintbrush struct {
 }
 
 func (p *Paintbrush) RenderStroke(dst draw.Image, s rm.Stroke) {
+	// TODO: probably better with a stamp image
 	drawPath(dst, s, p.fill)
 }
 
@@ -209,16 +186,19 @@ func (p *Paintbrush) RenderStroke(dst draw.Image, s rm.Stroke) {
 
 type segmentRenderer func(dst draw.Image, start, end rm.Dot)
 
-func walkDots(dst draw.Image, s rm.Stroke, r segmentRenderer) {
+func walkDots(dst draw.Image, s rm.Stroke, render segmentRenderer) {
 	for i := 1; i < len(s.Dots); i++ {
 		start := s.Dots[i-1]
 		end := s.Dots[i]
-		r(dst, start, end)
+		render(dst, start, end)
 	}
 }
 
+// Prepare the mask image by scaling it to the desired width, applying opacity.
+// and rotating it to align with the segment from start to end.
 func prepareMask(mask image.Image, width, opacity float64, start, end rm.Dot) image.Image {
 	i := imaging.Resize(mask, width)
+
 	if opacity != 1.0 {
 		i = imaging.ApplyOpacity(i, opacity)
 	}
@@ -227,37 +207,37 @@ func prepareMask(mask image.Image, width, opacity float64, start, end rm.Dot) im
 	// Brush images are alinged "left to right", i.e. the "front" is on the left.
 	angle := math.Atan2(float64(start.Y-end.Y), float64(start.X-end.X))
 	return imaging.Rotate(angle, i)
-	return i
 }
 
-// draw a single line from start to end with a "stamp" image.
+// Draw a single line from start to end with a "stamp" image.
 // The stamp image is repeated along the line, taking the overlap factor into account.
 func drawStamp(dst draw.Image, mask image.Image, fill image.Image, start, end rm.Dot, overlap float64) {
-	r := mask.Bounds()
-	w, h := r.Max.X-r.Min.X, r.Max.Y-r.Min.Y
+	rect := mask.Bounds()
+	w := rect.Max.X - rect.Min.X
+	h := rect.Max.Y - rect.Min.Y
 
+	// calculate the length of the segment
 	a := math.Abs(float64(start.Y - end.Y))
 	b := math.Abs(float64(start.X - end.X))
 	cSquared := math.Pow(a, float64(2.0)) + math.Pow(b, float64(2.0))
-	c := math.Sqrt(cSquared)
+	length := math.Sqrt(cSquared)
 
-	stampSize := float64(h) / overlap
-	numStamps := math.Ceil((c / stampSize))
+	stampSize := float64(h) / overlap // assumes stamps are quadratic
+	numStamps := math.Ceil((length / stampSize))
 	yFraction := a / numStamps
 	xFraction := b / numStamps
 
 	// left or right?
 	xDirection := float64(1)
 	if start.X > end.X {
-		xDirection = float64(-1)
+		xDirection *= -1
 	}
 	// up or down?
 	yDirection := float64(1)
 	if start.Y > end.Y {
-		yDirection = float64(-1)
+		yDirection *= -1
 	}
 
-	p := image.ZP
 	x := float64(start.X)
 	y := float64(start.Y)
 	wHalf := w / 2
@@ -267,7 +247,7 @@ func drawStamp(dst draw.Image, mask image.Image, fill image.Image, start, end rm
 		x0 := int(math.Round(x))
 		y0 := int(math.Round(y))
 		r := image.Rect(x0-wHalf, y0-hHalf, x0+wHalf, y0+hHalf)
-		draw.DrawMask(dst, r, fill, p, mask, p, draw.Over)
+		draw.DrawMask(dst, r, fill, image.ZP, mask, image.ZP, draw.Over)
 
 		// move along the path for the next iteration
 		x += xFraction * xDirection

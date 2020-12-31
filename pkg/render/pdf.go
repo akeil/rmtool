@@ -17,8 +17,8 @@ const tsFormat = "2006-01-02 15:04:05"
 //
 // The result is written to the given writer.
 func PDF(d *rm.Document, w io.Writer) error {
-	r := DefaultContext()
-	return renderPDF(r, d, w)
+	c := DefaultContext()
+	return renderPDF(c, d, w)
 }
 
 func renderPDF(c *Context, d *rm.Document, w io.Writer) error {

@@ -17,15 +17,15 @@ func overlayPDF(c *Context, doc *rm.Document, pdf *gofpdf.Fpdf) error {
 	logging.Debug("Render PDF with overlay")
 
 	// Read the underlaying PDF doc
-	pr, err := doc.AttachmentReader()
+	r, err := doc.AttachmentReader()
 	if err != nil {
 		return err
 	}
-	defer pr.Close()
+	defer r.Close()
 
-	// we need a ReadSeeker, so we load th e full PDF into memory
-	// and create one from the buffer
-	data, err := ioutil.ReadAll(pr)
+	// We need a ReadSeeker, so we load the full PDF into memory
+	// and create one from the buffer.
+	data, err := ioutil.ReadAll(r)
 	if err != nil {
 		return err
 	}
@@ -36,19 +36,21 @@ func overlayPDF(c *Context, doc *rm.Document, pdf *gofpdf.Fpdf) error {
 	for i, pageID := range doc.Pages() {
 		pdf.AddPage()
 
-		var tpl int
+		var tplID int
 		err = dontPanic(func() {
 			// TODO: how do we know which box to use?
-			tpl = im.ImportPageFromStream(pdf, &rs, i+1, "/MediaBox")
+			tplID = im.ImportPageFromStream(pdf, &rs, i+1, "/MediaBox")
 		})
 		if err != nil {
 			return err
 		}
-		// setting h, w to 0 fills the page
-		im.UseImportedTemplate(pdf, tpl, 0, 0, 0, 0)
+		// Setting h, w to 0 fills the page
+		im.UseImportedTemplate(pdf, tplID, 0, 0, 0, 0)
 
+		// Paint the drawing over the original
 		d, err := doc.Drawing(pageID)
 		if rm.IsNotFound(err) {
+			// Not every page has a drawing
 			logging.Info("Skip page %d without drawing", i)
 			continue
 		} else if err != nil {
@@ -65,8 +67,8 @@ func overlayPDF(c *Context, doc *rm.Document, pdf *gofpdf.Fpdf) error {
 	return nil
 }
 
-// executes the given function in a separate go routine.
-// If that panics, this will recover and return the panic as an error.
+// dontPanic executes the given function in a separate goroutine.
+// If that panics, it will recover and return the panic as an error.
 func dontPanic(f func()) error {
 	rv := make(chan error, 0)
 
