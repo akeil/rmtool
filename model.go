@@ -410,7 +410,8 @@ type Pagedata struct {
 // TODO: parse from template string
 func newPagedata() Pagedata {
 	return Pagedata{
-		Text: "Blank",
+		Orientation: Portrait,
+		Text:        "Blank",
 	}
 }
 

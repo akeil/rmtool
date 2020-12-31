@@ -77,6 +77,7 @@ func ReadDocument(r Repository, m Meta) (*Document, error) {
 	}
 
 	cp := m.ID() + ".content"
+	logging.Debug("Read content info from %q", cp)
 	cr, err := r.Reader(m.ID(), m.Version(), cp)
 	if err != nil {
 		return nil, err
@@ -103,11 +104,13 @@ func ReadDocument(r Repository, m Meta) (*Document, error) {
 // content as it is requested.
 type Document struct {
 	Meta
-	content  *Content
-	pagedata []Pagedata
-	pages    map[string]*Page
-	repo     Repository
-	pagesMx  sync.Mutex
+	content    *Content
+	pagedata   []Pagedata
+	pages      map[string]*Page
+	pagesMx    sync.Mutex
+	drawings   map[string]*Drawing
+	drawingsMx sync.Mutex
+	repo       Repository
 }
 
 func NewDocument(name string, ft FileType) *Document {
@@ -116,6 +119,14 @@ func NewDocument(name string, ft FileType) *Document {
 		content:  NewContent(ft),
 		pagedata: make([]Pagedata, 0),
 	}
+}
+
+// TODO: template name?
+func NewNotebook(name string) *Document {
+	d := NewDocument(name, Notebook)
+	// new notbeooks are created with an empty first page
+	d.CreatePage()
+	return d
 }
 
 // TODO - implement
@@ -155,17 +166,15 @@ func (d *Document) Validate() error {
 		return NewValidationError("number of pagedata entries does not match page count: %v != %v", len(d.pagedata), d.PageCount())
 	}
 
+	// TODO: Notebook needs a drawing for each page
+	// and at least one page
+
 	// TODO: validate pages
 
 	return nil
 }
 
 func (d *Document) Write(repo Repository, w WriterFunc) error {
-	// Before writing pages, we may have to create default page(s)
-	// - empty Notebook needs a single empty page
-	// - PDF, EPUB need page entries for each page
-	d.createPages()
-
 	logging.Debug("write content")
 	cw, err := w(fmt.Sprintf("%v.content", d.ID()))
 	if err != nil {
@@ -177,7 +186,7 @@ func (d *Document) Write(repo Repository, w WriterFunc) error {
 	}
 	defer cw.Close()
 
-	logging.Debug("write pagedata")
+	logging.Debug("Write pagedata")
 	pw, err := w(fmt.Sprintf("%v.pagedata", d.ID()))
 	if err != nil {
 		return err
@@ -189,7 +198,7 @@ func (d *Document) Write(repo Repository, w WriterFunc) error {
 	defer pw.Close()
 
 	for i, pageID := range d.Pages() {
-		logging.Debug("write page %v", pageID)
+		logging.Debug("Write page metadata for %v", pageID)
 		// TODO relies on all pages being cached
 		p, err := d.Page(pageID)
 		if err != nil {
@@ -200,12 +209,28 @@ func (d *Document) Write(repo Repository, w WriterFunc) error {
 		if err != nil {
 			return err
 		}
+		defer pmw.Close()
 		err = json.NewEncoder(pmw).Encode(p.meta)
 		if err != nil {
 			return err
 		}
 
-		// TODO: write drawings
+		// we do not have a backing repository and can only write cached drawing
+		// TODO: this does not feel like the "right" way to do it
+		logging.Debug("Write drawing for %v", pageID)
+		dr, err := d.Drawing(pageID)
+		if err != nil {
+			return err
+		}
+		drw, err := w(d.ID(), prefix+".rm")
+		if err != nil {
+			return err
+		}
+		defer drw.Close()
+		err = WriteDrawing(drw, dr)
+		if err != nil {
+			return err
+		}
 	}
 
 	// TODO: write attached PDF or EPUB
@@ -215,26 +240,24 @@ func (d *Document) Write(repo Repository, w WriterFunc) error {
 	return nil
 }
 
-func (d *Document) createPages() {
-	if len(d.pagedata) > 0 {
-		// assume that we have pages
-		return
-	}
-
-	logging.Debug("create default pages")
+// Create a new page with a drawing and append it to the document.
+// TODO: Orientation? Template?
+func (d *Document) CreatePage() *Page {
+	d.pagesMx.Lock()
+	defer d.pagesMx.Unlock()
 
 	pageID := uuid.New().String()
 
 	d.content.Pages = append(d.content.Pages, pageID)
-	d.content.PageCount = 1
+	d.content.PageCount++
 
-	idx := 0
+	index := len(d.pagedata) // we'll append later, so index == size
 
-	pd := newPagedata()
-	d.pagedata = append(d.pagedata, pd)
+	// with default orientation and default template
+	pgData := newPagedata()
+	d.pagedata = append(d.pagedata, pgData)
 
-	// now a default page
-	pm := PageMetadata{
+	pgMeta := PageMetadata{
 		Layers: []LayerMetadata{
 			LayerMetadata{
 				Name: "Layer 1",
@@ -242,18 +265,27 @@ func (d *Document) createPages() {
 		},
 	}
 
-	// construct the Page item
 	p := &Page{
-		index:    idx,
-		meta:     pm,
-		pagedata: pd,
+		index:    index,
+		meta:     pgMeta,
+		pagedata: pgData,
 	}
 
-	// cache
+	// page cache
 	if d.pages == nil {
 		d.pages = make(map[string]*Page)
 	}
 	d.pages[pageID] = p
+
+	// drawing
+	d.drawingsMx.Lock()
+	defer d.drawingsMx.Unlock()
+	if d.drawings == nil {
+		d.drawings = make(map[string]*Drawing)
+	}
+	d.drawings[pageID] = NewDrawing()
+
+	return p
 }
 
 // PageCount returns the number of pages in this document.
@@ -302,9 +334,10 @@ func (d *Document) Page(pageID string) (*Page, error) {
 		return nil, err
 	}
 
-	// lazy load pagedata
+	// lazy load pagedata, guarded by pagesMx
 	if d.pagedata == nil {
 		pdp := d.ID() + ".pagedata"
+		logging.Debug("Read pagedata from %q", pdp)
 		pdr, err := d.reader(pdp)
 		if err != nil {
 			return nil, err
@@ -318,7 +351,6 @@ func (d *Document) Page(pageID string) (*Page, error) {
 	}
 
 	// check if we have pagedata for this page
-	// TODO: we might set a default if we have none
 	if len(d.pagedata) <= idx {
 		return nil, fmt.Errorf("no pagedata for page with id %q", pageID)
 	}
@@ -326,6 +358,7 @@ func (d *Document) Page(pageID string) (*Page, error) {
 	// Load page metadata
 	var pm PageMetadata
 	pmp := d.repo.PagePrefix(d.ID(), idx) + "-metadata.json"
+	logging.Debug("Read page metadata from %q", pmp)
 	pmr, err := d.reader(d.ID(), pmp)
 	if err != nil {
 		logging.Debug("No page metadata for page %v at %q", idx, pmp)
@@ -367,15 +400,27 @@ func (d *Document) Page(pageID string) (*Page, error) {
 // Drawing loads the handwritten drawing for the given pageID.
 //
 // Note that not all pages have associated drawings.
-// If a page has no drawing...
-// TODO: return a specific type of error
+// If a page has no drawing, an error of type "Not Found" is returned
+// (use IsNotFound(err) to check for this).
 func (d *Document) Drawing(pageID string) (*Drawing, error) {
+	d.drawingsMx.Lock()
+	defer d.drawingsMx.Unlock()
+
+	if d.drawings == nil {
+		d.drawings = make(map[string]*Drawing)
+	}
+	cached := d.drawings[pageID]
+	if cached != nil {
+		return cached, nil
+	}
+
 	idx, err := d.pageIndex(pageID)
 	if err != nil {
 		return nil, err
 	}
 
 	dp := d.repo.PagePrefix(d.ID(), idx) + ".rm"
+	logging.Debug("Read drawing from %q", dp)
 	dr, err := d.reader(d.ID(), dp)
 	if err != nil {
 		return nil, err
@@ -386,6 +431,8 @@ func (d *Document) Drawing(pageID string) (*Drawing, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	d.drawings[pageID] = drawing
 
 	return drawing, nil
 }
@@ -405,6 +452,7 @@ func (d *Document) AttachmentReader() (io.ReadCloser, error) {
 		return nil, fmt.Errorf("document of type %v has no attachment", d.FileType())
 	}
 
+	logging.Debug("Read attachment from %q", p)
 	return d.reader(p)
 }
 
@@ -442,11 +490,15 @@ func (p *Page) Orientation() Orientation {
 	return p.pagedata.Orientation
 }
 
+// TODO: set orientation
+
 // Template is the name of the background template.
 // It can be used to look up a graphic file for this template.
 func (p *Page) Template() string {
 	return p.pagedata.Text
 }
+
+// TODO set template
 
 // HasTemplate tells if this page is associated with a background template.
 // Returns false for the "Blank" template.

@@ -99,14 +99,30 @@ func (r *repo) Update(m rm.Meta) error {
 }
 
 func (r *repo) Upload(d *rm.Document) error {
+	// We will write everything to a temporary directory,
+	// then move to the target dir
 	tmp, err := ioutil.TempDir("", "rm-upload-*")
 	if err != nil {
 		return err
 	}
 
-	logging.Debug("writing individual parts to temp dir %q", tmp)
+	// Cleanup:
+	// on success, this will remove the empty temp dir,
+	// on error, this will remove the files written so far.
+	defer func() {
+		logging.Debug("Cleanup %q", tmp)
+		cleanupErr := os.RemoveAll(tmp)
+		if cleanupErr != nil {
+			logging.Warning("Error during cleanup: %v", cleanupErr)
+		}
+	}()
 
-	// Set up a factory function to create writers for tempfiles
+	logging.Debug("Write individual files to temp dir %q...", tmp)
+
+	// Capture all the files we have created.
+	files := make(map[string]string, 0)
+
+	// Set up a factory function to create writers for tempfiles.
 	w := func(path ...string) (io.WriteCloser, error) {
 		if len(path) == 0 {
 			return nil, fmt.Errorf("path must not be empty")
@@ -115,25 +131,34 @@ func (r *repo) Upload(d *rm.Document) error {
 		parts := []string{tmp}
 		parts = append(parts, path...)
 
-		// do we need to create subdirectories?
+		// Do we need to create a subdirectory?
 		if len(path) > 1 {
 			subDir := filepath.Join(parts[0 : len(parts)-1]...)
-			err = os.MkdirAll(subDir, 0755)
+			err = os.Mkdir(subDir, 0755)
 			if err != nil {
-				return nil, err
+				if !os.IsExist(err) {
+					return nil, err
+				}
 			}
 		}
 
-		p := filepath.Join(parts...)
-		f, e := os.Create(p)
+		abs := filepath.Join(parts...)
+		rel := filepath.Join(path...)
+
+		logging.Debug("Create %q", abs)
+		f, e := os.Create(abs)
 		if e != nil {
 			return nil, e
 		}
+
+		// Capture the file we are going to write.
+		files[rel] = abs
+
 		return f, nil
 	}
 
-	// Write the metadata entry
-	logging.Debug("write metadata")
+	// Write the metadata entry.
+	logging.Debug("Write metadata")
 	meta := Metadata{
 		LastModified:     Timestamp{time.Now()},
 		Version:          d.Version(),
@@ -158,22 +183,39 @@ func (r *repo) Upload(d *rm.Document) error {
 		return err
 	}
 
-	// Let the document write
-	// - *.content
-	// - *.pagedata
-	logging.Debug("write document parts")
+	// Let the document write individual parts.
+	logging.Debug("Write document parts...")
 
 	err = d.Write(r, w)
 	if err != nil {
 		return err
 	}
 
-	// Create tempfiles for all components
-	// - .pdf, .epub  [opz]
-	// - drawings
-	// - pagemeta
+	// TODO: if we have an error during one of the moves,
+	// the partially transferred content in dst needs cleanup
 
-	// move everything to the data dir
+	// Move everything to the target directory.
+	logging.Debug("Move files to %q...", r.base)
+	for rel, src := range files {
+		dst := filepath.Join(r.base, rel)
+		// Create a subdirectory if needed.
+		dir, _ := filepath.Split(rel)
+		if dir != "" {
+			logging.Debug("Create subdirectory %q", dir)
+			absDir := filepath.Join(r.base, dir)
+			err := os.Mkdir(absDir, 0755)
+			if err != nil {
+				if !os.IsExist(err) {
+					return err
+				}
+			}
+		}
+		logging.Debug("Move %v", rel)
+		err = os.Rename(src, dst)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

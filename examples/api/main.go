@@ -179,7 +179,7 @@ func repository(repo rm.Repository) error {
 
 func upload(repo rm.Repository) error {
 
-	d := rm.NewDocument("my document", rm.Notebook)
+	d := rm.NewNotebook("My Notebook")
 	d.SetPinned(true)
 
 	err := repo.Upload(d)
