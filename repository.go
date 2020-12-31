@@ -363,7 +363,14 @@ func (d *Document) writeAttachment(w WriterFunc) error {
 // Create a new page with a drawing and append it to the document.
 // TODO: Orientation? Template?
 func (d *Document) CreatePage() string {
-	pageID := d.addPage()
+	pgMeta := &PageMetadata{
+		Layers: []LayerMetadata{
+			LayerMetadata{
+				Name: "Layer 1",
+			},
+		},
+	}
+	pageID := d.addPage(pgMeta)
 
 	// drawing
 	d.drawingsMx.Lock()
@@ -388,14 +395,14 @@ func (d *Document) createPdfPages() error {
 	}
 
 	for i := 0; i < numPages; i++ {
-		d.addPage()
+		d.addPage(nil)
 	}
 
 	return nil
 }
 
 // adds an empty page WITHOUT drawing
-func (d *Document) addPage() string {
+func (d *Document) addPage(pgMeta *PageMetadata) string {
 	d.pagesMx.Lock()
 	defer d.pagesMx.Unlock()
 
@@ -409,15 +416,6 @@ func (d *Document) addPage() string {
 	// with default orientation and default template
 	pgData := newPagedata()
 	d.pagedata = append(d.pagedata, pgData)
-
-	// TODO: PageMeta is optional
-	pgMeta := PageMetadata{
-		Layers: []LayerMetadata{
-			LayerMetadata{
-				Name: "Layer 1",
-			},
-		},
-	}
 
 	p := &Page{
 		index:    index,
@@ -502,7 +500,7 @@ func (d *Document) Page(pageID string) (*Page, error) {
 	}
 
 	// Load page metadata
-	var pm PageMetadata
+	pm := &PageMetadata{}
 	pmp := d.repo.PagePrefix(d.ID(), idx) + "-metadata.json"
 	logging.Debug("Read page metadata from %q", pmp)
 	pmr, err := d.reader(d.ID(), pmp)
@@ -516,7 +514,7 @@ func (d *Document) Page(pageID string) (*Page, error) {
 			return nil, err
 		}
 	} else {
-		err = json.NewDecoder(pmr).Decode(&pm)
+		err = json.NewDecoder(pmr).Decode(pm)
 		if err != nil {
 			return nil, err
 		}
@@ -621,7 +619,7 @@ func (d *Document) reader(path ...string) (io.ReadCloser, error) {
 // Page describes a single page within a document.
 type Page struct {
 	index    int
-	meta     PageMetadata // TODO: PageMetadata is optional
+	meta     *PageMetadata
 	pagedata Pagedata
 }
 
@@ -654,8 +652,8 @@ func (p *Page) HasTemplate() bool {
 
 // Layers is the metadata for the layers in this page.
 func (p *Page) Layers() []LayerMetadata {
-	if p.meta.Layers == nil {
-		p.meta.Layers = make([]LayerMetadata, 0)
+	if p.meta == nil || p.meta.Layers == nil {
+		return make([]LayerMetadata, 0)
 	}
 	return p.meta.Layers
 }
