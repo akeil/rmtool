@@ -40,16 +40,24 @@ func (r *repo) List() ([]rm.Meta, error) {
 	for _, f := range files {
 		if filepath.Ext(f.Name()) == ".metadata" {
 			id := strings.TrimSuffix(f.Name(), ".metadata")
-			p := filepath.Join(r.base, f.Name())
-			m, err := readMetadata(p)
+			m, err := r.readItem(id)
 			if err != nil {
 				return nil, err
 			}
-			l = append(l, metaWrapper{id: id, i: &m, repo: r})
+			l = append(l, m)
 		}
 	}
 
 	return l, err
+}
+
+func (r *repo) readItem(id string) (rm.Meta, error) {
+	p := filepath.Join(r.base, id+".metadata")
+	m, err := readMetadata(p)
+	if err != nil {
+		return nil, err
+	}
+	return metaWrapper{id: id, i: &m, repo: r}, nil
 }
 
 func (r *repo) Update(m rm.Meta) error {
@@ -99,6 +107,15 @@ func (r *repo) Update(m rm.Meta) error {
 }
 
 func (r *repo) Upload(d *rm.Document) error {
+	err := d.Validate()
+	if err != nil {
+		return err
+	}
+	err = r.checkParent(d.Parent())
+	if err != nil {
+		return err
+	}
+
 	// We will write everything to a temporary directory,
 	// then move to the target dir
 	tmp, err := ioutil.TempDir("", "rm-upload-*")
@@ -236,6 +253,23 @@ func (r *repo) Reader(id string, version uint, path ...string) (io.ReadCloser, e
 		return f, rm.NewNotFound(err.Error())
 	}
 	return f, err
+}
+
+func (r *repo) checkParent(parentID string) error {
+	if parentID == "" {
+		return nil
+	}
+
+	parent, err := r.readItem(parentID)
+	if err != nil {
+		return err
+	}
+
+	if parent.Type() != rm.CollectionType {
+		return fmt.Errorf("parent with id %q is no a collection (type=%v)", parentID, parent.Type())
+	}
+
+	return nil
 }
 
 func readMetadata(path string) (Metadata, error) {
