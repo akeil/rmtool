@@ -118,10 +118,12 @@ func NewDocument(name string, ft FileType) *Document {
 	}
 }
 
+// TODO - implement
 func NewPdf(name string, r io.ReadCloser) *Document {
 	return NewDocument(name, Pdf)
 }
 
+// TODO - implement
 func NewEpub(name string, r io.ReadCloser) *Document {
 	return NewDocument(name, Epub)
 }

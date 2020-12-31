@@ -70,14 +70,24 @@ type Drawing struct {
 	Layers  []Layer
 }
 
-// NewDrawing creates a new page.
-func newDrawing() *Drawing {
-	return &Drawing{Version: V5}
+// NewDrawing creates an empty drawing.
+func NewDrawing() *Drawing {
+	// A single empty layer is the minimum requirement for a valid drawing
+	return &Drawing{
+		Version: V5,
+		Layers: []Layer{
+			Layer{},
+		},
+	}
 }
 
 // NumLayers returns the number of layers in the drawing.
 func (d *Drawing) NumLayers() int {
 	return len(d.Layers)
+}
+
+func (d *Drawing) AddLayer(name string) {
+	d.Layers = append(d.Layers, Layer{})
 }
 
 // Layer is one layer in a drawing.

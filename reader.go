@@ -73,13 +73,14 @@ func readHeader(r io.Reader) (Version, error) {
 		return v, fmt.Errorf("unexpected header size")
 	}
 
-	switch string(buf) {
+	s := string(buf)
+	switch s {
 	case headerV3:
 		v = V3
 	case headerV5:
 		v = V5
 	default:
-		return v, fmt.Errorf("unsupported header")
+		return v, fmt.Errorf("unsupported header %q", s)
 	}
 
 	return v, nil

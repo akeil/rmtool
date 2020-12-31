@@ -10,6 +10,7 @@ import (
 // Level is one of "debug", "info", "warning" or "error".
 func SetLogLevel(level string) {
 	var lvl logging.Level
+
 	switch strings.ToLower(level) {
 	case "debug":
 		lvl = logging.LevelDebug
@@ -22,5 +23,6 @@ func SetLogLevel(level string) {
 	default:
 		lvl = logging.LevelNone
 	}
+
 	logging.SetLevel(lvl)
 }
