@@ -62,6 +62,15 @@ func (r *repo) readItem(id string) (rm.Meta, error) {
 
 func (r *repo) Update(m rm.Meta) error {
 	logging.Debug("Update entry with id %q, version %v", m.ID(), m.Version())
+	err := m.Validate()
+	if err != nil {
+		return err
+	}
+	err = r.checkParent(m.Parent())
+	if err != nil {
+		return err
+	}
+
 	p := filepath.Join(r.base, m.ID()+".metadata")
 	o, err := readMetadata(p)
 	if err != nil {
