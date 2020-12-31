@@ -9,20 +9,19 @@ import (
 
 	"akeil.net/akeil/rm"
 	"akeil.net/akeil/rm/pkg/api"
-	"akeil.net/akeil/rm/pkg/fs"
+	//"akeil.net/akeil/rm/pkg/fs"
 )
 
 func main() {
 	rm.SetLogLevel("debug")
 	var err error
 
-	/*
-		client, err := setup()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-	*/
+	client, err := setup()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	/*
 		err = register(client)
 		if err != nil {
@@ -31,18 +30,16 @@ func main() {
 		}
 	*/
 
-	/*
-		err = notifications(client)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-	*/
+	err = notifications(client)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	//dataDir := "/tmp/remarkable"
 	//repo := api.NewRepository(client, dataDir)
-	srcDir := "/tmp/xochitl"
-	repo := fs.NewRepository(srcDir)
+	//srcDir := "/tmp/xochitl"
+	//repo := fs.NewRepository(srcDir)
 
 	/*
 		err = repository(repo)
@@ -60,11 +57,13 @@ func main() {
 		}
 	*/
 
-	err = uploadPdf(repo, os.Args[1])
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	/*
+		err = uploadPdf(repo, os.Args[1])
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	*/
 }
 
 func register(client *api.Client) error {

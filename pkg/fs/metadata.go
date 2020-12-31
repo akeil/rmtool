@@ -16,7 +16,8 @@ type Timestamp struct {
 }
 
 // Metadata holds the metadata for a notebook.
-// TODO: move this to `fs` package
+//
+// This maps to the .metadata file from the tablet's file system.
 type Metadata struct {
 	// LastModified is the UTC date of the last edit as a Unix timestamp.
 	LastModified Timestamp `json:"lastModified"`

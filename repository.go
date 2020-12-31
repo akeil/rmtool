@@ -38,21 +38,24 @@ type Repository interface {
 
 	// Update changes metadata for an entry.
 	Update(meta Meta) error
-	// Delete
-	// Create
+	// TODO Delete
+	// TODO Create
+
+	// TODO CreateFolder ?
+	// TODO DeleteFolder ?
 
 	// Reader creates a reader for one of the components associated with an
 	// item, e.g. the drawing for a single page.
 	//
 	// This function is typically used internally by ReadDocument and friends.
 	Reader(id string, version uint, path ...string) (io.ReadCloser, error)
-	// Writer()
 
 	// PagePrefix returns the filename prefix for page related paths.
 	//
 	// This function is normally used internally by ReadDocument and friends.
 	PagePrefix(pageID string, pageIndex int) string
 
+	// Upload creates the given document in the repository.
 	Upload(d *Document) error
 }
 
@@ -133,6 +136,7 @@ func NewNotebook(name string) *Document {
 
 // NewPdf creates a new document for a PDF file.
 //
+// The given AttachmentReader should return a Reader for the PDF file.
 // Note that this can return an error as the PDF needs to be read for this.
 func NewPdf(name string, r AttachmentReader) (*Document, error) {
 	d := newDocument(name, Pdf, r)
@@ -737,6 +741,8 @@ func (d *docMeta) Validate() error {
 	return nil
 }
 
+// PDF Helper -----------------------------------------------------------------
+
 func countPdfPages(rc io.ReadCloser) (int, error) {
 	data, err := ioutil.ReadAll(rc)
 	if err != nil {
@@ -758,4 +764,13 @@ func countPdfPages(rc io.ReadCloser) (int, error) {
 	}
 
 	return ctx.PageCount, nil
+}
+
+// EPUB Helper ----------------------------------------------------------------
+
+func countEpubPages(rc io.ReadCloser) (int, error) {
+	// TODO: find a library to do this
+	// - https://github.com/bmaupin/go-epub  --  creates EPUB
+	// - https://github.com/kapmahc/epub	 --  reads from file path only
+	return 0, fmt.Errorf("not implemented")
 }

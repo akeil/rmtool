@@ -22,13 +22,14 @@ type MessageHandler func(Message)
 // It connects to the websocket service, parses messages from JSON
 // and forwards them to a registered message handler.
 type Notifications struct {
-	url   string
-	token string
-	conn  *websocket.Conn
-	done  chan struct{}
-	exit  chan struct{}
-	hdl   MessageHandler
-	hdlMx sync.Mutex
+	url    string
+	token  string
+	conn   *websocket.Conn
+	connMx sync.Mutex
+	done   chan struct{}
+	exit   chan struct{}
+	hdl    MessageHandler
+	hdlMx  sync.Mutex
 }
 
 // NewNotifications sets up a new notifications client.
@@ -49,6 +50,9 @@ func newNotifications(url, token string) *Notifications {
 //
 // Calling Connect while the client is already connected leads to a reconnect.
 func (n *Notifications) Connect() error {
+	n.connMx.Lock()
+	n.connMx.Unlock()
+
 	if n.isConnected() {
 		n.Disconnect()
 		// TODO: ideally, we would block until the connection is actually closed
@@ -78,7 +82,6 @@ func (n *Notifications) Connect() error {
 // isConnected checks whether we have an active connection to the notification
 // service.
 func (n *Notifications) isConnected() bool {
-	// TODO: Lock
 	return n.conn != nil
 }
 
@@ -91,11 +94,12 @@ func (n *Notifications) Disconnect() {
 // onDisconnected is called internally after the connection has been closed.
 func (n *Notifications) onDisconnected() {
 	logging.Info("Notifications disconnected")
-	// TODO: Lock
+	n.connMx.Lock()
 	if n.conn != nil {
 		n.conn.Close()
 		n.conn = nil
 	}
+	n.connMx.Unlock()
 
 	// TODO: client code should be able to register a handler for this.
 }
