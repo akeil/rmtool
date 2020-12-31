@@ -302,7 +302,10 @@ func (c *Client) Rename(id, name string) error {
 
 // Upload adds a document to the given parent folder.
 // The parentID can be empty (root folder) or refer to another folder.
-func (c *Client) Upload(name, parentID string, src io.Reader) error {
+func (c *Client) Upload(name, id, parentID string, src io.Reader) error {
+	if id == "" {
+		return fmt.Errorf("id must not be empty")
+	}
 	// We need to check the parent folder, server will not check
 	err := c.checkParent(parentID)
 	if err != nil {
@@ -311,7 +314,7 @@ func (c *Client) Upload(name, parentID string, src io.Reader) error {
 
 	// Create an "upload request" which will give us the upload URL
 	u := uploadItem{
-		ID:      uuid.New().String(),
+		ID:      id,
 		Version: 1,
 	}
 
@@ -319,7 +322,8 @@ func (c *Client) Upload(name, parentID string, src io.Reader) error {
 	wrap[0] = u
 	result := make([]Item, 0)
 
-	err = c.storageRequest("PUT", epUpload, &u, result)
+	logging.Debug("create upload request for item with ID %q", id)
+	err = c.storageRequest("PUT", epUpload, wrap, &result)
 	if err != nil {
 		return err
 	}
@@ -341,7 +345,7 @@ func (c *Client) Upload(name, parentID string, src io.Reader) error {
 	// Set the metadata for the new item
 	meta := Item{
 		ID:          u.ID,
-		Version:     u.Version,
+		Version:     0, // update() will increment te version; we need version 1, not 2
 		Type:        rm.DocumentType,
 		Parent:      parentID,
 		VisibleName: name,
@@ -392,12 +396,13 @@ func (c *Client) putBlob(url string, src io.Reader) error {
 
 	req, err := http.NewRequest("PUT", url, src)
 	if err != nil {
-		return err
+		return fmt.Errorf("blob upload failed with %v", err)
 	}
 
+	logging.Debug("Upload blob...")
 	res, err := c.client.Do(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("blob upload failed with %v", err)
 	}
 
 	return rm.ExpectOK(res, "blob upload failed")
@@ -418,8 +423,8 @@ func (c *Client) update(i Item) error {
 		return err
 	}
 
-	if len(result) != 0 {
-		return fmt.Errorf("unexpected response (empty list)")
+	if len(result) != 1 {
+		return fmt.Errorf("unexpected response (empty list/more than one item)")
 	}
 	return result[0].Err()
 }
@@ -450,26 +455,39 @@ func (c *Client) storageRequest(method, endpoint string, payload, dst interface{
 
 	req, err := newRequest(method, c.storageBase, endpoint, c.userToken, payload)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not prepare API request: %v", err)
 	}
 
+	// log the request body
+	data, err := ioutil.ReadAll(req.Body)
+	logging.Debug("Request body: %v", string(data))
+	req.Body = ioutil.NopCloser(bytes.NewBuffer(data))
+
 	res, err := c.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("upload request failed: %v", err)
+	}
+	defer res.Body.Close()
+	// must read body to end
+	// https://golang.org/pkg/net/http/#Client.Do
+	resData, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return err
 	}
 
-	logging.Debug("API request %v %v returned status %v\n", method, endpoint, res.StatusCode)
+	logging.Debug("API request %v %v returned status %v\n", req.Method, req.URL, res.StatusCode)
+	logging.Debug("Response body: %v", string(resData))
+
 	err = rm.ExpectOK(res, "storage request failed")
 	if err != nil {
 		return err
 	}
 
-	defer res.Body.Close()
 	if dst != nil {
-		dec := json.NewDecoder(res.Body)
+		dec := json.NewDecoder(bytes.NewBuffer(resData))
 		err = dec.Decode(dst)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to read API response: %v", err)
 		}
 	}
 
@@ -653,7 +671,9 @@ func newRequest(method, base, endpoint, token string, payload interface{}) (*htt
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	//req.Header.Set("Accept", "application/json")  // necessary?
+	// Not sure if this is necessary, won't hurt either
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "rmtools")
 
 	return req, nil
 }

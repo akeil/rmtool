@@ -30,14 +30,16 @@ func main() {
 		}
 	*/
 
-	err = notifications(client)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	/*
+		err = notifications(client)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	*/
 
-	//dataDir := "/tmp/remarkable"
-	//repo := api.NewRepository(client, dataDir)
+	dataDir := "/tmp/remarkable"
+	repo := api.NewRepository(client, dataDir)
 	//srcDir := "/tmp/xochitl"
 	//repo := fs.NewRepository(srcDir)
 
@@ -57,13 +59,12 @@ func main() {
 		}
 	*/
 
-	/*
-		err = uploadPdf(repo, os.Args[1])
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-	*/
+	err = uploadPdf(repo, os.Args[1])
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 }
 
 func register(client *api.Client) error {
@@ -175,12 +176,13 @@ func repository(repo rm.Repository) error {
 		}
 		fmt.Printf("Drawing version=%v\n", d.Version)
 	}
-
-	item.SetPinned(true)
-	err = repo.Update(item)
-	if err != nil {
-		return err
-	}
+	/*
+		item.SetPinned(true)
+		err = repo.Update(item)
+		if err != nil {
+			return err
+		}
+	*/
 
 	return nil
 }
@@ -207,6 +209,7 @@ func uploadPdf(repo rm.Repository, src string) error {
 	}
 
 	d.SetPinned(true)
+	//d.SetParent("does not exist")
 
 	err = repo.Upload(d)
 	if err != nil {

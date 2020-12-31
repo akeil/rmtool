@@ -2,6 +2,7 @@ package api
 
 import (
 	"archive/zip"
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -110,8 +111,50 @@ func (r *repo) Reader(id string, version uint, path ...string) (io.ReadCloser, e
 	return entry.Open()
 }
 
+// TODO implement
 func (r *repo) Upload(d *rm.Document) error {
-	return fmt.Errorf("not implemented")
+	err := d.Validate()
+	if err != nil {
+		return err
+	}
+	err = r.client.checkParent(d.Parent())
+	if err != nil {
+		return err
+	}
+
+	// Create the zip file for later upload
+	buf := new(bytes.Buffer)
+	archive := zip.NewWriter(buf)
+
+	w := func(path ...string) (io.WriteCloser, error) {
+		name := strings.Join(path, "/")
+		logging.Debug("Create zip entry %q", name)
+		writer, err := archive.Create(name)
+		if err != nil {
+			return nil, err
+		}
+		return &nopCloser{writer}, nil
+	}
+
+	logging.Debug("Write document parts to zip archive")
+	err = d.Write(r, w)
+	if err != nil {
+		return err
+	}
+
+	err = archive.Close()
+	if err != nil {
+		return err
+	}
+
+	logging.Debug("Upload the zip archive")
+
+	err = r.client.Upload(d.Name(), d.ID(), d.Parent(), buf)
+	if err != nil {
+		return err
+	}
+
+	return err
 }
 
 func (r *repo) downloadToCache(id string, version uint) error {
@@ -281,4 +324,13 @@ func (m metaWrapper) Parent() string {
 
 func (m metaWrapper) Validate() error {
 	return m.i.Validate()
+}
+
+// implement empty Close for WriteCloser interface
+type nopCloser struct {
+	io.Writer
+}
+
+func (n *nopCloser) Close() error {
+	return nil
 }
