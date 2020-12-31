@@ -12,8 +12,8 @@ func (d *Drawing) Validate() error {
 		return fmt.Errorf("invalid version: %v", d.Version)
 	}
 
-	if d.Layers == nil {
-		return nil
+	if d.Layers == nil || len(d.Layers) == 0 {
+		return NewValidationError("drawing must have at least one layer")
 	}
 
 	for _, l := range d.Layers {

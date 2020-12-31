@@ -5,7 +5,7 @@ import (
 )
 
 func TestValidateDrawing(t *testing.T) {
-	var d Drawing
+	d := NewDrawing()
 	err := d.Validate()
 	if err != nil {
 		t.Log("newly initialized drawing should be valid")

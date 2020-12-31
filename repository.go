@@ -166,8 +166,29 @@ func (d *Document) Validate() error {
 		return NewValidationError("number of pagedata entries does not match page count: %v != %v", len(d.pagedata), d.PageCount())
 	}
 
-	// TODO: Notebook needs a drawing for each page
-	// and at least one page
+	switch d.FileType() {
+	case Notebook:
+		// Notebook needs a drawing for each page and at least one page
+		if d.PageCount() < 1 {
+			return NewValidationError("notbeook must have at least one page")
+		}
+		// TODO: checking only cached drawings means we can validate
+		// fully loaded or new notebooks only
+		for _, pageID := range d.Pages() {
+			dr := d.drawings[pageID]
+			if dr == nil {
+				return NewValidationError("page %q has no associated drawing", pageID)
+			}
+			err := dr.Validate()
+			if err != nil {
+				return err
+			}
+		}
+	case Pdf:
+		// TODO - do we need validation?
+	case Epub:
+		// TODO - do we need validation?
+	}
 
 	// TODO: validate pages
 
@@ -242,7 +263,7 @@ func (d *Document) Write(repo Repository, w WriterFunc) error {
 
 // Create a new page with a drawing and append it to the document.
 // TODO: Orientation? Template?
-func (d *Document) CreatePage() *Page {
+func (d *Document) CreatePage() string {
 	d.pagesMx.Lock()
 	defer d.pagesMx.Unlock()
 
@@ -285,7 +306,7 @@ func (d *Document) CreatePage() *Page {
 	}
 	d.drawings[pageID] = NewDrawing()
 
-	return p
+	return pageID
 }
 
 // PageCount returns the number of pages in this document.
