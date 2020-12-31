@@ -220,6 +220,16 @@ func (r *repo) Upload(d *rm.Document) error {
 	// TODO: if we have an error during one of the moves,
 	// the partially transferred content in dst needs cleanup
 
+	// We always create the <ID>/ subdirectory, even if it will be empty.
+	// At least, this seems to be the behaviour of the remarkable tablet.
+	pagesDir := filepath.Join(r.base, d.ID())
+	err = os.Mkdir(pagesDir, 0755)
+	if err != nil {
+		if !os.IsExist(err) {
+			return err
+		}
+	}
+
 	// Move everything to the target directory.
 	logging.Debug("Move files to %q...", r.base)
 	for rel, src := range files {

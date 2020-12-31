@@ -1,18 +1,27 @@
 package rm
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 
 	"akeil.net/akeil/rm/internal/logging"
 )
 
 type WriterFunc func(path ...string) (io.WriteCloser, error)
+
+// An AttachmentReader creates a reader for a PDF or EPUB attachment.
+//
+// It must be supplied when creating documents with attachments.
+// It must be possible to call this function multiple times.
+type AttachmentReader func() (io.ReadCloser, error)
 
 // Repository is the interface for a storage backend.
 //
@@ -104,39 +113,46 @@ func ReadDocument(r Repository, m Meta) (*Document, error) {
 // content as it is requested.
 type Document struct {
 	Meta
-	content    *Content
-	pagedata   []Pagedata
-	pages      map[string]*Page
-	pagesMx    sync.Mutex
-	drawings   map[string]*Drawing
-	drawingsMx sync.Mutex
-	repo       Repository
-}
-
-func NewDocument(name string, ft FileType) *Document {
-	return &Document{
-		Meta:     newDocMeta(DocumentType, name),
-		content:  NewContent(ft),
-		pagedata: make([]Pagedata, 0),
-	}
+	content          *Content
+	pagedata         []Pagedata
+	pages            map[string]*Page
+	pagesMx          sync.Mutex
+	drawings         map[string]*Drawing
+	drawingsMx       sync.Mutex
+	attachmentReader AttachmentReader
+	repo             Repository
 }
 
 // TODO: template name?
 func NewNotebook(name string) *Document {
-	d := NewDocument(name, Notebook)
+	d := newDocument(name, Notebook, nil)
 	// new notbeooks are created with an empty first page
 	d.CreatePage()
 	return d
 }
 
-// TODO - implement
-func NewPdf(name string, r io.ReadCloser) *Document {
-	return NewDocument(name, Pdf)
+// NewPdf creates a new document for a PDF file.
+//
+// Note that this can return an error as the PDF needs to be read for this.
+func NewPdf(name string, r AttachmentReader) (*Document, error) {
+	d := newDocument(name, Pdf, r)
+	err := d.createPdfPages()
+	// TODO: orientation of the document?
+	return d, err
 }
 
 // TODO - implement
-func NewEpub(name string, r io.ReadCloser) *Document {
-	return NewDocument(name, Epub)
+func NewEpub(name string, r AttachmentReader) *Document {
+	return newDocument(name, Epub, r)
+}
+
+func newDocument(name string, ft FileType, r AttachmentReader) *Document {
+	return &Document{
+		Meta:             newDocMeta(DocumentType, name),
+		content:          NewContent(ft),
+		pagedata:         make([]Pagedata, 0),
+		attachmentReader: r,
+	}
 }
 
 func (d *Document) Validate() error {
@@ -168,26 +184,14 @@ func (d *Document) Validate() error {
 
 	switch d.FileType() {
 	case Notebook:
-		// Notebook needs a drawing for each page and at least one page
-		if d.PageCount() < 1 {
-			return NewValidationError("notbeook must have at least one page")
-		}
-		// TODO: checking only cached drawings means we can validate
-		// fully loaded or new notebooks only
-		for _, pageID := range d.Pages() {
-			dr := d.drawings[pageID]
-			if dr == nil {
-				return NewValidationError("page %q has no associated drawing", pageID)
-			}
-			err := dr.Validate()
-			if err != nil {
-				return err
-			}
-		}
+		err = d.validateNotebook()
 	case Pdf:
-		// TODO - do we need validation?
+		err = d.validateAttachment()
 	case Epub:
-		// TODO - do we need validation?
+		err = d.validateAttachment()
+	}
+	if err != nil {
+		return err
 	}
 
 	// TODO: validate pages
@@ -195,8 +199,68 @@ func (d *Document) Validate() error {
 	return nil
 }
 
+func (d *Document) validateNotebook() error {
+	// Notebook needs a drawing for each page and at least one page
+	if d.PageCount() < 1 {
+		return NewValidationError("notbeook must have at least one page")
+	}
+	// TODO: checking only cached drawings means we can validate
+	// fully loaded or new notebooks only
+	for _, pageID := range d.Pages() {
+		dr := d.drawings[pageID]
+		if dr == nil {
+			return NewValidationError("page %q has no associated drawing", pageID)
+		}
+		err := dr.Validate()
+		if err != nil {
+			return err
+		}
+
+		// TODO must have PageMetadata with at least one layer
+	}
+
+	return nil
+}
+
+// for PDF or EPUB
+func (d *Document) validateAttachment() error {
+	if d.attachmentReader == nil {
+		return NewValidationError("missing attachment reader")
+	}
+	// TODO - do we need more validation?
+
+	return nil
+}
+
 func (d *Document) Write(repo Repository, w WriterFunc) error {
-	logging.Debug("write content")
+	// .content and .pagedata
+	err := d.writeContent(w)
+	if err != nil {
+		return err
+	}
+
+	// page meta and drawings
+	err = d.writePages(repo, w)
+	if err != nil {
+		return err
+	}
+
+	// attached PDF or EPUB
+	if d.FileType() == Pdf || d.FileType() == Epub {
+		err = d.writeAttachment(w)
+		if err != nil {
+			return nil
+		}
+	}
+
+	// TODO write thumbnails?
+
+	return nil
+}
+
+// writes the .content and the .pagedata files.
+func (d *Document) writeContent(w WriterFunc) error {
+	logging.Debug("Write content")
 	cw, err := w(fmt.Sprintf("%v.content", d.ID()))
 	if err != nil {
 		return err
@@ -218,12 +282,31 @@ func (d *Document) Write(repo Repository, w WriterFunc) error {
 	}
 	defer pw.Close()
 
+	return nil
+}
+
+// writes the drawings (.rm) and the metadata for each page that has a drawing.
+// writes nothing for pages w/o drawing
+func (d *Document) writePages(repo Repository, w WriterFunc) error {
+	d.pagesMx.Lock()
+	d.drawingsMx.Lock()
+	defer d.pagesMx.Unlock()
+	defer d.drawingsMx.Unlock()
+
 	for i, pageID := range d.Pages() {
-		logging.Debug("Write page metadata for %v", pageID)
+		// we do not have a backing repository and can only write cached drawing
+		// TODO: this does not feel like the "right" way to do it
+		dr := d.drawings[pageID]
+		if dr == nil {
+			logging.Debug("Page %q has no drawing", pageID)
+			continue
+		}
+
 		// TODO relies on all pages being cached
-		p, err := d.Page(pageID)
-		if err != nil {
-			return err
+		logging.Debug("Write page metadata for %v", pageID)
+		p := d.pages[pageID]
+		if p == nil {
+			return fmt.Errorf("missing page metadata for page %q", pageID)
 		}
 		prefix := repo.PagePrefix(pageID, i)
 		pmw, err := w(d.ID(), prefix+"-metadata.json")
@@ -236,13 +319,7 @@ func (d *Document) Write(repo Repository, w WriterFunc) error {
 			return err
 		}
 
-		// we do not have a backing repository and can only write cached drawing
-		// TODO: this does not feel like the "right" way to do it
 		logging.Debug("Write drawing for %v", pageID)
-		dr, err := d.Drawing(pageID)
-		if err != nil {
-			return err
-		}
 		drw, err := w(d.ID(), prefix+".rm")
 		if err != nil {
 			return err
@@ -254,9 +331,31 @@ func (d *Document) Write(repo Repository, w WriterFunc) error {
 		}
 	}
 
-	// TODO: write attached PDF or EPUB
+	return nil
+}
 
-	// TODO write thumbnails?
+// write attachment, assume FileType is Pdf or Epub
+func (d *Document) writeAttachment(w WriterFunc) error {
+	logging.Debug("Write attachment (type=%v)", d.FileType())
+	if d.attachmentReader == nil {
+		return NewValidationError("missing attachment reader")
+	}
+
+	path := d.ID() + d.FileType().Ext()
+	aw, err := w(path)
+	if err != nil {
+		return err
+	}
+	defer aw.Close()
+	ar, err := d.attachmentReader()
+	if err != nil {
+		return err
+	}
+	defer ar.Close()
+	_, err = io.Copy(aw, ar)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -264,6 +363,39 @@ func (d *Document) Write(repo Repository, w WriterFunc) error {
 // Create a new page with a drawing and append it to the document.
 // TODO: Orientation? Template?
 func (d *Document) CreatePage() string {
+	pageID := d.addPage()
+
+	// drawing
+	d.drawingsMx.Lock()
+	defer d.drawingsMx.Unlock()
+	if d.drawings == nil {
+		d.drawings = make(map[string]*Drawing)
+	}
+	d.drawings[pageID] = NewDrawing()
+
+	return pageID
+}
+
+func (d *Document) createPdfPages() error {
+	rc, err := d.attachmentReader()
+	if err != nil {
+		return err
+	}
+
+	numPages, err := countPdfPages(rc)
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < numPages; i++ {
+		d.addPage()
+	}
+
+	return nil
+}
+
+// adds an empty page WITHOUT drawing
+func (d *Document) addPage() string {
 	d.pagesMx.Lock()
 	defer d.pagesMx.Unlock()
 
@@ -278,6 +410,7 @@ func (d *Document) CreatePage() string {
 	pgData := newPagedata()
 	d.pagedata = append(d.pagedata, pgData)
 
+	// TODO: PageMeta is optional
 	pgMeta := PageMetadata{
 		Layers: []LayerMetadata{
 			LayerMetadata{
@@ -297,14 +430,6 @@ func (d *Document) CreatePage() string {
 		d.pages = make(map[string]*Page)
 	}
 	d.pages[pageID] = p
-
-	// drawing
-	d.drawingsMx.Lock()
-	defer d.drawingsMx.Unlock()
-	if d.drawings == nil {
-		d.drawings = make(map[string]*Drawing)
-	}
-	d.drawings[pageID] = NewDrawing()
 
 	return pageID
 }
@@ -496,7 +621,7 @@ func (d *Document) reader(path ...string) (io.ReadCloser, error) {
 // Page describes a single page within a document.
 type Page struct {
 	index    int
-	meta     PageMetadata
+	meta     PageMetadata // TODO: PageMetadata is optional
 	pagedata Pagedata
 }
 
@@ -612,4 +737,27 @@ func (d *docMeta) Validate() error {
 	}
 
 	return nil
+}
+
+func countPdfPages(rc io.ReadCloser) (int, error) {
+	data, err := ioutil.ReadAll(rc)
+	if err != nil {
+		return 0, err
+	}
+	rc.Close()
+	rs := io.ReadSeeker(bytes.NewReader(data))
+
+	cfg := pdfcpu.NewDefaultConfiguration()
+	ctx, err := pdfcpu.Read(rs, cfg)
+	if err != nil {
+		return 0, err
+	}
+
+	// This *must* be called before accessing page count
+	err = ctx.EnsurePageCount()
+	if err != nil {
+		return 0, err
+	}
+
+	return ctx.PageCount, nil
 }

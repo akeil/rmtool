@@ -355,6 +355,17 @@ func (f FileType) String() string {
 	}
 }
 
+func (f FileType) Ext() string {
+	switch f {
+	case Epub:
+		return ".epub"
+	case Pdf:
+		return ".pdf"
+	default:
+		return ""
+	}
+}
+
 func (t *TextAlign) UnmarshalJSON(b []byte) error {
 	var s string
 	err := json.Unmarshal(b, &s)

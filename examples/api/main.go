@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -51,7 +52,15 @@ func main() {
 		}
 	*/
 
-	err = upload(repo)
+	/*
+		err = upload(repo)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	*/
+
+	err = uploadPdf(repo, os.Args[1])
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -183,6 +192,24 @@ func upload(repo rm.Repository) error {
 	d.SetPinned(true)
 
 	err := repo.Upload(d)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func uploadPdf(repo rm.Repository, src string) error {
+	d, err := rm.NewPdf("My PDF", func() (io.ReadCloser, error) {
+		return os.Open(src)
+	})
+	if err != nil {
+		return err
+	}
+
+	d.SetPinned(true)
+
+	err = repo.Upload(d)
 	if err != nil {
 		return err
 	}
