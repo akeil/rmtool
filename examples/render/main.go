@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"image/color"
 	"io/ioutil"
 	"log"
 	"os"
@@ -37,7 +38,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	rc := render.NewContext("./data")
+	bg := color.RGBA{240, 240, 240, 255}
+	brushes := map[rm.BrushColor]color.Color{
+		rm.Black: color.RGBA{0, 20, 120, 255},   // dark blue
+		rm.Gray:  color.RGBA{35, 110, 160, 255}, // light/gray blue
+		rm.White: color.White,
+	}
+	rc := render.NewContext("./data", render.NewPalette(bg, brushes))
 
 	var repo rm.Repository
 	// filesystem

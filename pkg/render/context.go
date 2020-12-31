@@ -45,7 +45,7 @@ var defaultColors = map[rm.BrushColor]color.Color{
 // If multiple drawings are rendered, they should use the same Context.
 type Context struct {
 	DataDir     string
-	colors      map[rm.BrushColor]color.Color
+	palette     *Palette
 	sprites     *image.RGBA
 	spriteIndex map[string][]int
 	spriteMx    sync.Mutex
@@ -58,15 +58,16 @@ type Context struct {
 //
 // dataDir should point to a directory with a spritesheet for the brushes
 // and a subdirectory 'templates' with page backgrounds.
-func NewContext(dataDir string) *Context {
+func NewContext(dataDir string, p *Palette) *Context {
 	return &Context{
 		DataDir: "data",
+		palette: p,
 	}
 }
 
 func DefaultContext() *Context {
 	// TODO hardcoded path - choose a more sensible value
-	return NewContext("./data")
+	return NewContext("./data", NewPalette(color.White, defaultColors))
 }
 
 // Page draws a single page to a PNG and writes it to the given writer.
@@ -82,11 +83,7 @@ func (c *Context) PDF(doc *rm.Document, w io.Writer) error {
 }
 
 func (c *Context) loadBrush(bt rm.BrushType, bc rm.BrushColor) (Brush, error) {
-	lookup := c.colors
-	if lookup == nil {
-		lookup = defaultColors
-	}
-	col := lookup[bc]
+	col := c.palette.Color(bc)
 	if col == nil {
 		return nil, fmt.Errorf("invalid color %v", bc)
 	}
@@ -292,4 +289,24 @@ func readPNG(path ...string) (image.Image, error) {
 	defer f.Close()
 
 	return png.Decode(f)
+}
+
+type Palette struct {
+	Background color.Color
+	colors     map[rm.BrushColor]color.Color
+}
+
+func NewPalette(bg color.Color, brushColors map[rm.BrushColor]color.Color) *Palette {
+	return &Palette{
+		Background: bg,
+		colors:     brushColors,
+	}
+}
+
+func (p *Palette) Color(bc rm.BrushColor) color.Color {
+	c, ok := p.colors[bc]
+	if ok {
+		return c
+	}
+	return defaultColors[bc]
 }

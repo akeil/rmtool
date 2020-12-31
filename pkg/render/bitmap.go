@@ -59,7 +59,7 @@ func renderPNG(c *Context, d *rm.Drawing, bg bool, w io.Writer) error {
 	dst := image.NewRGBA(rect)
 
 	if bg {
-		renderBackground(dst)
+		renderBackground(c, dst)
 	}
 
 	err := renderLayers(c, dst, d)
@@ -92,8 +92,8 @@ func renderTemplate(c *Context, dst draw.Image, tpl string, layout rm.Orientatio
 }
 
 // renderBackground fills the complete destination image with the background color (white).
-func renderBackground(dst draw.Image) {
-	bg := image.NewUniform(bgColor)
+func renderBackground(c *Context, dst draw.Image) {
+	bg := image.NewUniform(c.palette.Background)
 	draw.Draw(dst, dst.Bounds(), bg, image.ZP, draw.Over)
 }
 

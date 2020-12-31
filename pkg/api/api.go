@@ -459,9 +459,11 @@ func (c *Client) storageRequest(method, endpoint string, payload, dst interface{
 	}
 
 	// log the request body
-	data, err := ioutil.ReadAll(req.Body)
-	logging.Debug("Request body: %v", string(data))
-	req.Body = ioutil.NopCloser(bytes.NewBuffer(data))
+	if req.Body != nil {
+		data, _ := ioutil.ReadAll(req.Body)
+		logging.Debug("Request body: %v", string(data))
+		req.Body = ioutil.NopCloser(bytes.NewBuffer(data))
+	}
 
 	res, err := c.client.Do(req)
 	if err != nil {
