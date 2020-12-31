@@ -2,7 +2,6 @@ package render
 
 import (
 	"image"
-	"image/color"
 	"image/draw"
 	"image/png"
 	"io"
@@ -11,8 +10,6 @@ import (
 	"akeil.net/akeil/rm"
 	"akeil.net/akeil/rm/internal/imaging"
 )
-
-var bgColor = color.White
 
 // Page renders the page from the given document and writes the
 // result to the given writer.
@@ -54,11 +51,11 @@ func renderPage(c *Context, doc *rm.Document, pageID string, w io.Writer) error 
 
 // RenderPNG paints the given drawing to a PNG file and writes the PNG data
 // to the given writer.
-func renderPNG(c *Context, d *rm.Drawing, bg bool, w io.Writer) error {
+func renderPNG(c *Context, d *rm.Drawing, paintBg bool, w io.Writer) error {
 	rect := image.Rect(0, 0, rm.MaxWidth, rm.MaxHeight)
 	dst := image.NewRGBA(rect)
 
-	if bg {
+	if paintBg {
 		renderBackground(c, dst)
 	}
 
@@ -86,7 +83,7 @@ func renderTemplate(c *Context, dst draw.Image, tpl string, layout rm.Orientatio
 		img = imaging.Rotate(rad(90), img)
 	}
 
-	draw.Draw(dst, dst.Bounds(), img, image.ZP, draw.Over)
+	draw.Draw(dst, dst.Bounds(), img, image.Point{}, draw.Over)
 
 	return nil
 }
@@ -94,7 +91,7 @@ func renderTemplate(c *Context, dst draw.Image, tpl string, layout rm.Orientatio
 // renderBackground fills the complete destination image with the background color (white).
 func renderBackground(c *Context, dst draw.Image) {
 	bg := image.NewUniform(c.palette.Background)
-	draw.Draw(dst, dst.Bounds(), bg, image.ZP, draw.Over)
+	draw.Draw(dst, dst.Bounds(), bg, image.Point{}, draw.Over)
 }
 
 // renderLayoers paints all layers on the destination image.

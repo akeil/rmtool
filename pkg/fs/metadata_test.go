@@ -52,7 +52,7 @@ func TestReadMetadata(t *testing.T) {
 	if m.LastModified.Second() != 34 {
 		t.Errorf("unexpected value for lastModified (Second): %v", m.LastModified.Second())
 	}
-	if m.LastModified.Nanosecond() != 814_000_000 {
+	if m.LastModified.Nanosecond() != 814000000 {
 		t.Errorf("unexpected value for lastModified (Nanosecond): %v", m.LastModified.Nanosecond())
 	}
 

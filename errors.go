@@ -58,7 +58,6 @@ func ExpectOK(res *http.Response, msg string) error {
 // and returns an error with the given message if not.
 func ExpectStatus(res *http.Response, expected int, msg string) error {
 	code := res.StatusCode
-
 	if code == expected {
 		return nil
 	}

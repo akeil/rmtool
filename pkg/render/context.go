@@ -49,7 +49,6 @@ type Context struct {
 	sprites     *image.RGBA
 	spriteIndex map[string][]int
 	spriteMx    sync.Mutex
-	tpl         map[string]template
 	tplCache    map[string]image.Image
 	tplMx       sync.Mutex
 }
@@ -215,21 +214,6 @@ func (c *Context) loadTemplate(name string) (image.Image, error) {
 		return cached, nil
 	}
 
-	/*
-		TODO: apparently, we do not need the index
-			  filename is directly contained in pagedata
-			  Maybe 'orientation' is important?
-
-		err := c.lazyLoadTemplateIndex()
-		if err != nil {
-			return nil, err
-		}
-
-		t, ok := c.tpl[name]
-		if !ok {
-			return nil, fmt.Errorf("no template file found for %q", name)
-		}
-	*/
 	img, err := readPNG(c.DataDir, "templates", name+".png")
 	if err != nil {
 		return nil, err
@@ -238,44 +222,6 @@ func (c *Context) loadTemplate(name string) (image.Image, error) {
 	c.tplCache[name] = img
 
 	return img, nil
-}
-
-func (c *Context) lazyLoadTemplateIndex() error {
-	if c.tpl != nil {
-		return nil
-	}
-
-	p := filepath.Join(c.DataDir, "templates", "templates.json")
-	logging.Debug("Load template index from %q", p)
-	f, err := os.Open(p)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	var dst map[string][]template
-
-	err = json.NewDecoder(f).Decode(&dst)
-	if err != nil {
-		return err
-	}
-
-	c.tpl = make(map[string]template)
-	data := dst["templates"]
-	if data == nil {
-		return fmt.Errorf("unexpected JSON in %q - missing 'templates' member", p)
-	}
-	for _, t := range data {
-		c.tpl[t.Name] = t
-	}
-
-	return nil
-}
-
-type template struct {
-	Name      string `json:"name"`
-	Filename  string `json:"filename"`
-	Landscape bool   `json:"Landscape"`
 }
 
 func readPNG(path ...string) (image.Image, error) {

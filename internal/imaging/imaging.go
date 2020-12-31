@@ -53,8 +53,7 @@ func ApplyOpacity(i image.Image, opacity float64) image.Image {
 
 	rect := i.Bounds()
 	dst := image.NewRGBA(rect)
-	p := image.ZP
-	draw.DrawMask(dst, rect, i, p, mask, p, draw.Over)
+	draw.DrawMask(dst, rect, i, image.Point{}, mask, image.Point{}, draw.Over)
 	return dst
 }
 

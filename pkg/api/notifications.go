@@ -51,7 +51,7 @@ func newNotifications(url, token string) *Notifications {
 // Calling Connect while the client is already connected leads to a reconnect.
 func (n *Notifications) Connect() error {
 	n.connMx.Lock()
-	n.connMx.Unlock()
+	defer n.connMx.Unlock()
 
 	if n.isConnected() {
 		n.Disconnect()
@@ -66,7 +66,6 @@ func (n *Notifications) Connect() error {
 	conn, res, err := websocket.DefaultDialer.Dial(n.url, h)
 	if err != nil {
 		return fmt.Errorf("websocket connection failed with status %v, error %v", res.StatusCode, err)
-		return err
 	}
 
 	n.conn = conn

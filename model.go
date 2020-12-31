@@ -669,6 +669,9 @@ func (is *intStr) UnmarshalJSON(b []byte) error {
 	}
 
 	v, err := strconv.Atoi(s)
+	if err != nil {
+		return err
+	}
 
 	*is = intStr(v)
 	return nil

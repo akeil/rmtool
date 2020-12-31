@@ -126,6 +126,7 @@ type Document struct {
 	repo             Repository
 }
 
+// NewNotebook creates a new document of type "notebook" with a single emtpty page.
 // TODO: template name?
 func NewNotebook(name string) *Document {
 	d := newDocument(name, Notebook, nil)
@@ -364,7 +365,7 @@ func (d *Document) writeAttachment(w WriterFunc) error {
 	return nil
 }
 
-// Create a new page with a drawing and append it to the document.
+// CreatePage creates a new page with a drawing and append it to the document.
 // TODO: Orientation? Template?
 func (d *Document) CreatePage() string {
 	pgMeta := &PageMetadata{

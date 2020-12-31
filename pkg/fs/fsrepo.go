@@ -53,11 +53,11 @@ func (r *repo) List() ([]rm.Meta, error) {
 
 func (r *repo) readItem(id string) (rm.Meta, error) {
 	p := filepath.Join(r.base, id+".metadata")
-	m, err := readMetadata(p)
+	meta, err := readMetadata(p)
 	if err != nil {
 		return nil, err
 	}
-	return metaWrapper{id: id, i: &m, repo: r}, nil
+	return metaWrapper{id: id, i: &meta, repo: r}, nil
 }
 
 func (r *repo) Update(m rm.Meta) error {
@@ -144,7 +144,7 @@ func (r *repo) Upload(d *rm.Document) error {
 	logging.Debug("Write individual files to temp dir %q...", tmp)
 
 	// Capture all the files we have created.
-	files := make(map[string]string, 0)
+	files := make(map[string]string)
 
 	// Set up a factory function to create writers for tempfiles.
 	w := func(path ...string) (io.WriteCloser, error) {

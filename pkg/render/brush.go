@@ -160,7 +160,7 @@ func (h *Highlighter) RenderStroke(dst draw.Image, s rm.Stroke) {
 	alpha := uint8(math.Round(255 * opacity))
 	mask := image.NewUniform(color.Alpha{alpha})
 
-	draw.DrawMask(dst, rect, tmp, image.ZP, mask, image.ZP, draw.Over)
+	draw.DrawMask(dst, rect, tmp, image.Point{}, mask, image.Point{}, draw.Over)
 }
 
 func (h *Highlighter) renderSegment(dst draw.Image, start, end rm.Dot) {
@@ -247,7 +247,7 @@ func drawStamp(dst draw.Image, mask image.Image, fill image.Image, start, end rm
 		x0 := int(math.Round(x))
 		y0 := int(math.Round(y))
 		r := image.Rect(x0-wHalf, y0-hHalf, x0+wHalf, y0+hHalf)
-		draw.DrawMask(dst, r, fill, image.ZP, mask, image.ZP, draw.Over)
+		draw.DrawMask(dst, r, fill, image.Point{}, mask, image.Point{}, draw.Over)
 
 		// move along the path for the next iteration
 		x += xFraction * xDirection

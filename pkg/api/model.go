@@ -209,7 +209,7 @@ type msg struct {
 
 type msgAttr struct {
 	AuthUserID       string  `json:"auth0UserID"`
-	Bookmarked       boolStr `json:bookmarked`
+	Bookmarked       boolStr `json:"bookmarked"`
 	Event            string  `json:"event"`
 	ID               string  `json:"id"`
 	Parent           string  `json:"parent"`
@@ -257,6 +257,9 @@ func (is *intStr) UnmarshalJSON(b []byte) error {
 	}
 
 	v, err := strconv.Atoi(s)
+	if err != nil {
+		return err
+	}
 
 	*is = intStr(v)
 	return nil

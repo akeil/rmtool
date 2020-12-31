@@ -74,8 +74,8 @@ func (t *Timestamp) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	secs := int64(n / 1_000)
-	nanos := (int64(n) - (secs * 1_000)) * 1_000_000
+	secs := int64(n / 1000)
+	nanos := (int64(n) - (secs * 1000)) * 1000000
 	ts := Timestamp{time.Unix(secs, nanos).UTC()}
 
 	*t = ts
@@ -84,7 +84,7 @@ func (t *Timestamp) UnmarshalJSON(b []byte) error {
 
 func (t Timestamp) MarshalJSON() ([]byte, error) {
 	nanos := t.UnixNano()
-	millis := nanos / 1_000_000
+	millis := nanos / 1000000
 
 	s := fmt.Sprintf("%d", millis)
 	buf := bytes.NewBufferString(`"`)

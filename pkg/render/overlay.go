@@ -70,7 +70,7 @@ func overlayPDF(c *Context, doc *rm.Document, pdf *gofpdf.Fpdf) error {
 // dontPanic executes the given function in a separate goroutine.
 // If that panics, it will recover and return the panic as an error.
 func dontPanic(f func()) error {
-	rv := make(chan error, 0)
+	rv := make(chan error)
 
 	go func() {
 		// this will "catch" any panic and send its mssage to the error channel

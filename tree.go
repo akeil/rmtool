@@ -130,7 +130,7 @@ func BuildTree(r Repository) (*Node, error) {
 	}
 
 	// build a tree structure from the flat list
-	change := false
+	var change bool
 	for {
 		change = false
 		remaining := make([]*Node, 0)
@@ -142,7 +142,7 @@ func BuildTree(r Repository) (*Node, error) {
 			}
 		}
 		nodes = remaining
-		if change == false {
+		if !change {
 			break
 		}
 	}
@@ -264,7 +264,7 @@ func (n nodeMeta) LastModified() time.Time {
 }
 
 func (n nodeMeta) Parent() string {
-	return n.Parent()
+	return n.parent
 }
 
 func (n nodeMeta) Reader(path ...string) (io.ReadCloser, error) {

@@ -341,6 +341,9 @@ func (c *Client) Upload(name, id, parentID string, src io.Reader) error {
 	// Use the Put URL to upload the zipped content.
 	// The content will not be visible until we have set its metadata (below).
 	err = c.putBlob(i.BlobURLPut, src)
+	if err != nil {
+		return err
+	}
 
 	// Set the metadata for the new item
 	meta := Item{
@@ -460,9 +463,11 @@ func (c *Client) storageRequest(method, endpoint string, payload, dst interface{
 
 	// log the request body
 	if req.Body != nil {
-		data, _ := ioutil.ReadAll(req.Body)
-		logging.Debug("Request body: %v", string(data))
-		req.Body = ioutil.NopCloser(bytes.NewBuffer(data))
+		data, err := ioutil.ReadAll(req.Body)
+		if err == nil {
+			logging.Debug("Request body: %v", string(data))
+			req.Body = ioutil.NopCloser(bytes.NewBuffer(data))
+		}
 	}
 
 	res, err := c.client.Do(req)
