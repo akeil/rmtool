@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"image/color"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -41,6 +43,11 @@ func main() {
 		mkDirs   = get.Flag("dirs", "Create subdirectories from tablet's folders").Short('d').Bool()
 	)
 
+	put := app.Command("put", "Upload PDF documents to reMArkable")
+	var (
+		paths = put.Arg("paths", "Source and destination paths").Strings()
+	)
+
 	command := kingpin.MustParse(app.Parse(os.Args[1:]))
 
 	var err error
@@ -49,6 +56,8 @@ func main() {
 		err = doLs(*format, *match, *pinned)
 	case "get":
 		err = doGet(*matchGet, *outDir, *mkDirs)
+	case "put":
+		err = doPut(*paths)
 	default:
 		err = fmt.Errorf("unknown command: %q", command)
 	}
@@ -236,6 +245,111 @@ func renderPdf(rc *render.Context, repo rm.Repository, item *rm.Node, outDir str
 	}
 
 	fmt.Printf("%v document %q saved as %q.\n", checkmark, item.Name(), path)
+	return nil
+}
+
+// put ------------------------------------------------------------------------
+
+var typesByExt = map[string]rm.FileType{
+	rm.Pdf.Ext(): rm.Pdf,
+}
+
+func doPut(paths []string) error {
+	fmt.Println(paths)
+	// split src(s) from dst
+	var src []string
+	var dst string
+	if len(paths) == 0 {
+		return fmt.Errorf("no source file(s) specified")
+	} else if len(paths) == 1 {
+		src = paths
+	} else { // > 1
+		src = paths[0 : len(paths)-1]
+		dst = paths[len(paths)-1]
+		if dst == "/" || dst == "." {
+			dst = ""
+		}
+	}
+
+	// expand srcs, Glob() will also filter any non-existing files
+	srcs := make([]string, 0)
+	for _, s := range src {
+		fmt.Printf("expand %v\n", s)
+		matches, err := filepath.Glob(s)
+		if err != nil {
+			return err
+		}
+		srcs = append(srcs, matches...)
+	}
+	if len(srcs) == 0 {
+		return fmt.Errorf("no source file(s) specified")
+	}
+
+	for _, s := range srcs {
+		fmt.Printf("Source: %v\n", s)
+	}
+	fmt.Printf("Destination: %v\n", dst)
+
+	repo, err := setupRepo()
+	if err != nil {
+		return err
+	}
+	items, err := repo.List()
+	if err != nil {
+		return err
+	}
+
+	// TODO If a destination is specified, check if it is an existing
+	// document or folder
+	// if we have multiple source files,
+	// the target must be an existing folder
+
+	// TODO: if we have a single src, non-empty dst is either the target folder
+	// OR the target name
+	root := rm.BuildTree(items)
+	if dst != "" {
+		root = root.Filtered(rm.IsFolder, rm.MatchName(dst))
+	}
+
+	var group errgroup.Group
+	for _, s := range srcs {
+		srcPath := s // scope
+		group.Go(func() error {
+			return uploadPdf(repo, srcPath)
+		})
+	}
+
+	return group.Wait()
+}
+
+func uploadPdf(repo rm.Repository, src string) error {
+	_, file := filepath.Split(src)
+	ext := filepath.Ext(file)
+	base := strings.TrimSuffix(file, ext)
+	_, ok := typesByExt[strings.ToLower(ext)]
+	if !ok {
+		return fmt.Errorf("unsupported file type %q", ext)
+	}
+
+	// TODO: single file upload uses dst as name
+	doc, err := rm.NewPdf(base, func() (io.ReadCloser, error) {
+		f, err := os.Open(src)
+		if err != nil {
+			return nil, err
+		}
+		return f, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("%v upload %q\n", ellipsis, doc.Name())
+	err = repo.Upload(doc)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("%v %q uploaded\n", checkmark, doc.Name())
 	return nil
 }
 
