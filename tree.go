@@ -29,7 +29,7 @@ func newNode(m Meta) *Node {
 
 // tell if this node is the root folder.
 func (n *Node) isRoot() bool {
-	return n.ID() == ""
+	return n.ID() == "root"
 }
 
 // IsLeaf tells if this is a leaf node (without children).
@@ -220,7 +220,9 @@ func (n *Node) Filtered(match ...NodeFilter) *Node {
 			}
 		} else {
 			x := child.Filtered(match...)
-			if x.hasContent() {
+			// match against unfiltered `child`, allows path matches
+			// but *add* the filtered child
+			if x.hasContent() || matches(child) {
 				root.addChild(x)
 			}
 		}
@@ -246,6 +248,53 @@ func (n *Node) hasContent() bool {
 func MatchName(s string) NodeFilter {
 	return func(n *Node) bool {
 		return strings.Contains(strings.ToLower(n.Name()), strings.ToLower(s))
+	}
+}
+
+// MatchPath creates a node filter that matches on the path components of
+// a node (case insensitive).
+//
+// The path to match against is expected to contain the item name,
+// i.e. "foo/bar/baz" will match the item named "baz" in the folder "foo/bar".
+func MatchPath(path string) NodeFilter {
+	fragments := strings.Split(path, "/")
+	match := make([]string, 0)
+	for _, s := range fragments {
+		// Remove empty components essentially clears leading and trailing "/"
+		// and normalizes multiple "//" to single "/"
+		if s != "" {
+			match = append(match, s)
+		}
+	}
+	var name string
+	if len(match) > 0 {
+		name = match[len(match)-1]
+		match = match[:len(match)-1]
+	}
+
+	return func(n *Node) bool {
+		// Edge case:
+		// When path is "" or "/", match the root folder
+		if len(match) == 0 && name == "" {
+			return n.isRoot()
+		}
+
+		if strings.ToLower(name) != strings.ToLower(n.Name()) {
+			return false
+		}
+
+		p := n.Path()
+		p = p[1:] // drop root element
+		if len(p) != len(match) {
+			return false
+		}
+
+		for i := 0; i < len(match); i++ {
+			if strings.ToLower(p[i]) != strings.ToLower(match[i]) {
+				return false
+			}
+		}
+		return true
 	}
 }
 

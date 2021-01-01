@@ -104,6 +104,25 @@ func TestTreePath(t *testing.T) {
 	assert.Equal(root.Children[0].Children[0].Path(), []string{"root", "b0"})
 }
 
+func TestMatchPath(t *testing.T) {
+	assert := assert.New(t)
+	root := sampleTree()
+
+	assert.True(MatchPath("")(root), "empty path matches root folder")
+	assert.True(MatchPath("a0")(root.Children[0]), "plain name matches item in root")
+	assert.True(MatchPath("b0")(root.Children[3]), "match folder")
+	assert.True(MatchPath("b0/c1")(root.Children[3].Children[1]), "multi-level match")
+
+	assert.False(MatchPath("b0/c1/xx")(root.Children[3].Children[1]), "non-existing name")
+	assert.False(MatchPath("xx/c1")(root.Children[3].Children[1]), "non-existing first level")
+	assert.False(MatchPath("xx")(root.Children[0]), "non-existing name first level")
+
+	// normalize
+	assert.True(MatchPath("/b0/c1")(root.Children[3].Children[1]), "leading / ignored")
+	assert.True(MatchPath("b0/c1/")(root.Children[3].Children[1]), "trailing / ignored")
+	assert.True(MatchPath("b0///c1")(root.Children[3].Children[1]), "multiple // ignored")
+}
+
 // creates a tree like this:
 //
 // root
