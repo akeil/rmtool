@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"akeil.net/akeil/rm/internal/logging"
 )
 
 // Node is the representation for an entry in the content tree.
@@ -30,8 +32,8 @@ func (n *Node) isRoot() bool {
 	return n.ID() == ""
 }
 
-// Leaf tells if this is a leaf node (without children).
-func (n *Node) Leaf() bool {
+// IsLeaf tells if this is a leaf node (without children).
+func (n *Node) IsLeaf() bool {
 	return n.Type() != CollectionType && !n.isRoot()
 }
 
@@ -97,12 +99,7 @@ func (n *Node) put(other *Node) bool {
 
 // BuildTree creates a tree view of all items in the given repository.
 // Returns the root node.
-func BuildTree(r Repository) (*Node, error) {
-	items, err := r.List()
-	if err != nil {
-		return nil, err
-	}
-
+func BuildTree(items []Meta) *Node {
 	root := newNode(&nodeMeta{name: "root", nbType: CollectionType})
 	root.addChild(newNode(&nodeMeta{
 		id:     "trash",
@@ -134,10 +131,10 @@ func BuildTree(r Repository) (*Node, error) {
 	}
 
 	if len(nodes) != 0 {
-		return nil, fmt.Errorf("could not fit all notes into the tree")
+		logging.Warning("could not fit all notes into the tree")
 	}
 
-	return root, nil
+	return root
 }
 
 // NodeComparator is used to sort nodes in a tree.
@@ -173,9 +170,9 @@ func DefaultSort(one, other *Node) bool {
 	}
 
 	// collections before content
-	if one.Leaf() && !other.Leaf() {
+	if one.IsLeaf() && !other.IsLeaf() {
 		return false
-	} else if other.Leaf() && !one.Leaf() {
+	} else if other.IsLeaf() && !one.IsLeaf() {
 		return true
 	}
 
@@ -215,7 +212,7 @@ func (n *Node) Filtered(match ...NodeFilter) *Node {
 
 	root := newNode(n.Meta)
 	for _, child := range n.Children {
-		if child.Leaf() {
+		if child.IsLeaf() {
 			if matches(child) {
 				root.addChild(newNode(child.Meta))
 			}
@@ -231,7 +228,7 @@ func (n *Node) Filtered(match ...NodeFilter) *Node {
 
 func (n *Node) hasContent() bool {
 	for _, c := range n.Children {
-		if c.Leaf() {
+		if c.IsLeaf() {
 			return true
 		} else if c.hasContent() {
 			return true

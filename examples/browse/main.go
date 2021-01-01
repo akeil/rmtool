@@ -25,10 +25,11 @@ func main() {
 	}
 
 	repo := fs.NewRepository(dir)
-	root, err := rm.BuildTree(repo)
+	items, err := repo.List()
 	if err != nil {
 		log.Fatal(err)
 	}
+	root := rm.BuildTree(items)
 
 	root = root.Filtered(match...)
 	root.Sort(rm.DefaultSort)
@@ -45,7 +46,7 @@ func show(n *rm.Node, level int) {
 		fmt.Print("  ")
 	}
 
-	if n.Leaf() {
+	if n.IsLeaf() {
 		fmt.Print("- ")
 	} else {
 		fmt.Print("+ ")
@@ -57,7 +58,7 @@ func show(n *rm.Node, level int) {
 	}
 	fmt.Println()
 
-	if !n.Leaf() {
+	if !n.IsLeaf() {
 		for _, c := range n.Children {
 			show(c, level+1)
 		}

@@ -11,10 +11,14 @@ BRUSHES := $(wildcard $BRUSHDIR/*.png)
 
 .PHONY: examples
 
-all: build examples sprites
+all: build cli examples sprites
 
 build:
 	go build
+
+cli:
+	mkdir -p $(BINDIR)
+	go build -o $(BINDIR)/rmtool cmd/rmtool/main.go
 
 examples: ${samples}
 	mkdir -p $(EXAMPLESDIR)

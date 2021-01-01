@@ -68,7 +68,7 @@ func main() {
 }
 
 func register(client *api.Client) error {
-	if !client.Registered() {
+	if !client.IsRegistered() {
 		if len(os.Args) != 2 {
 			return fmt.Errorf("invalid number of arguments")
 		}
