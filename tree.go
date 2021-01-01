@@ -38,7 +38,7 @@ func (n *Node) IsLeaf() bool {
 }
 
 // Path returns the path components for this node.
-// That is, the IDs of its parent and grandparent up to the root node.
+// That is, the names of its parent and grandparent up to the root node.
 func (n *Node) Path() []string {
 	p := make([]string, 0)
 
@@ -47,7 +47,9 @@ func (n *Node) Path() []string {
 		if ctx.ParentNode == nil {
 			break
 		}
-		p = append(p, ctx.ParentNode.ID())
+		// We are moving "up" towards root, but the path should start at root.
+		// Therfore, *prepend* each item to the list.
+		p = append([]string{ctx.ParentNode.Name()}, p...)
 		ctx = ctx.ParentNode
 	}
 

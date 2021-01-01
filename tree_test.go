@@ -88,6 +88,22 @@ func TestSortTree(t *testing.T) {
 	assert.Equal(root.Children[1].ID(), "a0", "documents by name")
 }
 
+func TestTreePath(t *testing.T) {
+	assert := assert.New(t)
+	root := sampleTree()
+
+	assert.Equal(root.Path(), []string{})
+	assert.Equal(root.Children[0].Path(), []string{"root"})
+	assert.Equal(root.Children[3].Children[0].Path(), []string{"root", "b0"})
+
+	// filter and sort should not disturb paths of remaining elements
+	root = root.Filtered(MatchName("c0"))
+	root.Sort(DefaultSort)
+	assert.Equal(root.Path(), []string{})
+	assert.Equal(root.Children[0].Path(), []string{"root"})
+	assert.Equal(root.Children[0].Children[0].Path(), []string{"root", "b0"})
+}
+
 // creates a tree like this:
 //
 // root

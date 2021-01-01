@@ -38,6 +38,7 @@ func main() {
 	var (
 		matchGet = get.Arg("match", "Name must match this").String()
 		outDir   = get.Flag("output", "Output directory").Short('o').Default(".").String()
+		mkDirs   = get.Flag("dirs", "Create subdirectories from tablet's folders").Short('d').Bool()
 	)
 
 	command := kingpin.MustParse(app.Parse(os.Args[1:]))
@@ -47,7 +48,7 @@ func main() {
 	case "ls":
 		err = doLs(*format, *match, *pinned)
 	case "get":
-		err = doGet(*matchGet, *outDir)
+		err = doGet(*matchGet, *outDir, *mkDirs)
 	default:
 		err = fmt.Errorf("unknown command: %q", command)
 	}
@@ -159,7 +160,7 @@ func showTree(n *rm.Node, level int) {
 
 // get ------------------------------------------------------------------------
 
-func doGet(match, outDir string) error {
+func doGet(match, outDir string, mkDirs bool) error {
 	repo, err := setupRepo()
 	if err != nil {
 		return err
@@ -191,21 +192,32 @@ func doGet(match, outDir string) error {
 		if n.Type() == rm.CollectionType {
 			return nil
 		}
-
 		group.Go(func() error {
-			return renderPdf(rc, repo, n, outDir)
+			return renderPdf(rc, repo, n, outDir, mkDirs)
 		})
 		return nil
 	})
 	return group.Wait()
 }
 
-func renderPdf(rc *render.Context, repo rm.Repository, item rm.Meta, outDir string) error {
+func renderPdf(rc *render.Context, repo rm.Repository, item *rm.Node, outDir string, mkDirs bool) error {
 	fmt.Printf("%v download %q\n", ellipsis, item.Name())
 	doc, err := rm.ReadDocument(repo, item)
 	if err != nil {
 		fmt.Printf("%v Failed to download %q: %v\n", crossmark, item.Name(), err)
 		return err
+	}
+
+	// Mirror the directory structure from the tablet
+	p := item.Path()
+	p = p[1:] // drop root element
+	if mkDirs && len(p) != 0 {
+		outDir = filepath.Join(outDir, filepath.Join(p...))
+		err = os.MkdirAll(outDir, 0755)
+		if err != nil {
+			fmt.Printf("%v Failed to create directory %q: %v\n", crossmark, outDir, err)
+			return err
+		}
 	}
 
 	path := filepath.Join(outDir, doc.Name()+".pdf")
