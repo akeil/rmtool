@@ -25,14 +25,14 @@ func newNode(m Meta) *Node {
 	}
 }
 
-// tell if this node is lovated in the root folder.
-func (n *Node) inRoot() bool {
+// tell if this node is the root folder.
+func (n *Node) isRoot() bool {
 	return n.ID() == ""
 }
 
 // Leaf tells if this is a leaf node (without children).
 func (n *Node) Leaf() bool {
-	return n.Type() != CollectionType && !n.inRoot()
+	return n.Type() != CollectionType && !n.isRoot()
 }
 
 // Path returns the path components for this node.
@@ -70,21 +70,6 @@ func (n *Node) Walk(f func(n *Node) error) error {
 	return nil
 }
 
-// Sort sorts the subtree starting at this node by the given sort rule.
-// Sorting is in-place.
-func (n *Node) Sort(compare func(*Node, *Node) bool) {
-	f := func(i, j int) bool {
-		one := n.Children[i]
-		other := n.Children[j]
-		return compare(one, other)
-	}
-	sort.Slice(n.Children, f)
-
-	for _, c := range n.Children {
-		c.Sort(compare)
-	}
-}
-
 // addChild adds a child node to this node and sets the Parent field
 // of the child.
 func (n *Node) addChild(child *Node) {
@@ -118,10 +103,11 @@ func BuildTree(r Repository) (*Node, error) {
 		return nil, err
 	}
 
-	root := newNode(nodeMeta{name: "root"})
-	root.addChild(newNode(nodeMeta{
-		id:   "trash",
-		name: "Trash",
+	root := newNode(&nodeMeta{name: "root", nbType: CollectionType})
+	root.addChild(newNode(&nodeMeta{
+		id:     "trash",
+		name:   "Trash",
+		nbType: CollectionType,
 	}))
 
 	nodes := make([]*Node, len(items))
@@ -152,6 +138,25 @@ func BuildTree(r Repository) (*Node, error) {
 	}
 
 	return root, nil
+}
+
+// NodeComparator is used to sort nodes in a tree.
+// It should return true if "one" comes before "other".
+type NodeComparator func(one, other *Node) bool
+
+// Sort sorts the subtree starting at this node by the given sort rule.
+// Sorting is in-place.
+func (n *Node) Sort(compare NodeComparator) {
+	f := func(i, j int) bool {
+		one := n.Children[i]
+		other := n.Children[j]
+		return compare(one, other)
+	}
+	sort.Slice(n.Children, f)
+
+	for _, c := range n.Children {
+		c.Sort(compare)
+	}
 }
 
 // DefaultSort is the comparsion function to sort nodes in the content tree
@@ -188,7 +193,6 @@ func DefaultSort(one, other *Node) bool {
 
 	// by name, case-insensitive
 	return strings.ToLower(one.Name()) < strings.ToLower(other.Name())
-
 }
 
 // A NodeFilter is a function that can be used to test whether a node should
@@ -196,17 +200,27 @@ func DefaultSort(one, other *Node) bool {
 type NodeFilter func(n *Node) bool
 
 // Filtered returns a new node that is the root of a subtree starting at this node.
-// The subtree cill contain only nodes that match the given NodeFilter
+// The subtree will contain only nodes that match the given NodeFilter
 // and the parent folders of the matched nodes.
-func (n *Node) Filtered(match NodeFilter) *Node {
+func (n *Node) Filtered(match ...NodeFilter) *Node {
+
+	matches := func(n *Node) bool {
+		for _, accept := range match {
+			if !accept(n) {
+				return false
+			}
+		}
+		return true
+	}
+
 	root := newNode(n.Meta)
-	for _, c := range n.Children {
-		if c.Leaf() {
-			if match(c) {
-				root.addChild(newNode(c.Meta))
+	for _, child := range n.Children {
+		if child.Leaf() {
+			if matches(child) {
+				root.addChild(newNode(child.Meta))
 			}
 		} else {
-			x := c.Filtered(match)
+			x := child.Filtered(match...)
 			if x.hasContent() {
 				root.addChild(x)
 			}
@@ -227,54 +241,74 @@ func (n *Node) hasContent() bool {
 	return false
 }
 
+// MatchName creates a node filter that matches the given string against
+// the Name of a node. The match is case insensitive and allows partial matches
+// ("doc" matches "My Document").
+func MatchName(s string) NodeFilter {
+	return func(n *Node) bool {
+		return strings.Contains(strings.ToLower(n.Name()), strings.ToLower(s))
+	}
+}
+
+// IsDocument is a Node filter that matches only documents (not foldeers).
+func IsDocument(n *Node) bool {
+	return n.Type() == DocumentType
+}
+
+// IsFolder is a node filter that matches only folders.
+func IsFolder(n *Node) bool {
+	return n.Type() == CollectionType
+}
+
 // implements the Meta interface for "virtual" nodes
 // (root and "trash").
 type nodeMeta struct {
 	id     string
 	parent string
 	name   string
+	nbType NotebookType
 }
 
-func (n nodeMeta) ID() string {
+func (n *nodeMeta) ID() string {
 	return n.id
 }
 
-func (n nodeMeta) Version() uint {
+func (n *nodeMeta) Version() uint {
 	return uint(1)
 }
 
-func (n nodeMeta) Name() string {
+func (n *nodeMeta) Name() string {
 	return n.name
 }
 
-func (n nodeMeta) SetName(s string) {}
+func (n *nodeMeta) SetName(s string) {}
 
-func (n nodeMeta) Type() NotebookType {
-	return CollectionType
+func (n *nodeMeta) Type() NotebookType {
+	return n.nbType
 }
 
-func (n nodeMeta) Pinned() bool {
+func (n *nodeMeta) Pinned() bool {
 	return false
 }
 
-func (n nodeMeta) SetPinned(b bool) {}
+func (n *nodeMeta) SetPinned(b bool) {}
 
-func (n nodeMeta) LastModified() time.Time {
+func (n *nodeMeta) LastModified() time.Time {
 	return time.Time{}
 }
 
-func (n nodeMeta) Parent() string {
+func (n *nodeMeta) Parent() string {
 	return n.parent
 }
 
-func (n nodeMeta) Reader(path ...string) (io.ReadCloser, error) {
+func (n *nodeMeta) Reader(path ...string) (io.ReadCloser, error) {
 	return nil, fmt.Errorf("not implemented for virtual nodes")
 }
 
-func (n nodeMeta) PagePrefix(id string, index int) string {
+func (n *nodeMeta) PagePrefix(id string, index int) string {
 	return ""
 }
 
-func (n nodeMeta) Validate() error {
+func (n *nodeMeta) Validate() error {
 	return nil
 }

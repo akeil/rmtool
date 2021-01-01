@@ -773,5 +773,9 @@ func countEpubPages(rc io.ReadCloser) (int, error) {
 	// TODO: find a library to do this
 	// - https://github.com/bmaupin/go-epub  --  creates EPUB
 	// - https://github.com/kapmahc/epub	 --  reads from file path only
+	//
+	// ... does it even make sense?
+	// One can change font size, line height, margins in the reader.
+	// -> The number of pages depends on individual settings.
 	return 0, fmt.Errorf("not implemented")
 }

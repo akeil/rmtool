@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"akeil.net/akeil/rm"
 	"akeil.net/akeil/rm/pkg/fs"
@@ -14,18 +13,12 @@ func main() {
 	rm.SetLogLevel("debug")
 
 	var dir string
-	var match rm.NodeFilter
+	match := make([]rm.NodeFilter, 0)
 	if len(os.Args) == 2 {
 		dir = os.Args[1]
-		match = func(n *rm.Node) bool {
-			return true
-		}
 	} else if len(os.Args) == 3 {
 		dir = os.Args[1]
-		s := strings.ToLower(os.Args[2])
-		match = func(n *rm.Node) bool {
-			return strings.Contains(strings.ToLower(n.Name()), s)
-		}
+		match = append(match, rm.MatchName(os.Args[2]), rm.IsDocument)
 	} else {
 		fmt.Println("wrong number of arguments")
 		os.Exit(1)
@@ -37,7 +30,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	root = root.Filtered(match)
+	root = root.Filtered(match...)
 	root.Sort(rm.DefaultSort)
 
 	for _, c := range root.Children {
