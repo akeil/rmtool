@@ -83,6 +83,7 @@ type Meta interface {
 }
 
 // ReadDocument is a helper function to read a full Document from a repository entry.
+// TODO make this a method of the repository, transfer implementation to internal/
 func ReadDocument(r Repository, m Meta) (*Document, error) {
 	if m.Type() != DocumentType {
 		return nil, fmt.Errorf("can only read document for items with type DocumentType")

@@ -2,6 +2,7 @@ package render
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 
 	"github.com/google/uuid"
@@ -22,6 +23,10 @@ func PDF(d *rm.Document, w io.Writer) error {
 }
 
 func renderPDF(c *Context, d *rm.Document, w io.Writer) error {
+	if d.FileType() == rm.Epub {
+		return fmt.Errorf("render Pdf not supported for file type %q", d.FileType())
+	}
+
 	logging.Debug("Render PDF for document %q, type %q", d.ID(), d.FileType())
 	pdf := setupPDF("A4", d)
 

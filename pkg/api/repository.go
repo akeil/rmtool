@@ -103,7 +103,7 @@ func (r *repo) Reader(id string, version uint, path ...string) (io.ReadCloser, e
 		}
 	}
 	if entry == nil {
-		return nil, fmt.Errorf("no zip entry found with name %q", match)
+		return nil, rm.NewNotFound("no zip entry found with name %q", match)
 	}
 
 	// return a reader for the file entry

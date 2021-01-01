@@ -2,13 +2,23 @@ package main
 
 import (
 	"fmt"
+	"image/color"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
+	"golang.org/x/sync/errgroup"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"akeil.net/akeil/rm"
 	"akeil.net/akeil/rm/pkg/api"
+	"akeil.net/akeil/rm/pkg/render"
+)
+
+const (
+	checkmark = "\u2713"
+	crossmark = "\u2717"
+	ellipsis  = "\u2026"
 )
 
 func main() {
@@ -19,9 +29,15 @@ func main() {
 
 	ls := app.Command("ls", "List notebooks").Default()
 	var (
-		pinned = ls.Flag("pinned", "Show only pinned items").Bool()
-		format = ls.Flag("format", "Output format").Default("tree").String()
+		pinned = ls.Flag("pinned", "Show only pinned items").Short('p').Bool()
+		format = ls.Flag("format", "Output format").Short('f').Default("tree").String()
 		match  = ls.Arg("match", "Name must match this").String()
+	)
+
+	get := app.Command("get", "Download one or more notebooks in PDF format")
+	var (
+		matchGet = get.Arg("match", "Name must match this").String()
+		outDir   = get.Flag("output", "Output directory").Short('o').Default(".").String()
 	)
 
 	command := kingpin.MustParse(app.Parse(os.Args[1:]))
@@ -30,12 +46,14 @@ func main() {
 	switch command {
 	case "ls":
 		err = doLs(*format, *match, *pinned)
+	case "get":
+		err = doGet(*matchGet, *outDir)
 	default:
 		err = fmt.Errorf("unknown command: %q", command)
 	}
 
 	if err != nil {
-		fmt.Printf("Error: %v", err)
+		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
 	os.Exit(0)
@@ -53,7 +71,6 @@ func doLs(format, match string, pinned bool) error {
 	}
 
 	root := rm.BuildTree(items)
-	// TODO: filter
 	filters := make([]rm.NodeFilter, 0)
 	if match != "" {
 		filters = append(filters, rm.IsDocument, rm.MatchName(match))
@@ -139,6 +156,78 @@ func showTree(n *rm.Node, level int) {
 		}
 	}
 }
+
+// get ------------------------------------------------------------------------
+
+func doGet(match, outDir string) error {
+	repo, err := setupRepo()
+	if err != nil {
+		return err
+	}
+
+	items, err := repo.List()
+	if err != nil {
+		return err
+	}
+
+	root := rm.BuildTree(items)
+	root = root.Filtered(rm.IsDocument, rm.MatchName(match))
+
+	if len(root.Children) == 0 {
+		fmt.Printf("No matching documents for %q\n", match)
+		return nil
+	}
+
+	brushes := map[rm.BrushColor]color.Color{
+		rm.Black: color.RGBA{0, 20, 120, 255},   // dark blue
+		rm.Gray:  color.RGBA{35, 110, 160, 255}, // light/gray blue
+		rm.White: color.White,
+	}
+	p := render.NewPalette(color.White, brushes)
+	rc := render.NewContext("./data", p)
+
+	var group errgroup.Group
+	root.Walk(func(n *rm.Node) error {
+		if n.Type() == rm.CollectionType {
+			return nil
+		}
+
+		group.Go(func() error {
+			return renderPdf(rc, repo, n, outDir)
+		})
+		return nil
+	})
+	return group.Wait()
+}
+
+func renderPdf(rc *render.Context, repo rm.Repository, item rm.Meta, outDir string) error {
+	fmt.Printf("%v download %q\n", ellipsis, item.Name())
+	doc, err := rm.ReadDocument(repo, item)
+	if err != nil {
+		fmt.Printf("%v Failed to download %q: %v\n", crossmark, item.Name(), err)
+		return err
+	}
+
+	path := filepath.Join(outDir, doc.Name()+".pdf")
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	fmt.Printf("%v render %q\n", ellipsis, item.Name())
+	err = rc.Pdf(doc, f)
+
+	if err != nil {
+		fmt.Printf("%v Failed to render %q: %v\n", crossmark, item.Name(), err)
+		return err
+	}
+
+	fmt.Printf("%v document %q saved as %q.\n", checkmark, item.Name(), path)
+	return nil
+}
+
+// common ---------------------------------------------------------------------
 
 func setupRepo() (rm.Repository, error) {
 	client, err := setupClient()
