@@ -17,14 +17,19 @@ func main() {
 	app := kingpin.New("rmtool", "reMarkable Tool")
 	app.HelpFlag.Short('h')
 
-	app.Command("ls", "List notebooks").Default()
+	ls := app.Command("ls", "List notebooks").Default()
+	var (
+		pinned = ls.Flag("pinned", "Show only pinned items").Bool()
+		format = ls.Flag("format", "Output format").Default("tree").String()
+		match  = ls.Arg("match", "Name must match this").String()
+	)
 
 	command := kingpin.MustParse(app.Parse(os.Args[1:]))
 
 	var err error
 	switch command {
 	case "ls":
-		err = doLs()
+		err = doLs(*format, *match, *pinned)
 	default:
 		err = fmt.Errorf("unknown command: %q", command)
 	}
@@ -36,7 +41,7 @@ func main() {
 	os.Exit(0)
 }
 
-func doLs() error {
+func doLs(format, match string, pinned bool) error {
 	repo, err := setupRepo()
 	if err != nil {
 		return err
@@ -50,33 +55,83 @@ func doLs() error {
 	root := rm.BuildTree(items)
 	// TODO: filter
 	filters := make([]rm.NodeFilter, 0)
+	if match != "" {
+		filters = append(filters, rm.IsDocument, rm.MatchName(match))
+	}
+	if pinned {
+		filters = append(filters, rm.IsPinned)
+	}
+
 	root = root.Filtered(filters...)
+
+	if len(root.Children) == 0 {
+		fmt.Println("Found no matching notebooks.")
+		return nil
+	}
 
 	root.Sort(rm.DefaultSort)
 
-	fmt.Println("# reMarkable Notebooks:")
-	showTree(root, 0)
+	fmt.Println("reMarkable Notebooks")
+	fmt.Println("--------------------")
+
+	switch format {
+	case "tree":
+		showTree(root, 0)
+	case "list":
+		showList(root)
+	default:
+		return fmt.Errorf("unsupported format, choose one of 'tree', 'list'")
+	}
 
 	return nil
 }
 
+func showList(n *rm.Node) {
+	dateFormat := "Jan 02 2006, 15:04"
+
+	show := func(n *rm.Node) error {
+		if n.IsLeaf() {
+			fmt.Print(" ")
+		} else {
+			fmt.Print("d")
+		}
+
+		if n.Pinned() {
+			fmt.Print("*")
+		} else {
+			fmt.Print(" ")
+		}
+
+		fmt.Print(" ")
+		fmt.Print(n.LastModified().Format(dateFormat))
+		fmt.Print(" | ")
+		fmt.Print(n.Name())
+		fmt.Println()
+
+		return nil
+	}
+	n.Walk(show)
+}
+
 func showTree(n *rm.Node, level int) {
-	for i := 0; i < level; i++ {
-		fmt.Print("  ")
-	}
+	if level > 0 {
+		for i := 1; i < level; i++ {
+			fmt.Print("  ")
+		}
 
-	if n.IsLeaf() {
-		fmt.Print("- ")
-	} else {
-		fmt.Print("+ ")
-	}
+		if n.IsLeaf() {
+			fmt.Print("- ")
+		} else {
+			fmt.Print("+ ")
+		}
 
-	fmt.Printf(n.Name())
-	if n.Pinned() {
-		fmt.Print(" *")
-	}
+		fmt.Printf(n.Name())
+		if n.Pinned() {
+			fmt.Print(" *")
+		}
 
-	fmt.Println()
+		fmt.Println()
+	}
 
 	if !n.IsLeaf() {
 		for _, c := range n.Children {

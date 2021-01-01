@@ -257,6 +257,11 @@ func IsFolder(n *Node) bool {
 	return n.Type() == CollectionType
 }
 
+// IsPinned is a node filter that matches only pinned items.
+func IsPinned(n *Node) bool {
+	return n.Pinned()
+}
+
 // implements the Meta interface for "virtual" nodes
 // (root and "trash").
 type nodeMeta struct {
