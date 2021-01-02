@@ -9,6 +9,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"akeil.net/akeil/rm"
+	"akeil.net/akeil/rm/pkg/lines"
 	"akeil.net/akeil/rm/pkg/render"
 )
 
@@ -31,10 +32,10 @@ func doGet(s settings, match, outDir string, mkDirs bool) error {
 		return nil
 	}
 
-	brushes := map[rm.BrushColor]color.Color{
-		rm.Black: color.RGBA{0, 20, 120, 255},   // dark blue
-		rm.Gray:  color.RGBA{35, 110, 160, 255}, // light/gray blue
-		rm.White: color.White,
+	brushes := map[lines.BrushColor]color.Color{
+		lines.Black: color.RGBA{0, 20, 120, 255},   // dark blue
+		lines.Gray:  color.RGBA{35, 110, 160, 255}, // light/gray blue
+		lines.White: color.White,
 	}
 	yellow := color.RGBA{240, 240, 80, 255}
 	p := render.NewPalette(color.White, yellow, brushes)

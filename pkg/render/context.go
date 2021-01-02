@@ -14,30 +14,31 @@ import (
 	"akeil.net/akeil/rm"
 	"akeil.net/akeil/rm/internal/imaging"
 	"akeil.net/akeil/rm/internal/logging"
+	"akeil.net/akeil/rm/pkg/lines"
 )
 
-var brushNames = map[rm.BrushType]string{
-	rm.Ballpoint:          "ballpoint",
-	rm.BallpointV5:        "ballpoint",
-	rm.Pencil:             "pencil",
-	rm.PencilV5:           "pencil",
-	rm.MechanicalPencil:   "mech-pencil",
-	rm.MechanicalPencilV5: "mech-pencil",
-	rm.Marker:             "marker",
-	rm.MarkerV5:           "marker",
-	rm.Fineliner:          "fineliner",
-	rm.FinelinerV5:        "fineliner",
-	rm.Highlighter:        "highlighter",
-	rm.HighlighterV5:      "highlighter",
-	rm.PaintBrush:         "ballpoint", // TODO add mask image and change name
-	rm.PaintBrushV5:       "ballpoint", // TODO add mask image and change name
-	rm.CalligraphyV5:      "ballpoint", // TODO add mask image and change name
+var brushNames = map[lines.BrushType]string{
+	lines.Ballpoint:          "ballpoint",
+	lines.BallpointV5:        "ballpoint",
+	lines.Pencil:             "pencil",
+	lines.PencilV5:           "pencil",
+	lines.MechanicalPencil:   "mech-pencil",
+	lines.MechanicalPencilV5: "mech-pencil",
+	lines.Marker:             "marker",
+	lines.MarkerV5:           "marker",
+	lines.Fineliner:          "fineliner",
+	lines.FinelinerV5:        "fineliner",
+	lines.Highlighter:        "highlighter",
+	lines.HighlighterV5:      "highlighter",
+	lines.PaintBrush:         "ballpoint", // TODO add mask image and change name
+	lines.PaintBrushV5:       "ballpoint", // TODO add mask image and change name
+	lines.CalligraphyV5:      "ballpoint", // TODO add mask image and change name
 }
 
-var defaultColors = map[rm.BrushColor]color.Color{
-	rm.Black: color.Black,
-	rm.Gray:  color.RGBA{150, 150, 150, 255},
-	rm.White: color.White,
+var defaultColors = map[lines.BrushColor]color.Color{
+	lines.Black: color.Black,
+	lines.Gray:  color.RGBA{150, 150, 150, 255},
+	lines.White: color.White,
 }
 
 // Context holds parameters and cached data for rendering operations.
@@ -83,7 +84,7 @@ func (c *Context) Pdf(doc *rm.Document, w io.Writer) error {
 	return renderPdf(c, doc, w)
 }
 
-func (c *Context) loadBrush(bt rm.BrushType, bc rm.BrushColor) (Brush, error) {
+func (c *Context) loadBrush(bt lines.BrushType, bc lines.BrushColor) (Brush, error) {
 	col := c.palette.Color(bc)
 	if col == nil {
 		return nil, fmt.Errorf("invalid color %v", bc)
@@ -101,39 +102,39 @@ func (c *Context) loadBrush(bt rm.BrushType, bc rm.BrushColor) (Brush, error) {
 	mask := imaging.CreateMask(img)
 
 	switch bt {
-	case rm.Ballpoint, rm.BallpointV5:
+	case lines.Ballpoint, lines.BallpointV5:
 		return &Ballpoint{
 			mask:  mask,
 			fill:  image.NewUniform(col),
 			color: col,
 		}, nil
-	case rm.Pencil, rm.PencilV5:
+	case lines.Pencil, lines.PencilV5:
 		return &Pencil{
 			mask: mask,
 			fill: image.NewUniform(col),
 		}, nil
-	case rm.MechanicalPencil, rm.MechanicalPencilV5:
+	case lines.MechanicalPencil, lines.MechanicalPencilV5:
 		return &MechanicalPencil{
 			mask: mask,
 			fill: image.NewUniform(col),
 		}, nil
-	case rm.Marker, rm.MarkerV5:
+	case lines.Marker, lines.MarkerV5:
 		return &Marker{
 			mask: mask,
 			fill: image.NewUniform(col),
 		}, nil
-	case rm.Fineliner, rm.FinelinerV5:
+	case lines.Fineliner, lines.FinelinerV5:
 		return &Fineliner{
 			mask:  mask,
 			fill:  image.NewUniform(col),
 			color: col,
 		}, nil
-	case rm.Highlighter, rm.HighlighterV5:
+	case lines.Highlighter, lines.HighlighterV5:
 		return &Highlighter{
 			mask: mask,
 			fill: image.NewUniform(c.palette.Highlighter),
 		}, nil
-	case rm.PaintBrush, rm.PaintBrushV5:
+	case lines.PaintBrush, lines.PaintBrushV5:
 		return &Paintbrush{
 			fill: image.NewUniform(col),
 		}, nil
@@ -246,11 +247,11 @@ func readPNG(path ...string) (image.Image, error) {
 type Palette struct {
 	Background  color.Color
 	Highlighter color.Color
-	colors      map[rm.BrushColor]color.Color
+	colors      map[lines.BrushColor]color.Color
 }
 
 // NewPalette creates a new palette with the given color scheme.
-func NewPalette(bg color.Color, highlighter color.Color, brushColors map[rm.BrushColor]color.Color) *Palette {
+func NewPalette(bg color.Color, highlighter color.Color, brushColors map[lines.BrushColor]color.Color) *Palette {
 	return &Palette{
 		Background:  bg,
 		colors:      brushColors,
@@ -260,7 +261,7 @@ func NewPalette(bg color.Color, highlighter color.Color, brushColors map[rm.Brus
 
 // Color is used by the renderer to retrieve the color value to use
 // for a specific Brush Color.
-func (p *Palette) Color(bc rm.BrushColor) color.Color {
+func (p *Palette) Color(bc lines.BrushColor) color.Color {
 	c, ok := p.colors[bc]
 	if ok {
 		return c

@@ -14,6 +14,7 @@ import (
 
 	"akeil.net/akeil/rm/internal/errors"
 	"akeil.net/akeil/rm/internal/logging"
+	"akeil.net/akeil/rm/pkg/lines"
 )
 
 type WriterFunc func(path ...string) (io.WriteCloser, error)
@@ -121,7 +122,7 @@ type Document struct {
 	pagedata         []Pagedata
 	pages            map[string]*Page
 	pagesMx          sync.Mutex
-	drawings         map[string]*Drawing
+	drawings         map[string]*lines.Drawing
 	drawingsMx       sync.Mutex
 	attachmentReader AttachmentReader
 	repo             Repository
@@ -331,7 +332,7 @@ func (d *Document) writePages(repo Repository, w WriterFunc) error {
 			return err
 		}
 		defer drw.Close()
-		err = WriteDrawing(drw, dr)
+		err = lines.WriteDrawing(drw, dr)
 		if err != nil {
 			return err
 		}
@@ -382,9 +383,9 @@ func (d *Document) CreatePage() string {
 	d.drawingsMx.Lock()
 	defer d.drawingsMx.Unlock()
 	if d.drawings == nil {
-		d.drawings = make(map[string]*Drawing)
+		d.drawings = make(map[string]*lines.Drawing)
 	}
-	d.drawings[pageID] = NewDrawing()
+	d.drawings[pageID] = lines.NewDrawing()
 
 	return pageID
 }
@@ -552,12 +553,12 @@ func (d *Document) Page(pageID string) (*Page, error) {
 // Note that not all pages have associated drawings.
 // If a page has no drawing, an error of type "Not Found" is returned
 // (use IsNotFound(err) to check for this).
-func (d *Document) Drawing(pageID string) (*Drawing, error) {
+func (d *Document) Drawing(pageID string) (*lines.Drawing, error) {
 	d.drawingsMx.Lock()
 	defer d.drawingsMx.Unlock()
 
 	if d.drawings == nil {
-		d.drawings = make(map[string]*Drawing)
+		d.drawings = make(map[string]*lines.Drawing)
 	}
 	cached := d.drawings[pageID]
 	if cached != nil {
@@ -577,7 +578,7 @@ func (d *Document) Drawing(pageID string) (*Drawing, error) {
 	}
 	defer dr.Close()
 
-	drawing, err := ReadDrawing(dr)
+	drawing, err := lines.ReadDrawing(dr)
 	if err != nil {
 		return nil, err
 	}

@@ -1,4 +1,4 @@
-package rm
+package lines
 
 // Header starting a .rm binary file. This can help recognizing a .rm file.
 const (
@@ -60,7 +60,9 @@ const (
 )
 
 const (
-	MaxWidth  = 1404
+	// MaxWidth is the display width of the reMArkable tablet.
+	MaxWidth = 1404
+	// MaxHeight is the display height of the reMArkable tablet.
 	MaxHeight = 1872
 )
 
@@ -86,6 +88,7 @@ func (d *Drawing) NumLayers() int {
 	return len(d.Layers)
 }
 
+// AddLayer adds a new layer with the given name.
 func (d *Drawing) AddLayer(name string) {
 	d.Layers = append(d.Layers, Layer{})
 }
