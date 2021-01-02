@@ -43,6 +43,12 @@ func main() {
 		paths = put.Arg("paths", "Source and destination paths").Strings()
 	)
 
+	pin := app.Command("pin", "Add or remove a bookmark")
+	var (
+		matchPin = pin.Arg("match", "Which documents or folders to pin").String()
+		unpin    = pin.Flag("negate", "Remove a bookmark").Short('n').Bool()
+	)
+
 	command := kingpin.MustParse(app.Parse(os.Args[1:]))
 
 	settings, err := loadSettings()
@@ -58,6 +64,8 @@ func main() {
 		err = doGet(settings, *matchGet, *outDir, *mkDirs)
 	case "put":
 		err = doPut(settings, *paths)
+	case "pin":
+		err = doPin(settings, *matchPin, !*unpin)
 	default:
 		err = fmt.Errorf("unknown command: %q", command)
 	}
