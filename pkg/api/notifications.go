@@ -10,7 +10,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/akeil/rm/internal/logging"
+	"github.com/akeil/rmtool/internal/logging"
 )
 
 // A MessageHandler can be registered with the notifications client to receive

@@ -14,10 +14,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/akeil/rm"
-	"github.com/akeil/rm/internal/errors"
-	"github.com/akeil/rm/internal/fs"
-	"github.com/akeil/rm/internal/logging"
+	"github.com/akeil/rmtool"
+	"github.com/akeil/rmtool/internal/errors"
+	"github.com/akeil/rmtool/internal/fs"
+	"github.com/akeil/rmtool/internal/logging"
 )
 
 type repo struct {
@@ -30,21 +30,21 @@ type repo struct {
 // backend.
 //
 // The supplied dataDir is used to cache downloaded content.
-func NewRepository(c *Client, dataDir string) rm.Repository {
+func NewRepository(c *Client, dataDir string) rmtool.Repository {
 	return &repo{
 		client:  c,
 		dataDir: dataDir,
 	}
 }
 
-func (r *repo) List() ([]rm.Meta, error) {
+func (r *repo) List() ([]rmtool.Meta, error) {
 	logging.Debug("Repository.List")
 	items, err := r.client.List()
 	if err != nil {
 		return nil, err
 	}
 
-	rv := make([]rm.Meta, len(items))
+	rv := make([]rmtool.Meta, len(items))
 	for i, item := range items {
 		rv[i] = metaWrapper{i: item, r: r}
 	}
@@ -52,7 +52,7 @@ func (r *repo) List() ([]rm.Meta, error) {
 	return rv, nil
 }
 
-func (r *repo) Update(m rm.Meta) error {
+func (r *repo) Update(m rmtool.Meta) error {
 	item := Item{
 		ID:          m.ID(),
 		Version:     int(m.Version()),
@@ -114,7 +114,7 @@ func (r *repo) Reader(id string, version uint, path ...string) (io.ReadCloser, e
 }
 
 // TODO implement
-func (r *repo) Upload(d *rm.Document) error {
+func (r *repo) Upload(d *rmtool.Document) error {
 	err := d.Validate()
 	if err != nil {
 		return err
@@ -304,7 +304,7 @@ func (m metaWrapper) SetName(n string) {
 	m.i.VisibleName = n
 }
 
-func (m metaWrapper) Type() rm.NotebookType {
+func (m metaWrapper) Type() rmtool.NotebookType {
 	return m.i.Type
 }
 

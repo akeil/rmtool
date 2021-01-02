@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/akeil/rm"
+	"github.com/akeil/rmtool"
 )
 
 func doLs(s settings, format, match string, pinned bool) error {

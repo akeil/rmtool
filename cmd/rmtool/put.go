@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/akeil/rm"
+	"github.com/akeil/rmtool"
 )
 
 var typesByExt = map[string]rm.FileType{

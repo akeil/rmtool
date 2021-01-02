@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/akeil/rm/internal/errors"
+	"github.com/akeil/rmtool/internal/errors"
 )
 
 // Validate checks this drawing and all layers, strokes and dots for valid data.
