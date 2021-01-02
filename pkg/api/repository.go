@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"akeil.net/akeil/rm"
+	"akeil.net/akeil/rm/internal/fs"
 	"akeil.net/akeil/rm/internal/logging"
 )
 
@@ -205,7 +206,7 @@ func (r *repo) downloadToCache(id string, version uint) error {
 	// Move to destination dir
 	p := r.cachePath(id, version)
 	logging.Debug("Move archive blob to %q\n", p)
-	err = move(f.Name(), p)
+	err = fs.Move(f.Name(), p)
 	if err != nil {
 		return err
 	}
@@ -278,37 +279,6 @@ func (r *repo) cleanCache() {
 			}
 		}
 	}
-}
-
-func move(src, dst string) error {
-	err := os.Rename(src, dst)
-	if err == nil {
-		return nil
-	}
-
-	// Rename may have failed when moving across file systems
-	// so try again w/ copy & delete.
-	logging.Debug("Rename failed for %v -> %v, fall back on copy and delete", src, dst)
-	r, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	w, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	_, err = io.Copy(w, r)
-	if err != nil {
-		return err
-	}
-
-	// A bit untidy, but we carry on even if we fail to clean up behind us.
-	ignoredErr := os.Remove(src)
-	if ignoredErr != nil {
-		logging.Error("Failed to remove file %v", src)
-	}
-
-	return err
 }
 
 // implement the Meta interface for an Item

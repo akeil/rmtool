@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"akeil.net/akeil/rm"
+	fsx "akeil.net/akeil/rm/internal/fs"
 	"akeil.net/akeil/rm/internal/logging"
 )
 
@@ -110,7 +111,7 @@ func (r *repo) Update(m rm.Meta) error {
 
 	logging.Debug("Move updated JSON document to %q\n", p)
 
-	return os.Rename(f.Name(), p)
+	return fsx.Move(f.Name(), p)
 }
 
 func (r *repo) Upload(d *rm.Document) error {
@@ -245,7 +246,8 @@ func (r *repo) Upload(d *rm.Document) error {
 			}
 		}
 		logging.Debug("Move %v", rel)
-		err = os.Rename(src, dst)
+
+		err = fsx.Move(src, dst)
 		if err != nil {
 			return err
 		}
