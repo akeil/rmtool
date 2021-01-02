@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 
 	"akeil.net/akeil/rm"
+	"akeil.net/akeil/rm/internal/errors"
 	"akeil.net/akeil/rm/internal/logging"
 )
 
@@ -153,7 +154,7 @@ func (c *Client) fetchItem(id string) (Item, error) {
 	}
 
 	if len(items) == 0 {
-		return item, rm.NewNotFound("no item with id %q", id)
+		return item, errors.NewNotFound("no item with id %q", id)
 	} else if len(items) != 1 {
 		return item, fmt.Errorf("got unexpected number of items (%v)", len(items))
 	}
@@ -183,7 +184,7 @@ func (c *Client) fetchBlob(url string, w io.Writer) error {
 		return err
 	}
 
-	err = rm.ExpectOK(res, "blob request failed")
+	err = errors.ExpectOK(res, "blob request failed")
 	if err != nil {
 		return err
 	}
@@ -408,7 +409,7 @@ func (c *Client) putBlob(url string, src io.Reader) error {
 		return fmt.Errorf("blob upload failed with %v", err)
 	}
 
-	return rm.ExpectOK(res, "blob upload failed")
+	return errors.ExpectOK(res, "blob upload failed")
 }
 
 // Update updates the metadata for an item.
@@ -485,7 +486,7 @@ func (c *Client) storageRequest(method, endpoint string, payload, dst interface{
 	logging.Debug("API request %v %v returned status %v\n", req.Method, req.URL, res.StatusCode)
 	logging.Debug("Response body: %v", string(resData))
 
-	err = rm.ExpectOK(res, "storage request failed")
+	err = errors.ExpectOK(res, "storage request failed")
 	if err != nil {
 		return err
 	}
@@ -579,7 +580,7 @@ func (c *Client) requestToken(endpoint, token string, payload interface{}) (stri
 	}
 	defer res.Body.Close()
 
-	err = rm.ExpectOK(res, "token request failed")
+	err = errors.ExpectOK(res, "token request failed")
 	if err != nil {
 		var msg string
 		d, xerr := ioutil.ReadAll(res.Body)
@@ -587,7 +588,7 @@ func (c *Client) requestToken(endpoint, token string, payload interface{}) (stri
 			msg = string(d)
 			msg = strings.TrimSpace(msg)
 		}
-		return "", rm.Wrap(err, msg)
+		return "", errors.Wrap(err, msg)
 	}
 
 	// The token is returned as a plain string
@@ -625,7 +626,7 @@ func (c *Client) discoverHost(url string) (string, error) {
 		return "", err
 	}
 
-	err = rm.ExpectOK(res, "service discovery failed")
+	err = errors.ExpectOK(res, "service discovery failed")
 	if err != nil {
 		return "", err
 	}

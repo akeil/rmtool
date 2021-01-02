@@ -1,12 +1,12 @@
-package rm
+package errors
 
 import (
-	"errors"
+	e "errors"
 	"testing"
 )
 
 func TestIsNotFound(t *testing.T) {
-	err := errors.New("some error")
+	err := e.New("some error")
 	if IsNotFound(err) {
 		t.Log("custom error type NotFound is wrongly recognized")
 		t.Fail()

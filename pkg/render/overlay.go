@@ -10,6 +10,7 @@ import (
 	"github.com/jung-kurt/gofpdf/contrib/gofpdi"
 
 	"akeil.net/akeil/rm"
+	"akeil.net/akeil/rm/internal/errors"
 	"akeil.net/akeil/rm/internal/logging"
 )
 
@@ -49,7 +50,7 @@ func overlayPdf(c *Context, doc *rm.Document, pdf *gofpdf.Fpdf) error {
 
 		// Paint the drawing over the original
 		d, err := doc.Drawing(pageID)
-		if rm.IsNotFound(err) {
+		if errors.IsNotFound(err) {
 			// Not every page has a drawing
 			logging.Info("Skip page %d without drawing", i)
 			continue

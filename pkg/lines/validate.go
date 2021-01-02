@@ -1,8 +1,10 @@
-package rm
+package lines
 
 import (
 	"fmt"
 	"math"
+
+	"akeil.net/akeil/rm/internal/errors"
 )
 
 // Validate checks this drawing and all layers, strokes and dots for valid data.
@@ -13,7 +15,7 @@ func (d *Drawing) Validate() error {
 	}
 
 	if d.Layers == nil || len(d.Layers) == 0 {
-		return NewValidationError("drawing must have at least one layer")
+		return errors.NewValidationError("drawing must have at least one layer")
 	}
 
 	for _, l := range d.Layers {

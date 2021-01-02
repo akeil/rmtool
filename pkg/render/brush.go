@@ -9,8 +9,8 @@ import (
 	"github.com/llgcode/draw2d"
 	"github.com/llgcode/draw2d/draw2dimg"
 
-	"akeil.net/akeil/rm"
 	"akeil.net/akeil/rm/internal/imaging"
+	"akeil.net/akeil/rm/pkg/lines"
 )
 
 // see:
@@ -18,7 +18,7 @@ import (
 // https://gitlab.com/wrobell/remt/-/blob/master/remt/drawer.py
 
 type Brush interface {
-	RenderStroke(dst draw.Image, s rm.Stroke)
+	RenderStroke(dst draw.Image, s lines.Stroke)
 }
 
 type BasePen struct {
@@ -33,11 +33,11 @@ func loadBasePen(mask image.Image, c color.Color) Brush {
 	}
 }
 
-func (b *BasePen) RenderStroke(dst draw.Image, s rm.Stroke) {
+func (b *BasePen) RenderStroke(dst draw.Image, s lines.Stroke) {
 	walkDots(dst, s, b.renderSegment)
 }
 
-func (b *BasePen) renderSegment(dst draw.Image, start, end rm.Dot) {
+func (b *BasePen) renderSegment(dst draw.Image, start, end lines.Dot) {
 	width := float64(start.Width)
 	opacity := 1.0
 	mask := prepareMask(b.mask, width, opacity, start, end)
@@ -54,7 +54,7 @@ type Ballpoint struct {
 	color color.Color
 }
 
-func (b *Ballpoint) RenderStroke(dst draw.Image, s rm.Stroke) {
+func (b *Ballpoint) RenderStroke(dst draw.Image, s lines.Stroke) {
 	drawPath(dst, s, b.color)
 }
 
@@ -67,7 +67,7 @@ type Fineliner struct {
 	color color.Color
 }
 
-func (f *Fineliner) RenderStroke(dst draw.Image, s rm.Stroke) {
+func (f *Fineliner) RenderStroke(dst draw.Image, s lines.Stroke) {
 	drawPath(dst, s, f.color)
 }
 
@@ -78,11 +78,11 @@ type Pencil struct {
 	fill image.Image
 }
 
-func (p *Pencil) RenderStroke(dst draw.Image, s rm.Stroke) {
+func (p *Pencil) RenderStroke(dst draw.Image, s lines.Stroke) {
 	walkDots(dst, s, p.renderSegment)
 }
 
-func (p *Pencil) renderSegment(dst draw.Image, start, end rm.Dot) {
+func (p *Pencil) renderSegment(dst draw.Image, start, end lines.Dot) {
 	// TODO: pencil rendering does not look good
 	// *desity* of pixels in stamp should vary with tilt and pressure - how to to it?
 
@@ -105,11 +105,11 @@ type MechanicalPencil struct {
 	fill image.Image
 }
 
-func (m *MechanicalPencil) RenderStroke(dst draw.Image, s rm.Stroke) {
+func (m *MechanicalPencil) RenderStroke(dst draw.Image, s lines.Stroke) {
 	walkDots(dst, s, m.renderSegment)
 }
 
-func (m *MechanicalPencil) renderSegment(dst draw.Image, start, end rm.Dot) {
+func (m *MechanicalPencil) renderSegment(dst draw.Image, start, end lines.Dot) {
 	width := float64(start.Width)
 	opacity := 1.0
 	mask := prepareMask(m.mask, width, opacity, start, end)
@@ -124,11 +124,11 @@ type Marker struct {
 	fill image.Image
 }
 
-func (m *Marker) RenderStroke(dst draw.Image, s rm.Stroke) {
+func (m *Marker) RenderStroke(dst draw.Image, s lines.Stroke) {
 	walkDots(dst, s, m.renderSegment)
 }
 
-func (m *Marker) renderSegment(dst draw.Image, start, end rm.Dot) {
+func (m *Marker) renderSegment(dst draw.Image, start, end lines.Dot) {
 	width := float64(start.Width)
 	opacity := 1.0
 	mask := prepareMask(m.mask, width, opacity, start, end)
@@ -143,7 +143,7 @@ type Highlighter struct {
 	fill image.Image
 }
 
-func (h *Highlighter) RenderStroke(dst draw.Image, s rm.Stroke) {
+func (h *Highlighter) RenderStroke(dst draw.Image, s lines.Stroke) {
 	// TODO - poor performance? -> Needs measure.
 
 	// The highlighter has a uniform opacity per stroke.
@@ -163,7 +163,7 @@ func (h *Highlighter) RenderStroke(dst draw.Image, s rm.Stroke) {
 	draw.DrawMask(dst, rect, tmp, image.Point{}, mask, image.Point{}, draw.Over)
 }
 
-func (h *Highlighter) renderSegment(dst draw.Image, start, end rm.Dot) {
+func (h *Highlighter) renderSegment(dst draw.Image, start, end lines.Dot) {
 	width := float64(start.Width)
 	opacity := 1.0
 	mask := prepareMask(h.mask, width, opacity, start, end)
@@ -177,16 +177,16 @@ type Paintbrush struct {
 	fill color.Color
 }
 
-func (p *Paintbrush) RenderStroke(dst draw.Image, s rm.Stroke) {
+func (p *Paintbrush) RenderStroke(dst draw.Image, s lines.Stroke) {
 	// TODO: probably better with a stamp image
 	drawPath(dst, s, p.fill)
 }
 
 // Rendering Helpers ----------------------------------------------------------
 
-type segmentRenderer func(dst draw.Image, start, end rm.Dot)
+type segmentRenderer func(dst draw.Image, start, end lines.Dot)
 
-func walkDots(dst draw.Image, s rm.Stroke, render segmentRenderer) {
+func walkDots(dst draw.Image, s lines.Stroke, render segmentRenderer) {
 	for i := 1; i < len(s.Dots); i++ {
 		start := s.Dots[i-1]
 		end := s.Dots[i]
@@ -196,7 +196,7 @@ func walkDots(dst draw.Image, s rm.Stroke, render segmentRenderer) {
 
 // Prepare the mask image by scaling it to the desired width, applying opacity.
 // and rotating it to align with the segment from start to end.
-func prepareMask(mask image.Image, width, opacity float64, start, end rm.Dot) image.Image {
+func prepareMask(mask image.Image, width, opacity float64, start, end lines.Dot) image.Image {
 	i := imaging.Resize(mask, width)
 
 	if opacity != 1.0 {
@@ -211,7 +211,7 @@ func prepareMask(mask image.Image, width, opacity float64, start, end rm.Dot) im
 
 // Draw a single line from start to end with a "stamp" image.
 // The stamp image is repeated along the line, taking the overlap factor into account.
-func drawStamp(dst draw.Image, mask image.Image, fill image.Image, start, end rm.Dot, overlap float64) {
+func drawStamp(dst draw.Image, mask image.Image, fill image.Image, start, end lines.Dot, overlap float64) {
 	rect := mask.Bounds()
 	w := rect.Max.X - rect.Min.X
 	h := rect.Max.Y - rect.Min.Y
@@ -258,7 +258,7 @@ func drawStamp(dst draw.Image, mask image.Image, fill image.Image, start, end rm
 // Draw the given stroke with basic draw2d path functions.
 // This works well for brushes with little variance in line width
 // and which do not have the need for texture.
-func drawPath(dst draw.Image, s rm.Stroke, c color.Color) {
+func drawPath(dst draw.Image, s lines.Stroke, c color.Color) {
 	// guard - we'll access by index later
 	if len(s.Dots) == 0 {
 		return

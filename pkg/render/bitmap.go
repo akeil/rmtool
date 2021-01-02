@@ -9,6 +9,7 @@ import (
 
 	"akeil.net/akeil/rm"
 	"akeil.net/akeil/rm/internal/imaging"
+	"akeil.net/akeil/rm/pkg/lines"
 )
 
 // Page renders the page from the given document and writes the
@@ -26,7 +27,7 @@ func renderPage(c *Context, doc *rm.Document, pageID string, w io.Writer) error 
 		return err
 	}
 
-	rect := image.Rect(0, 0, rm.MaxWidth, rm.MaxHeight)
+	rect := image.Rect(0, 0, lines.MaxWidth, lines.MaxHeight)
 	dst := image.NewRGBA(rect)
 
 	if pg.HasTemplate() {
@@ -51,8 +52,8 @@ func renderPage(c *Context, doc *rm.Document, pageID string, w io.Writer) error 
 
 // RenderPNG paints the given drawing to a PNG file and writes the PNG data
 // to the given writer.
-func renderPNG(c *Context, d *rm.Drawing, paintBg bool, w io.Writer) error {
-	rect := image.Rect(0, 0, rm.MaxWidth, rm.MaxHeight)
+func renderPNG(c *Context, d *lines.Drawing, paintBg bool, w io.Writer) error {
+	rect := image.Rect(0, 0, lines.MaxWidth, lines.MaxHeight)
 	dst := image.NewRGBA(rect)
 
 	if paintBg {
@@ -95,12 +96,12 @@ func renderBackground(c *Context, dst draw.Image) {
 }
 
 // renderLayoers paints all layers on the destination image.
-func renderLayers(c *Context, dst draw.Image, d *rm.Drawing) error {
+func renderLayers(c *Context, dst draw.Image, d *lines.Drawing) error {
 	for _, l := range d.Layers {
 		for _, s := range l.Strokes {
 			// The erased content is deleted,
 			// but eraser strokes are recorded.
-			if s.BrushType == rm.Eraser {
+			if s.BrushType == lines.Eraser || s.BrushType == lines.EraseArea {
 				continue
 			}
 

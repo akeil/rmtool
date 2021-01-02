@@ -10,6 +10,7 @@ import (
 
 	"akeil.net/akeil/rm"
 	"akeil.net/akeil/rm/internal/logging"
+	"akeil.net/akeil/rm/pkg/lines"
 )
 
 const (
@@ -89,7 +90,7 @@ func doRenderPdfPage(c *Context, pdf *gofpdf.Fpdf, doc *rm.Document, pageID stri
 //
 // This function is used to render a drawing onto an empty page
 // AND to overlay an existing page with the drawing.
-func drawingToPdf(c *Context, pdf *gofpdf.Fpdf, d *rm.Drawing) error {
+func drawingToPdf(c *Context, pdf *gofpdf.Fpdf, d *lines.Drawing) error {
 	id := uuid.New().String()
 	opts := gofpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}
 

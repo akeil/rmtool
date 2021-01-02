@@ -1,4 +1,4 @@
-package rm
+package lines
 
 import (
 	"bytes"
@@ -7,6 +7,7 @@ import (
 	"io"
 )
 
+// MarshalBinary returns the byte representation of the drawing.
 func (d *Drawing) MarshalBinary() ([]byte, error) {
 	buf := &bytes.Buffer{}
 	err := write(io.Writer(buf), d)
@@ -17,6 +18,7 @@ func (d *Drawing) MarshalBinary() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// WriteDrawing writes the given drawing to the given writer.
 func WriteDrawing(w io.Writer, d *Drawing) error {
 	return write(w, d)
 }

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"akeil.net/akeil/rm"
+	"akeil.net/akeil/rm/internal/errors"
 	"akeil.net/akeil/rm/internal/fs"
 	"akeil.net/akeil/rm/internal/logging"
 )
@@ -104,7 +105,7 @@ func (r *repo) Reader(id string, version uint, path ...string) (io.ReadCloser, e
 		}
 	}
 	if entry == nil {
-		return nil, rm.NewNotFound("no zip entry found with name %q", match)
+		return nil, errors.NewNotFound("no zip entry found with name %q", match)
 	}
 
 	// return a reader for the file entry
