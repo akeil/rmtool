@@ -66,8 +66,9 @@ func NewContext(dataDir string, p *Palette) *Context {
 
 // DefaultContext creates a new rendering context with default settings.
 func DefaultContext() *Context {
+	gray := color.RGBA{150, 150, 150, 255}
 	// TODO hardcoded path - choose a more sensible value
-	return NewContext("./data", NewPalette(color.White, defaultColors))
+	return NewContext("./data", NewPalette(color.White, gray, defaultColors))
 }
 
 // Page draws a single page to a PNG and writes it to the given writer.
@@ -130,7 +131,7 @@ func (c *Context) loadBrush(bt rm.BrushType, bc rm.BrushColor) (Brush, error) {
 	case rm.Highlighter, rm.HighlighterV5:
 		return &Highlighter{
 			mask: mask,
-			fill: image.NewUniform(col),
+			fill: image.NewUniform(c.palette.Highlighter),
 		}, nil
 	case rm.PaintBrush, rm.PaintBrushV5:
 		return &Paintbrush{
@@ -238,18 +239,27 @@ func readPNG(path ...string) (image.Image, error) {
 	return png.Decode(f)
 }
 
+// Palette holds the colors used for rendering.
+//
+// You can use a palette to map from the default colors of the reMarkable
+// tablet (black, gray, white) ro another color scheme.
 type Palette struct {
-	Background color.Color
-	colors     map[rm.BrushColor]color.Color
+	Background  color.Color
+	Highlighter color.Color
+	colors      map[rm.BrushColor]color.Color
 }
 
-func NewPalette(bg color.Color, brushColors map[rm.BrushColor]color.Color) *Palette {
+// NewPalette creates a new palette with the given color scheme.
+func NewPalette(bg color.Color, highlighter color.Color, brushColors map[rm.BrushColor]color.Color) *Palette {
 	return &Palette{
-		Background: bg,
-		colors:     brushColors,
+		Background:  bg,
+		colors:      brushColors,
+		Highlighter: highlighter,
 	}
 }
 
+// Color is used by the renderer to retrieve the color value to use
+// for a specific Brush Color.
 func (p *Palette) Color(bc rm.BrushColor) color.Color {
 	c, ok := p.colors[bc]
 	if ok {

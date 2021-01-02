@@ -36,7 +36,8 @@ func doGet(s settings, match, outDir string, mkDirs bool) error {
 		rm.Gray:  color.RGBA{35, 110, 160, 255}, // light/gray blue
 		rm.White: color.White,
 	}
-	p := render.NewPalette(color.White, brushes)
+	yellow := color.RGBA{240, 240, 80, 255}
+	p := render.NewPalette(color.White, yellow, brushes)
 	rc := render.NewContext(s.dataDir, p)
 
 	var group errgroup.Group

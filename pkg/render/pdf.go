@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	tsFormat = "2006-01-02 15:04:05"
+	tsFormat        = "2006-01-02 15:04:05"
 	defaultPageSize = "A4"
 )
 
