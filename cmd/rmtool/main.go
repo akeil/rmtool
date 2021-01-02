@@ -255,40 +255,16 @@ var typesByExt = map[string]rm.FileType{
 }
 
 func doPut(paths []string) error {
-	fmt.Println(paths)
-	// split src(s) from dst
-	var src []string
-	var dst string
-	if len(paths) == 0 {
-		return fmt.Errorf("no source file(s) specified")
-	} else if len(paths) == 1 {
-		src = paths
-	} else { // > 1
-		src = paths[0 : len(paths)-1]
-		dst = paths[len(paths)-1]
-		if dst == "/" || dst == "." {
-			dst = ""
-		}
-	}
+	src, dst := normalizeSrcDst(paths)
 
-	// expand srcs, Glob() will also filter any non-existing files
-	srcs := make([]string, 0)
-	for _, s := range src {
-		fmt.Printf("expand %v\n", s)
-		matches, err := filepath.Glob(s)
-		if err != nil {
-			return err
-		}
-		srcs = append(srcs, matches...)
-	}
-	if len(srcs) == 0 {
+	if len(src) == 0 {
 		return fmt.Errorf("no source file(s) specified")
 	}
 
-	for _, s := range srcs {
-		fmt.Printf("Source: %v\n", s)
+	err := checkSrcFormat(src)
+	if err != nil {
+		return err
 	}
-	fmt.Printf("Destination: %v\n", dst)
 
 	repo, err := setupRepo()
 	if err != nil {
@@ -298,41 +274,68 @@ func doPut(paths []string) error {
 	if err != nil {
 		return err
 	}
-
-	// TODO If a destination is specified, check if it is an existing
-	// document or folder
-	// if we have multiple source files,
-	// the target must be an existing folder
-
-	// TODO: if we have a single src, non-empty dst is either the target folder
-	// OR the target name
 	root := rm.BuildTree(items)
-	if dst != "" {
-		root = root.Filtered(rm.IsFolder, rm.MatchName(dst))
+
+	var dstNode *rm.Node
+	var dstName string
+	var dstType rm.NotebookType
+	if dst == "" {
+		dstNode = root
+		dstName = ""
+		dstType = rm.CollectionType
+	} else {
+		dstNode, dstName = determineUploadDst(root, dst)
+		if dstNode != nil {
+			dstType = dstNode.Type()
+		}
 	}
 
+	if dstNode == nil {
+		return fmt.Errorf("Destination path %q does not exist", dst)
+	}
+
+	// not all combinations are allowed
+	if len(src) == 1 {
+		if dstType == rm.DocumentType {
+			// replace existing document
+			// TODO implement
+			return fmt.Errorf("replace existing document is not implemented")
+		}
+		// upload to dstNode
+		// nmae = dstName or from filename
+	} else { // multiple source files
+		if dstType == rm.DocumentType || dstName != "" {
+			return fmt.Errorf("cannot upload multiple documents to a single target document")
+		}
+		// upload to dstNode,
+		// name = from filename
+	}
+
+	// TODO when name is chosen from filename, it may still refer to an existing name
+	// currently, this will lead to duplicate names in the same folder
+	// technically OK, but not what we want
+
 	var group errgroup.Group
-	for _, s := range srcs {
+	for _, s := range src {
 		srcPath := s // scope
 		group.Go(func() error {
-			return uploadPdf(repo, srcPath)
+			return uploadPdf(repo, srcPath, dstName, dstNode)
 		})
 	}
 
 	return group.Wait()
 }
 
-func uploadPdf(repo rm.Repository, src string) error {
-	_, file := filepath.Split(src)
-	ext := filepath.Ext(file)
-	base := strings.TrimSuffix(file, ext)
-	_, ok := typesByExt[strings.ToLower(ext)]
-	if !ok {
-		return fmt.Errorf("unsupported file type %q", ext)
+// upload a single pdf
+func uploadPdf(repo rm.Repository, src string, dstName string, dstNode *rm.Node) error {
+	if dstName == "" {
+		_, file := filepath.Split(src)
+		ext := filepath.Ext(file)
+		dstName = strings.TrimSuffix(file, ext)
+
 	}
 
-	// TODO: single file upload uses dst as name
-	doc, err := rm.NewPdf(base, func() (io.ReadCloser, error) {
+	doc, err := rm.NewPdf(dstName, dstNode.ID(), func() (io.ReadCloser, error) {
 		f, err := os.Open(src)
 		if err != nil {
 			return nil, err
@@ -350,6 +353,111 @@ func uploadPdf(repo rm.Repository, src string) error {
 	}
 
 	fmt.Printf("%v %q uploaded\n", checkmark, doc.Name())
+	return nil
+}
+
+// determine the upload destination from a given destination path.
+//
+// If the path matches a node exactly, that node is returned
+// (the node can refer to a folder or a document).
+//
+// If the path matches except the last component,
+// the mtching node is returned IF it is a folder
+// and the last path component is returned as a string.
+func determineUploadDst(root *rm.Node, path string) (*rm.Node, string) {
+	// normalizes path:
+	// /foo/bar  =>  foo/bar
+	// foo/bar/  =>  foo/bar
+	// foo//bar  =>  foo/bar
+	norm := make([]string, 0)
+	parts := strings.Split(path, "/")
+	for _, s := range parts {
+		if s != "" {
+			norm = append(norm, s)
+		}
+	}
+
+	// walk the tree, accepting the FIRST child that matches a path component
+	// stop on first non-match
+	var consumed int
+	var found bool
+	node := root
+	for _, name := range norm {
+		found = false
+		for _, child := range node.Children {
+			if strings.ToLower(name) == strings.ToLower(child.Name()) {
+				found = true
+				node = child
+			}
+		}
+		if !found {
+			break
+		}
+		consumed++
+	}
+	// path components we have NOT matched
+	unmatched := norm[consumed:]
+
+	if len(unmatched) == 0 {
+		// exact match
+		return node, ""
+	} else if len(unmatched) == 1 {
+		if node.Type() == rm.CollectionType {
+			// matched "new document in parent folder"
+			return node, unmatched[0]
+		}
+	}
+
+	// no match
+	return nil, ""
+}
+
+// Split a list of paths into a list of SRC's and a single DST.
+// If the initial list contains less than two entries, DST is empty,
+// otherwise, DST is the last element from the list.
+func normalizeSrcDst(paths []string) ([]string, string) {
+	src := make([]string, 0)
+	var dst string
+
+	var temp []string
+	if len(paths) == 0 {
+		return src, dst // empty
+	} else if len(paths) == 1 {
+		temp = paths
+	} else { // > 1
+		temp = paths[0 : len(paths)-1]
+		dst = paths[len(paths)-1]
+		if dst == "/" || dst == "." {
+			dst = ""
+		}
+	}
+
+	// expand SRCs
+	// Glob() will also filter any non-existing files
+	// TODO: this might be redundant
+	for _, s := range temp {
+		fmt.Printf("expand %v\n", s)
+		matches, err := filepath.Glob(s)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		src = append(src, matches...)
+	}
+
+	return src, dst
+}
+
+// Check if all of the given src paths are supported file types.
+func checkSrcFormat(src []string) error {
+	for _, s := range src {
+		_, file := filepath.Split(s)
+		ext := filepath.Ext(file)
+		_, ok := typesByExt[strings.ToLower(ext)]
+		if !ok {
+			return fmt.Errorf("unsupported file type %q", ext)
+		}
+	}
 	return nil
 }
 
