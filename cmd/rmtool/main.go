@@ -19,10 +19,12 @@ const (
 )
 
 func main() {
-	rm.SetLogLevel("warning")
-
 	app := kingpin.New("rmtool", "reMarkable Tool")
 	app.HelpFlag.Short('h')
+
+	var (
+		verbose = app.Flag("verbose", "Print debug messages").Short('v').Bool()
+	)
 
 	ls := app.Command("ls", "List notebooks").Default()
 	var (
@@ -41,6 +43,7 @@ func main() {
 	put := app.Command("put", "Upload PDF documents to reMarkable")
 	var (
 		paths = put.Arg("paths", "Source and destination paths").Strings()
+		// TODO: --pin to immediately pin the item
 	)
 
 	pin := app.Command("pin", "Add or remove a bookmark")
@@ -50,6 +53,12 @@ func main() {
 	)
 
 	command := kingpin.MustParse(app.Parse(os.Args[1:]))
+
+	if *verbose {
+		rm.SetLogLevel("debug")
+	} else {
+		rm.SetLogLevel("warning")
+	}
 
 	settings, err := loadSettings()
 	if err != nil {
