@@ -1,4 +1,4 @@
-module akeil.net/akeil/rmtool
+module github.com/akeil/rmtool
 
 go 1.15
 
