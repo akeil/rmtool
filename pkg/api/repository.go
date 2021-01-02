@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"akeil.net/akeil/rm"
+	"akeil.net/akeil/rm/internal/fs"
 	"akeil.net/akeil/rm/internal/logging"
 )
 
@@ -103,7 +104,7 @@ func (r *repo) Reader(id string, version uint, path ...string) (io.ReadCloser, e
 		}
 	}
 	if entry == nil {
-		return nil, fmt.Errorf("no zip entry found with name %q", match)
+		return nil, rm.NewNotFound("no zip entry found with name %q", match)
 	}
 
 	// return a reader for the file entry
@@ -205,7 +206,7 @@ func (r *repo) downloadToCache(id string, version uint) error {
 	// Move to destination dir
 	p := r.cachePath(id, version)
 	logging.Debug("Move archive blob to %q\n", p)
-	err = os.Rename(f.Name(), p)
+	err = fs.Move(f.Name(), p)
 	if err != nil {
 		return err
 	}

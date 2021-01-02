@@ -26,7 +26,7 @@ func (n notFound) Error() string {
 }
 
 func asNotFound(e error) error {
-	return notFound{fmt.Sprintf("Not found: %v", e)}
+	return notFound{fmt.Sprintf("not found: %v", e)}
 }
 
 // IsNotFound checks if the given error is a "not found" error.

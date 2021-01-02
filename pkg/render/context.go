@@ -59,7 +59,7 @@ type Context struct {
 // and a subdirectory 'templates' with page backgrounds.
 func NewContext(dataDir string, p *Palette) *Context {
 	return &Context{
-		DataDir: "data",
+		DataDir: dataDir,
 		palette: p,
 	}
 }
@@ -77,7 +77,7 @@ func (c *Context) Page(doc *rm.Document, pageID string, w io.Writer) error {
 // PDF renders all pages from a document to a PDF file.
 //
 // The resulting PDF document is written to the given writer.
-func (c *Context) PDF(doc *rm.Document, w io.Writer) error {
+func (c *Context) Pdf(doc *rm.Document, w io.Writer) error {
 	return renderPDF(c, doc, w)
 }
 

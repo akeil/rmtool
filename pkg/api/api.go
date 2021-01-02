@@ -528,9 +528,9 @@ func (c *Client) Register(code string) (string, error) {
 	return token, nil
 }
 
-// Registered tells if this client thinks it is registered.
+// IsRegistered tells if this client thinks it is registered.
 // This merely looks if a device token is present; that token might still be invalid.
-func (c *Client) Registered() bool {
+func (c *Client) IsRegistered() bool {
 	return c.deviceToken != ""
 }
 

@@ -75,7 +75,6 @@ type Meta interface {
 	SetPinned(p bool)
 	LastModified() time.Time
 	Parent() string
-	// TODO: SetParent() ?
 
 	// Validate checks the internal state of this item
 	// and returns an error if it is not valid.
@@ -83,6 +82,7 @@ type Meta interface {
 }
 
 // ReadDocument is a helper function to read a full Document from a repository entry.
+// TODO make this a method of the repository, transfer implementation to internal/
 func ReadDocument(r Repository, m Meta) (*Document, error) {
 	if m.Type() != DocumentType {
 		return nil, fmt.Errorf("can only read document for items with type DocumentType")
@@ -128,8 +128,8 @@ type Document struct {
 
 // NewNotebook creates a new document of type "notebook" with a single emtpty page.
 // TODO: template name?
-func NewNotebook(name string) *Document {
-	d := newDocument(name, Notebook, nil)
+func NewNotebook(name, parentID string) *Document {
+	d := newDocument(name, parentID, Notebook, nil)
 	// new notbeooks are created with an empty first page
 	d.CreatePage()
 	return d
@@ -139,21 +139,21 @@ func NewNotebook(name string) *Document {
 //
 // The given AttachmentReader should return a Reader for the PDF file.
 // Note that this can return an error as the PDF needs to be read for this.
-func NewPdf(name string, r AttachmentReader) (*Document, error) {
-	d := newDocument(name, Pdf, r)
+func NewPdf(name, parentID string, r AttachmentReader) (*Document, error) {
+	d := newDocument(name, parentID, Pdf, r)
 	err := d.createPdfPages()
 	// TODO: orientation of the document?
 	return d, err
 }
 
 // TODO - implement
-func NewEpub(name string, r AttachmentReader) *Document {
-	return newDocument(name, Epub, r)
+func NewEpub(name, parentID string, r AttachmentReader) *Document {
+	return newDocument(name, parentID, Epub, r)
 }
 
-func newDocument(name string, ft FileType, r AttachmentReader) *Document {
+func newDocument(name, parentID string, ft FileType, r AttachmentReader) *Document {
 	return &Document{
-		Meta:             newDocMeta(DocumentType, name),
+		Meta:             newDocMeta(DocumentType, name, parentID),
 		content:          NewContent(ft),
 		pagedata:         make([]Pagedata, 0),
 		attachmentReader: r,
@@ -674,11 +674,12 @@ type docMeta struct {
 	parent       string
 }
 
-func newDocMeta(t NotebookType, name string) Meta {
+func newDocMeta(t NotebookType, name, parentID string) Meta {
 	return &docMeta{
 		id:           uuid.New().String(),
 		nbType:       t,
 		name:         name,
+		parent:       parentID,
 		lastModified: time.Now(),
 	}
 }

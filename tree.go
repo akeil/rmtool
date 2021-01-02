@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"akeil.net/akeil/rm/internal/logging"
 )
 
 // Node is the representation for an entry in the content tree.
@@ -27,16 +29,16 @@ func newNode(m Meta) *Node {
 
 // tell if this node is the root folder.
 func (n *Node) isRoot() bool {
-	return n.ID() == ""
+	return n.ID() == "root"
 }
 
-// Leaf tells if this is a leaf node (without children).
-func (n *Node) Leaf() bool {
+// IsLeaf tells if this is a leaf node (without children).
+func (n *Node) IsLeaf() bool {
 	return n.Type() != CollectionType && !n.isRoot()
 }
 
 // Path returns the path components for this node.
-// That is, the IDs of its parent and grandparent up to the root node.
+// That is, the names of its parent and grandparent up to the root node.
 func (n *Node) Path() []string {
 	p := make([]string, 0)
 
@@ -45,7 +47,9 @@ func (n *Node) Path() []string {
 		if ctx.ParentNode == nil {
 			break
 		}
-		p = append(p, ctx.ParentNode.ID())
+		// We are moving "up" towards root, but the path should start at root.
+		// Therfore, *prepend* each item to the list.
+		p = append([]string{ctx.ParentNode.Name()}, p...)
 		ctx = ctx.ParentNode
 	}
 
@@ -97,12 +101,7 @@ func (n *Node) put(other *Node) bool {
 
 // BuildTree creates a tree view of all items in the given repository.
 // Returns the root node.
-func BuildTree(r Repository) (*Node, error) {
-	items, err := r.List()
-	if err != nil {
-		return nil, err
-	}
-
+func BuildTree(items []Meta) *Node {
 	root := newNode(&nodeMeta{name: "root", nbType: CollectionType})
 	root.addChild(newNode(&nodeMeta{
 		id:     "trash",
@@ -134,10 +133,10 @@ func BuildTree(r Repository) (*Node, error) {
 	}
 
 	if len(nodes) != 0 {
-		return nil, fmt.Errorf("could not fit all notes into the tree")
+		logging.Warning("could not fit all notes into the tree")
 	}
 
-	return root, nil
+	return root
 }
 
 // NodeComparator is used to sort nodes in a tree.
@@ -173,9 +172,9 @@ func DefaultSort(one, other *Node) bool {
 	}
 
 	// collections before content
-	if one.Leaf() && !other.Leaf() {
+	if one.IsLeaf() && !other.IsLeaf() {
 		return false
-	} else if other.Leaf() && !one.Leaf() {
+	} else if other.IsLeaf() && !one.IsLeaf() {
 		return true
 	}
 
@@ -215,13 +214,15 @@ func (n *Node) Filtered(match ...NodeFilter) *Node {
 
 	root := newNode(n.Meta)
 	for _, child := range n.Children {
-		if child.Leaf() {
+		if child.IsLeaf() {
 			if matches(child) {
 				root.addChild(newNode(child.Meta))
 			}
 		} else {
 			x := child.Filtered(match...)
-			if x.hasContent() {
+			// match against unfiltered `child`, allows path matches
+			// but *add* the filtered child
+			if x.hasContent() || matches(child) {
 				root.addChild(x)
 			}
 		}
@@ -231,7 +232,7 @@ func (n *Node) Filtered(match ...NodeFilter) *Node {
 
 func (n *Node) hasContent() bool {
 	for _, c := range n.Children {
-		if c.Leaf() {
+		if c.IsLeaf() {
 			return true
 		} else if c.hasContent() {
 			return true
@@ -250,6 +251,53 @@ func MatchName(s string) NodeFilter {
 	}
 }
 
+// MatchPath creates a node filter that matches on the path components of
+// a node (case insensitive).
+//
+// The path to match against is expected to contain the item name,
+// i.e. "foo/bar/baz" will match the item named "baz" in the folder "foo/bar".
+func MatchPath(path string) NodeFilter {
+	fragments := strings.Split(path, "/")
+	match := make([]string, 0)
+	for _, s := range fragments {
+		// Remove empty components essentially clears leading and trailing "/"
+		// and normalizes multiple "//" to single "/"
+		if s != "" {
+			match = append(match, s)
+		}
+	}
+	var name string
+	if len(match) > 0 {
+		name = match[len(match)-1]
+		match = match[:len(match)-1]
+	}
+
+	return func(n *Node) bool {
+		// Edge case:
+		// When path is "" or "/", match the root folder
+		if len(match) == 0 && name == "" {
+			return n.isRoot()
+		}
+
+		if !strings.EqualFold(name, n.Name()) {
+			return false
+		}
+
+		p := n.Path()
+		p = p[1:] // drop root element
+		if len(p) != len(match) {
+			return false
+		}
+
+		for i := 0; i < len(match); i++ {
+			if !strings.EqualFold(p[i], match[i]) {
+				return false
+			}
+		}
+		return true
+	}
+}
+
 // IsDocument is a Node filter that matches only documents (not foldeers).
 func IsDocument(n *Node) bool {
 	return n.Type() == DocumentType
@@ -258,6 +306,11 @@ func IsDocument(n *Node) bool {
 // IsFolder is a node filter that matches only folders.
 func IsFolder(n *Node) bool {
 	return n.Type() == CollectionType
+}
+
+// IsPinned is a node filter that matches only pinned items.
+func IsPinned(n *Node) bool {
+	return n.Pinned()
 }
 
 // implements the Meta interface for "virtual" nodes
