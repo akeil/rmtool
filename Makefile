@@ -18,7 +18,7 @@ build:
 
 cli:
 	mkdir -p $(BINDIR)
-	go build -o $(BINDIR)/rmtool cmd/rmtool/main.go
+	go build -o $(BINDIR)/rmtool cmd/rmtool/*
 
 examples: ${samples}
 	mkdir -p $(EXAMPLESDIR)
