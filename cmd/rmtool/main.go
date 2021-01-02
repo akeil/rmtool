@@ -50,14 +50,19 @@ func main() {
 
 	command := kingpin.MustParse(app.Parse(os.Args[1:]))
 
-	var err error
+	settings, err := loadSettings()
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+
 	switch command {
 	case "ls":
-		err = doLs(*format, *match, *pinned)
+		err = doLs(settings, *format, *match, *pinned)
 	case "get":
-		err = doGet(*matchGet, *outDir, *mkDirs)
+		err = doGet(settings, *matchGet, *outDir, *mkDirs)
 	case "put":
-		err = doPut(*paths)
+		err = doPut(settings, *paths)
 	default:
 		err = fmt.Errorf("unknown command: %q", command)
 	}
@@ -69,8 +74,8 @@ func main() {
 	os.Exit(0)
 }
 
-func doLs(format, match string, pinned bool) error {
-	repo, err := setupRepo()
+func doLs(s settings, format, match string, pinned bool) error {
+	repo, err := setupRepo(s)
 	if err != nil {
 		return err
 	}
@@ -169,8 +174,8 @@ func showTree(n *rm.Node, level int) {
 
 // get ------------------------------------------------------------------------
 
-func doGet(match, outDir string, mkDirs bool) error {
-	repo, err := setupRepo()
+func doGet(s settings, match, outDir string, mkDirs bool) error {
+	repo, err := setupRepo(s)
 	if err != nil {
 		return err
 	}
@@ -194,7 +199,7 @@ func doGet(match, outDir string, mkDirs bool) error {
 		rm.White: color.White,
 	}
 	p := render.NewPalette(color.White, brushes)
-	rc := render.NewContext("./data", p)
+	rc := render.NewContext(s.dataDir, p)
 
 	var group errgroup.Group
 	root.Walk(func(n *rm.Node) error {
@@ -254,7 +259,7 @@ var typesByExt = map[string]rm.FileType{
 	rm.Pdf.Ext(): rm.Pdf,
 }
 
-func doPut(paths []string) error {
+func doPut(s settings, paths []string) error {
 	src, dst := normalizeSrcDst(paths)
 
 	if len(src) == 0 {
@@ -266,7 +271,7 @@ func doPut(paths []string) error {
 		return err
 	}
 
-	repo, err := setupRepo()
+	repo, err := setupRepo(s)
 	if err != nil {
 		return err
 	}
@@ -463,19 +468,47 @@ func checkSrcFormat(src []string) error {
 
 // common ---------------------------------------------------------------------
 
-func setupRepo() (rm.Repository, error) {
-	client, err := setupClient()
+type settings struct {
+	dataDir  string
+	cacheDir string
+}
+
+func loadSettings() (settings, error) {
+	var s settings
+	// TODO: from env vars
+	dataHome := os.Getenv("XDG_DATA_HOME")
+	if dataHome == "" {
+		// TODO linux only
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return s, err
+		}
+		dataHome = filepath.Join(home, ".local", "share")
+	}
+	s.dataDir = filepath.Join(dataHome, "rmtool")
+
+	cacheHome, err := os.UserCacheDir()
+	if err != nil {
+		return s, err
+	}
+	s.cacheDir = filepath.Join(cacheHome, "rmtool")
+
+	return s, nil
+}
+
+func setupRepo(s settings) (rm.Repository, error) {
+	client, err := setupClient(s)
 	if err != nil {
 		return nil, err
 	}
 
-	repo := api.NewRepository(client, "/tmp/remarkable")
+	repo := api.NewRepository(client, s.cacheDir)
 	return repo, nil
 }
 
-func setupClient() (*api.Client, error) {
+func setupClient(s settings) (*api.Client, error) {
 	var token string
-	token, err := readToken()
+	token, err := readToken(s)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return nil, err
@@ -484,7 +517,7 @@ func setupClient() (*api.Client, error) {
 	client := api.NewClient(api.StorageDiscoveryURL, api.NotificationsDiscoveryURL, api.AuthURL, token)
 
 	if !client.IsRegistered() {
-		err = register(client)
+		err = register(s, client)
 		if err != nil {
 			return nil, err
 		}
@@ -493,7 +526,7 @@ func setupClient() (*api.Client, error) {
 	return client, nil
 }
 
-func register(client *api.Client) error {
+func register(s settings, client *api.Client) error {
 	fmt.Printf("Register rmtool with remarkable\n")
 	// TODO: prompt user
 	code := ""
@@ -502,13 +535,13 @@ func register(client *api.Client) error {
 		return err
 	}
 
-	saveToken(token)
+	saveToken(s, token)
 
 	return nil
 }
 
-func readToken() (string, error) {
-	tokenfile := "./data/device-token"
+func readToken(s settings) (string, error) {
+	tokenfile := filepath.Join(s.dataDir, "device-token")
 	f, err := os.Open(tokenfile)
 	if err != nil {
 		return "", err
@@ -522,8 +555,8 @@ func readToken() (string, error) {
 	return string(d), err
 }
 
-func saveToken(token string) {
-	tokenfile := "./data/device-token"
+func saveToken(s settings, token string) {
+	tokenfile := filepath.Join(s.dataDir, "device-token")
 	f, err := os.Create(tokenfile)
 	if err != nil {
 		fmt.Printf("Failed to save token to %q: %v\n", tokenfile, err)
