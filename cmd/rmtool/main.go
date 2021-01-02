@@ -390,7 +390,7 @@ func determineUploadDst(root *rm.Node, path string) (*rm.Node, string) {
 	for _, name := range norm {
 		found = false
 		for _, child := range node.Children {
-			if strings.ToLower(name) == strings.ToLower(child.Name()) {
+			if strings.EqualFold(name, child.Name()) {
 				found = true
 				node = child
 			}

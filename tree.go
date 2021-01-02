@@ -279,7 +279,7 @@ func MatchPath(path string) NodeFilter {
 			return n.isRoot()
 		}
 
-		if strings.ToLower(name) != strings.ToLower(n.Name()) {
+		if !strings.EqualFold(name, n.Name()) {
 			return false
 		}
 
@@ -290,7 +290,7 @@ func MatchPath(path string) NodeFilter {
 		}
 
 		for i := 0; i < len(match); i++ {
-			if strings.ToLower(p[i]) != strings.ToLower(match[i]) {
+			if !strings.EqualFold(p[i], match[i]) {
 				return false
 			}
 		}
