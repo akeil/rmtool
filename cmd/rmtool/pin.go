@@ -5,7 +5,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/akeil/rm"
+	"github.com/akeil/rmtool"
 )
 
 func doPin(s settings, match string, pinned bool) error {
@@ -19,11 +19,11 @@ func doPin(s settings, match string, pinned bool) error {
 		return err
 	}
 
-	root := rm.BuildTree(items)
-	matches := rm.MatchName(match)
+	root := rmtool.BuildTree(items)
+	matches := rmtool.MatchName(match)
 
 	var group errgroup.Group
-	root.Walk(func(n *rm.Node) error {
+	root.Walk(func(n *rmtool.Node) error {
 		if matches(n) {
 			group.Go(func() error {
 				n.SetPinned(pinned)

@@ -7,21 +7,21 @@ import (
 	"io"
 	"math"
 
-	"github.com/akeil/rm"
-	"github.com/akeil/rm/internal/imaging"
-	"github.com/akeil/rm/pkg/lines"
+	"github.com/akeil/rmtool"
+	"github.com/akeil/rmtool/internal/imaging"
+	"github.com/akeil/rmtool/pkg/lines"
 )
 
 // Page renders the page from the given document and writes the
 // result to the given writer.
 //
 // Unlike RenderDrawing, this includes the page's background template.
-func Page(doc *rm.Document, pageID string, w io.Writer) error {
+func Page(doc *rmtool.Document, pageID string, w io.Writer) error {
 	c := DefaultContext()
 	return renderPage(c, doc, pageID, w)
 }
 
-func renderPage(c *Context, doc *rm.Document, pageID string, w io.Writer) error {
+func renderPage(c *Context, doc *rmtool.Document, pageID string, w io.Writer) error {
 	pg, err := doc.Page(pageID)
 	if err != nil {
 		return err
@@ -74,13 +74,13 @@ func renderPNG(c *Context, d *lines.Drawing, paintBg bool, w io.Writer) error {
 // The background image is loaded from the given Context.
 //
 // An error is returned ff the template cannot be loaded.
-func renderTemplate(c *Context, dst draw.Image, tpl string, layout rm.Orientation) error {
+func renderTemplate(c *Context, dst draw.Image, tpl string, layout rmtool.Orientation) error {
 	img, err := c.loadTemplate(tpl)
 	if err != nil {
 		return err
 	}
 
-	if layout == rm.Landscape {
+	if layout == rmtool.Landscape {
 		img = imaging.Rotate(rad(90), img)
 	}
 

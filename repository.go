@@ -1,4 +1,4 @@
-package rm
+package rmtool
 
 import (
 	"bytes"
@@ -11,8 +11,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 
-	"github.com/akeil/rm/internal/errors"
-	"github.com/akeil/rm/internal/logging"
+	"github.com/akeil/rmtool/internal/errors"
+	"github.com/akeil/rmtool/internal/logging"
 )
 
 type WriterFunc func(path ...string) (io.WriteCloser, error)

@@ -9,8 +9,8 @@ import (
 	"github.com/llgcode/draw2d"
 	"github.com/llgcode/draw2d/draw2dimg"
 
-	"github.com/akeil/rm/internal/imaging"
-	"github.com/akeil/rm/pkg/lines"
+	"github.com/akeil/rmtool/internal/imaging"
+	"github.com/akeil/rmtool/pkg/lines"
 )
 
 // see:

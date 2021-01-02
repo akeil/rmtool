@@ -9,11 +9,11 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/akeil/rm"
+	"github.com/akeil/rmtool"
 )
 
-var typesByExt = map[string]rm.FileType{
-	rm.Pdf.Ext(): rm.Pdf,
+var typesByExt = map[string]rmtool.FileType{
+	rmtool.Pdf.Ext(): rmtool.Pdf,
 }
 
 func doPut(s settings, paths []string) error {
@@ -36,15 +36,15 @@ func doPut(s settings, paths []string) error {
 	if err != nil {
 		return err
 	}
-	root := rm.BuildTree(items)
+	root := rmtool.BuildTree(items)
 
-	var dstNode *rm.Node
+	var dstNode *rmtool.Node
 	var dstName string
-	var dstType rm.NotebookType
+	var dstType rmtool.NotebookType
 	if dst == "" {
 		dstNode = root
 		dstName = ""
-		dstType = rm.CollectionType
+		dstType = rmtool.CollectionType
 	} else {
 		dstNode, dstName = determineUploadDst(root, dst)
 		if dstNode != nil {
@@ -58,7 +58,7 @@ func doPut(s settings, paths []string) error {
 
 	// not all combinations are allowed
 	if len(src) == 1 {
-		if dstType == rm.DocumentType {
+		if dstType == rmtool.DocumentType {
 			// replace existing document
 			// TODO implement
 			return fmt.Errorf("replace existing document is not implemented")
@@ -66,7 +66,7 @@ func doPut(s settings, paths []string) error {
 		// upload to dstNode
 		// nmae = dstName or from filename
 	} else { // multiple source files
-		if dstType == rm.DocumentType || dstName != "" {
+		if dstType == rmtool.DocumentType || dstName != "" {
 			return fmt.Errorf("cannot upload multiple documents to a single target document")
 		}
 		// upload to dstNode,
@@ -89,7 +89,7 @@ func doPut(s settings, paths []string) error {
 }
 
 // upload a single pdf
-func uploadPdf(repo rm.Repository, src string, dstName string, dstNode *rm.Node) error {
+func uploadPdf(repo rmtool.Repository, src string, dstName string, dstNode *rmtool.Node) error {
 	if dstName == "" {
 		_, file := filepath.Split(src)
 		ext := filepath.Ext(file)
@@ -97,7 +97,7 @@ func uploadPdf(repo rm.Repository, src string, dstName string, dstNode *rm.Node)
 
 	}
 
-	doc, err := rm.NewPdf(dstName, dstNode.ID(), func() (io.ReadCloser, error) {
+	doc, err := rmtool.NewPdf(dstName, dstNode.ID(), func() (io.ReadCloser, error) {
 		f, err := os.Open(src)
 		if err != nil {
 			return nil, err
@@ -126,7 +126,7 @@ func uploadPdf(repo rm.Repository, src string, dstName string, dstNode *rm.Node)
 // If the path matches except the last component,
 // the mtching node is returned IF it is a folder
 // and the last path component is returned as a string.
-func determineUploadDst(root *rm.Node, path string) (*rm.Node, string) {
+func determineUploadDst(root *rmtool.Node, path string) (*rmtool.Node, string) {
 	// normalizes path:
 	// /foo/bar  =>  foo/bar
 	// foo/bar/  =>  foo/bar
@@ -164,7 +164,7 @@ func determineUploadDst(root *rm.Node, path string) (*rm.Node, string) {
 		// exact match
 		return node, ""
 	} else if len(unmatched) == 1 {
-		if node.Type() == rm.CollectionType {
+		if node.Type() == rmtool.CollectionType {
 			// matched "new document in parent folder"
 			return node, unmatched[0]
 		}

@@ -13,9 +13,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/akeil/rm"
-	"github.com/akeil/rm/internal/errors"
-	"github.com/akeil/rm/internal/logging"
+	"github.com/akeil/rmtool"
+	"github.com/akeil/rmtool/internal/errors"
+	"github.com/akeil/rmtool/internal/logging"
 )
 
 // Default URLs
@@ -104,7 +104,7 @@ func (c *Client) Fetch(id string, w io.Writer) (Item, error) {
 		return item, err
 	}
 
-	if item.Type == rm.CollectionType {
+	if item.Type == rmtool.CollectionType {
 		return item, fmt.Errorf("can only fetch document type items")
 	}
 
@@ -209,7 +209,7 @@ func (c *Client) CreateFolder(parentID, name string) error {
 
 	item := Item{
 		ID:          uuid.New().String(),
-		Type:        rm.CollectionType,
+		Type:        rmtool.CollectionType,
 		Parent:      parentID,
 		VisibleName: name,
 	}
@@ -225,7 +225,7 @@ func (c *Client) Delete(id string) error {
 	}
 
 	// TODO: if CollectionType, check if empty
-	if item.Type == rm.CollectionType {
+	if item.Type == rmtool.CollectionType {
 		err = c.checkEmpty(item.ID)
 		if err != nil {
 			return err
@@ -350,7 +350,7 @@ func (c *Client) Upload(name, id, parentID string, src io.Reader) error {
 	meta := Item{
 		ID:          u.ID,
 		Version:     0, // update() will increment te version; we need version 1, not 2
-		Type:        rm.DocumentType,
+		Type:        rmtool.DocumentType,
 		Parent:      parentID,
 		VisibleName: name,
 	}
@@ -369,7 +369,7 @@ func (c *Client) checkParent(parentID string) error {
 		return err
 	}
 
-	if p.Type != rm.CollectionType {
+	if p.Type != rmtool.CollectionType {
 		return fmt.Errorf("parent %q is not a collection", parentID)
 	}
 

@@ -8,9 +8,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/jung-kurt/gofpdf"
 
-	"github.com/akeil/rm"
-	"github.com/akeil/rm/internal/logging"
-	"github.com/akeil/rm/pkg/lines"
+	"github.com/akeil/rmtool"
+	"github.com/akeil/rmtool/internal/logging"
+	"github.com/akeil/rmtool/pkg/lines"
 )
 
 const (
@@ -21,13 +21,13 @@ const (
 // Pdf renders all pages of the given document to a PDF file.
 //
 // The result is written to the given writer.
-func Pdf(d *rm.Document, w io.Writer) error {
+func Pdf(d *rmtool.Document, w io.Writer) error {
 	c := DefaultContext()
 	return renderPdf(c, d, w)
 }
 
 // PdfPage renders a single drawing into a single one-page PDF.
-func PdfPage(c *Context, d *rm.Document, pageID string, w io.Writer) error {
+func PdfPage(c *Context, d *rmtool.Document, pageID string, w io.Writer) error {
 	pdf := setupPdf(defaultPageSize, nil)
 
 	err := doRenderPdfPage(c, pdf, d, pageID, 0)
@@ -38,8 +38,8 @@ func PdfPage(c *Context, d *rm.Document, pageID string, w io.Writer) error {
 	return pdf.Output(w)
 }
 
-func renderPdf(c *Context, d *rm.Document, w io.Writer) error {
-	if d.FileType() == rm.Epub {
+func renderPdf(c *Context, d *rmtool.Document, w io.Writer) error {
+	if d.FileType() == rmtool.Epub {
 		return fmt.Errorf("render Pdf not supported for file type %q", d.FileType())
 	}
 
@@ -47,7 +47,7 @@ func renderPdf(c *Context, d *rm.Document, w io.Writer) error {
 	pdf := setupPdf(defaultPageSize, d)
 
 	var err error
-	if d.FileType() == rm.Pdf {
+	if d.FileType() == rmtool.Pdf {
 		err = overlayPdf(c, d, pdf)
 	} else {
 		err = drawingsPdf(c, pdf, d)
@@ -59,7 +59,7 @@ func renderPdf(c *Context, d *rm.Document, w io.Writer) error {
 	return pdf.Output(w)
 }
 
-func drawingsPdf(c *Context, pdf *gofpdf.Fpdf, d *rm.Document) error {
+func drawingsPdf(c *Context, pdf *gofpdf.Fpdf, d *rmtool.Document) error {
 	for i, pageID := range d.Pages() {
 		err := doRenderPdfPage(c, pdf, d, pageID, i)
 		if err != nil {
@@ -70,7 +70,7 @@ func drawingsPdf(c *Context, pdf *gofpdf.Fpdf, d *rm.Document) error {
 	return nil
 }
 
-func doRenderPdfPage(c *Context, pdf *gofpdf.Fpdf, doc *rm.Document, pageID string, i int) error {
+func doRenderPdfPage(c *Context, pdf *gofpdf.Fpdf, doc *rmtool.Document, pageID string, i int) error {
 	d, err := doc.Drawing(pageID)
 	if err != nil {
 		return err
@@ -119,7 +119,7 @@ func drawingToPdf(c *Context, pdf *gofpdf.Fpdf, d *lines.Drawing) error {
 	return nil
 }
 
-func setupPdf(pageSize string, d *rm.Document) *gofpdf.Fpdf {
+func setupPdf(pageSize string, d *rmtool.Document) *gofpdf.Fpdf {
 	orientation := "P" // [P]ortrait or [L]andscape
 	sizeUnit := "pt"
 	fontDir := ""

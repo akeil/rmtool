@@ -1,4 +1,4 @@
-package rm
+package rmtool
 
 import (
 	"encoding/json"
@@ -8,9 +8,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/akeil/rm/internal/errors"
-	"github.com/akeil/rm/internal/logging"
-	"github.com/akeil/rm/pkg/lines"
+	"github.com/akeil/rmtool/internal/errors"
+	"github.com/akeil/rmtool/internal/logging"
+	"github.com/akeil/rmtool/pkg/lines"
 )
 
 // A Document is a notebook, PDF or EPUB with all associated metadata

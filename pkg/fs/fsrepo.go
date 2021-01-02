@@ -10,9 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/akeil/rm"
-	fsx "github.com/akeil/rm/internal/fs"
-	"github.com/akeil/rm/internal/logging"
+	"github.com/akeil/rmtool"
+	fsx "github.com/akeil/rmtool/internal/fs"
+	fsx "github.com/akeil/rmtool/internal/errors"
+	"github.com/akeil/rmtool/internal/logging"
 )
 
 type repo struct {
@@ -23,13 +24,13 @@ type repo struct {
 //
 // The given path should point to a directory similar to the storage directory
 // on the remarkable tablet.
-func NewRepository(path string) rm.Repository {
+func NewRepository(path string) rmtool.Repository {
 	return &repo{
 		base: path,
 	}
 }
 
-func (r *repo) List() ([]rm.Meta, error) {
+func (r *repo) List() ([]rmtool.Meta, error) {
 	logging.Debug("List files from %q", r.base)
 
 	files, err := ioutil.ReadDir(r.base)
@@ -37,7 +38,7 @@ func (r *repo) List() ([]rm.Meta, error) {
 		return nil, err
 	}
 
-	l := make([]rm.Meta, 0)
+	l := make([]rmtool.Meta, 0)
 	for _, f := range files {
 		if filepath.Ext(f.Name()) == ".metadata" {
 			id := strings.TrimSuffix(f.Name(), ".metadata")
@@ -52,7 +53,7 @@ func (r *repo) List() ([]rm.Meta, error) {
 	return l, err
 }
 
-func (r *repo) readItem(id string) (rm.Meta, error) {
+func (r *repo) readItem(id string) (rmtool.Meta, error) {
 	p := filepath.Join(r.base, id+".metadata")
 	meta, err := readMetadata(p)
 	if err != nil {
@@ -61,7 +62,7 @@ func (r *repo) readItem(id string) (rm.Meta, error) {
 	return metaWrapper{id: id, i: &meta, repo: r}, nil
 }
 
-func (r *repo) Update(m rm.Meta) error {
+func (r *repo) Update(m rmtool.Meta) error {
 	logging.Debug("Update entry with id %q, version %v", m.ID(), m.Version())
 	err := m.Validate()
 	if err != nil {
@@ -114,7 +115,7 @@ func (r *repo) Update(m rm.Meta) error {
 	return fsx.Move(f.Name(), p)
 }
 
-func (r *repo) Upload(d *rm.Document) error {
+func (r *repo) Upload(d *rmtool.Document) error {
 	err := d.Validate()
 	if err != nil {
 		return err
@@ -269,7 +270,7 @@ func (r *repo) Reader(id string, version uint, path ...string) (io.ReadCloser, e
 
 	f, err := os.Open(p)
 	if os.IsNotExist(err) {
-		return f, rm.NewNotFound(err.Error())
+		return f, errors.NewNotFound(err.Error())
 	}
 	return f, err
 }
@@ -284,7 +285,7 @@ func (r *repo) checkParent(parentID string) error {
 		return err
 	}
 
-	if parent.Type() != rm.CollectionType {
+	if parent.Type() != rmtool.CollectionType {
 		return fmt.Errorf("parent with id %q is no a collection (type=%v)", parentID, parent.Type())
 	}
 
@@ -296,15 +297,15 @@ func readMetadata(path string) (Metadata, error) {
 	r, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return m, rm.NewNotFound("no metadata file at %q", path)
+			return m, errors.NewNotFound("no metadata file at %q", path)
 		}
-		return m, rm.Wrap(err, "failed to read metadata for %q", path)
+		return m, errors.Wrap(err, "failed to read metadata for %q", path)
 	}
 	defer r.Close()
 
 	err = json.NewDecoder(r).Decode(&m)
 	if err != nil {
-		return m, rm.Wrap(err, "failed to read metadata for %q", path)
+		return m, errors.Wrap(err, "failed to read metadata for %q", path)
 	}
 
 	return m, err
@@ -332,7 +333,7 @@ func (m metaWrapper) SetName(n string) {
 	m.i.VisibleName = n
 }
 
-func (m metaWrapper) Type() rm.NotebookType {
+func (m metaWrapper) Type() rmtool.NotebookType {
 	return m.i.Type
 }
 

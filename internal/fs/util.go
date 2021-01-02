@@ -4,7 +4,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/akeil/rm/internal/logging"
+	"github.com/akeil/rmtool/internal/logging"
 )
 
 // Move moves a file from src to dst.

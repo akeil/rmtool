@@ -11,10 +11,10 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/akeil/rm"
-	"github.com/akeil/rm/internal/imaging"
-	"github.com/akeil/rm/internal/logging"
-	"github.com/akeil/rm/pkg/lines"
+	"github.com/akeil/rmtool"
+	"github.com/akeil/rmtool/internal/imaging"
+	"github.com/akeil/rmtool/internal/logging"
+	"github.com/akeil/rmtool/pkg/lines"
 )
 
 var brushNames = map[lines.BrushType]string{
@@ -73,14 +73,14 @@ func DefaultContext() *Context {
 }
 
 // Page draws a single page to a PNG and writes it to the given writer.
-func (c *Context) Page(doc *rm.Document, pageID string, w io.Writer) error {
+func (c *Context) Page(doc *rmtool.Document, pageID string, w io.Writer) error {
 	return renderPage(c, doc, pageID, w)
 }
 
 // Pdf renders all pages from a document to a PDF file.
 //
 // The resulting PDF document is written to the given writer.
-func (c *Context) Pdf(doc *rm.Document, w io.Writer) error {
+func (c *Context) Pdf(doc *rmtool.Document, w io.Writer) error {
 	return renderPdf(c, doc, w)
 }
 

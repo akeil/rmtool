@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/akeil/rm"
-	"github.com/akeil/rm/internal/errors"
+	"github.com/akeil/rmtool"
+	"github.com/akeil/rmtool/internal/errors"
 )
 
 // Item holds the data for a single metadata entry from the API.
@@ -21,7 +21,7 @@ type Item struct {
 	Version int
 
 	// Type describes the type of item (Notebook or Folder).
-	Type rm.NotebookType
+	Type rmtool.NotebookType
 
 	// VisibleName is the display name for an item.
 	VisibleName string `json:"VissibleName"`
@@ -73,7 +73,7 @@ func (i Item) Err() error {
 
 func (i Item) Validate() error {
 	switch i.Type {
-	case rm.DocumentType, rm.CollectionType:
+	case rmtool.DocumentType, rmtool.CollectionType:
 		// ok
 	default:
 		return errors.NewValidationError("invalid type %v", i.Type)
@@ -91,7 +91,7 @@ type uploadItem struct {
 	ID             string
 	Version        int
 	ModifiedClient DateTime
-	Type           rm.NotebookType
+	Type           rmtool.NotebookType
 	VisibleName    string `json:"VissibleName"`
 	CurrentPage    int
 	Bookmarked     bool

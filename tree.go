@@ -1,4 +1,4 @@
-package rm
+package rmtool
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/akeil/rm/internal/logging"
+	"github.com/akeil/rmtool/internal/logging"
 )
 
 // Node is the representation for an entry in the content tree.

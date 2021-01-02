@@ -9,12 +9,12 @@ import (
 	"github.com/jung-kurt/gofpdf"
 	"github.com/jung-kurt/gofpdf/contrib/gofpdi"
 
-	"github.com/akeil/rm"
-	"github.com/akeil/rm/internal/errors"
-	"github.com/akeil/rm/internal/logging"
+	"github.com/akeil/rmtool"
+	"github.com/akeil/rmtool/internal/errors"
+	"github.com/akeil/rmtool/internal/logging"
 )
 
-func overlayPdf(c *Context, doc *rm.Document, pdf *gofpdf.Fpdf) error {
+func overlayPdf(c *Context, doc *rmtool.Document, pdf *gofpdf.Fpdf) error {
 	logging.Debug("Render PDF with overlay")
 
 	// Read the underlaying PDF doc
