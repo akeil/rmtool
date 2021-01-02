@@ -1,5 +1,5 @@
 NAMESPACE	:= github.com/akeil
-NAME		:= rm
+NAME		:= rmtool
 QNAME		:= $(NAMESPACE)/$(NAME)
 BINDIR		:= ./bin
 BRUSHDIR    := data/brushes
