@@ -64,6 +64,7 @@ func NewContext(dataDir string, p *Palette) *Context {
 	}
 }
 
+// DefaultContext creates a new rendering context with default settings.
 func DefaultContext() *Context {
 	// TODO hardcoded path - choose a more sensible value
 	return NewContext("./data", NewPalette(color.White, defaultColors))
@@ -74,11 +75,11 @@ func (c *Context) Page(doc *rm.Document, pageID string, w io.Writer) error {
 	return renderPage(c, doc, pageID, w)
 }
 
-// PDF renders all pages from a document to a PDF file.
+// Pdf renders all pages from a document to a PDF file.
 //
 // The resulting PDF document is written to the given writer.
 func (c *Context) Pdf(doc *rm.Document, w io.Writer) error {
-	return renderPDF(c, doc, w)
+	return renderPdf(c, doc, w)
 }
 
 func (c *Context) loadBrush(bt rm.BrushType, bc rm.BrushColor) (Brush, error) {
