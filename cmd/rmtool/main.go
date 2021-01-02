@@ -55,9 +55,9 @@ func main() {
 	command := kingpin.MustParse(app.Parse(os.Args[1:]))
 
 	if *verbose {
-		rm.SetLogLevel("debug")
+		rmtool.SetLogLevel("debug")
 	} else {
-		rm.SetLogLevel("warning")
+		rmtool.SetLogLevel("warning")
 	}
 
 	settings, err := loadSettings()
@@ -113,7 +113,7 @@ func loadSettings() (settings, error) {
 	return s, nil
 }
 
-func setupRepo(s settings) (rm.Repository, error) {
+func setupRepo(s settings) (rmtool.Repository, error) {
 	client, err := setupClient(s)
 	if err != nil {
 		return nil, err

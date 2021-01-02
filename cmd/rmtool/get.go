@@ -24,8 +24,8 @@ func doGet(s settings, match, outDir string, mkDirs bool) error {
 		return err
 	}
 
-	root := rm.BuildTree(items)
-	root = root.Filtered(rm.IsDocument, rm.MatchName(match))
+	root := rmtool.BuildTree(items)
+	root = root.Filtered(rmtool.IsDocument, rmtool.MatchName(match))
 
 	if len(root.Children) == 0 {
 		fmt.Printf("No matching documents for %q\n", match)
@@ -42,8 +42,8 @@ func doGet(s settings, match, outDir string, mkDirs bool) error {
 	rc := render.NewContext(s.dataDir, p)
 
 	var group errgroup.Group
-	root.Walk(func(n *rm.Node) error {
-		if n.Type() == rm.CollectionType {
+	root.Walk(func(n *rmtool.Node) error {
+		if n.Type() == rmtool.CollectionType {
 			return nil
 		}
 		group.Go(func() error {
@@ -54,9 +54,9 @@ func doGet(s settings, match, outDir string, mkDirs bool) error {
 	return group.Wait()
 }
 
-func renderPdf(rc *render.Context, repo rm.Repository, item *rm.Node, outDir string, mkDirs bool) error {
+func renderPdf(rc *render.Context, repo rmtool.Repository, item *rmtool.Node, outDir string, mkDirs bool) error {
 	fmt.Printf("%v download %q\n", ellipsis, item.Name())
-	doc, err := rm.ReadDocument(repo, item)
+	doc, err := rmtool.ReadDocument(repo, item)
 	if err != nil {
 		fmt.Printf("%v Failed to download %q: %v\n", crossmark, item.Name(), err)
 		return err

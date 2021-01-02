@@ -17,13 +17,13 @@ func doLs(s settings, format, match string, pinned bool) error {
 		return err
 	}
 
-	root := rm.BuildTree(items)
-	filters := make([]rm.NodeFilter, 0)
+	root := rmtool.BuildTree(items)
+	filters := make([]rmtool.NodeFilter, 0)
 	if match != "" {
-		filters = append(filters, rm.IsDocument, rm.MatchName(match))
+		filters = append(filters, rmtool.IsDocument, rmtool.MatchName(match))
 	}
 	if pinned {
-		filters = append(filters, rm.IsPinned)
+		filters = append(filters, rmtool.IsPinned)
 	}
 
 	root = root.Filtered(filters...)
@@ -33,7 +33,7 @@ func doLs(s settings, format, match string, pinned bool) error {
 		return nil
 	}
 
-	root.Sort(rm.DefaultSort)
+	root.Sort(rmtool.DefaultSort)
 
 	fmt.Println("reMarkable Notebooks")
 	fmt.Println("--------------------")
@@ -50,10 +50,10 @@ func doLs(s settings, format, match string, pinned bool) error {
 	return nil
 }
 
-func showList(n *rm.Node) {
+func showList(n *rmtool.Node) {
 	dateFormat := "Jan 02 2006, 15:04"
 
-	show := func(n *rm.Node) error {
+	show := func(n *rmtool.Node) error {
 		if n.IsLeaf() {
 			fmt.Print(" ")
 		} else {
@@ -77,7 +77,7 @@ func showList(n *rm.Node) {
 	n.Walk(show)
 }
 
-func showTree(n *rm.Node, level int) {
+func showTree(n *rmtool.Node, level int) {
 	if level > 0 {
 		for i := 1; i < level; i++ {
 			fmt.Print("  ")
