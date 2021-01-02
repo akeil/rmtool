@@ -2,7 +2,6 @@ NAMESPACE	:= akeil.net/akeil
 NAME		:= rm
 QNAME		:= $(NAMESPACE)/$(NAME)
 BINDIR		:= ./bin
-EXAMPLESDIR := $(BINDIR)/examples
 BRUSHDIR    := data/brushes
 SPRITES     := data/sprites
 
@@ -11,7 +10,7 @@ BRUSHES := $(wildcard $BRUSHDIR/*.png)
 
 .PHONY: examples
 
-all: build cli examples sprites
+all: build cli sprites
 
 build:
 	go build
@@ -19,12 +18,6 @@ build:
 cli:
 	mkdir -p $(BINDIR)
 	go build -o $(BINDIR)/rmtool cmd/rmtool/*
-
-examples: ${samples}
-	mkdir -p $(EXAMPLESDIR)
-	go build -o $(EXAMPLESDIR)/api examples/api/main.go
-	go build -o $(EXAMPLESDIR)/browse examples/browse/main.go
-	go build -o $(EXAMPLESDIR)/render examples/render/main.go
 
 test:
 	go test $(QNAME) $(QNAME)

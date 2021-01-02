@@ -13,7 +13,7 @@ import (
 	"akeil.net/akeil/rm/internal/logging"
 )
 
-func overlayPDF(c *Context, doc *rm.Document, pdf *gofpdf.Fpdf) error {
+func overlayPdf(c *Context, doc *rm.Document, pdf *gofpdf.Fpdf) error {
 	logging.Debug("Render PDF with overlay")
 
 	// Read the underlaying PDF doc
@@ -58,7 +58,7 @@ func overlayPDF(c *Context, doc *rm.Document, pdf *gofpdf.Fpdf) error {
 		}
 
 		logging.Debug("overlay the drawing for page %v", i)
-		err = drawingToPDF(c, pdf, d)
+		err = drawingToPdf(c, pdf, d)
 		if err != nil {
 			return err
 		}
