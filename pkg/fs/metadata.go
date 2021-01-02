@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"akeil.net/akeil/rm"
+	"github.com/akeil/rm"
 )
 
 // Timestamp is the datatype for a UNIX timestamp in string format.

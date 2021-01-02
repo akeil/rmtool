@@ -5,7 +5,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"akeil.net/akeil/rm"
+	"github.com/akeil/rm"
 )
 
 func doPin(s settings, match string, pinned bool) error {

@@ -8,9 +8,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/jung-kurt/gofpdf"
 
-	"akeil.net/akeil/rm"
-	"akeil.net/akeil/rm/internal/logging"
-	"akeil.net/akeil/rm/pkg/lines"
+	"github.com/akeil/rm"
+	"github.com/akeil/rm/internal/logging"
+	"github.com/akeil/rm/pkg/lines"
 )
 
 const (

@@ -8,9 +8,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"akeil.net/akeil/rm/internal/errors"
-	"akeil.net/akeil/rm/internal/logging"
-	"akeil.net/akeil/rm/pkg/lines"
+	"github.com/akeil/rm/internal/errors"
+	"github.com/akeil/rm/internal/logging"
+	"github.com/akeil/rm/pkg/lines"
 )
 
 // A Document is a notebook, PDF or EPUB with all associated metadata

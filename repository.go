@@ -11,8 +11,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 
-	"akeil.net/akeil/rm/internal/errors"
-	"akeil.net/akeil/rm/internal/logging"
+	"github.com/akeil/rm/internal/errors"
+	"github.com/akeil/rm/internal/logging"
 )
 
 type WriterFunc func(path ...string) (io.WriteCloser, error)

@@ -8,8 +8,8 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"akeil.net/akeil/rm"
-	"akeil.net/akeil/rm/pkg/api"
+	"github.com/akeil/rm"
+	"github.com/akeil/rm/pkg/api"
 )
 
 const (
