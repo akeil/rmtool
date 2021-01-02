@@ -3,12 +3,12 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strconv"
 	"time"
 
 	"akeil.net/akeil/rm"
+	"akeil.net/akeil/rm/internal/errors"
 )
 
 // Item holds the data for a single metadata entry from the API.
@@ -68,7 +68,7 @@ func (i Item) Err() error {
 	if i.Success {
 		return nil
 	}
-	return errors.New(i.Message)
+	return fmt.Errorf(i.Message)
 }
 
 func (i Item) Validate() error {
@@ -76,11 +76,11 @@ func (i Item) Validate() error {
 	case rm.DocumentType, rm.CollectionType:
 		// ok
 	default:
-		return rm.NewValidationError("invalid type %v", i.Type)
+		return errors.NewValidationError("invalid type %v", i.Type)
 	}
 
 	if i.VisibleName == "" {
-		return rm.NewValidationError("visible name must not be emtpty")
+		return errors.NewValidationError("visible name must not be emtpty")
 	}
 
 	return nil

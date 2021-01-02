@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 
+	"akeil.net/akeil/rm/internal/errors"
 	"akeil.net/akeil/rm/internal/logging"
 )
 
@@ -167,7 +168,7 @@ func (d *Document) Validate() error {
 	}
 
 	if d.Meta.Type() != DocumentType {
-		return NewValidationError("only DocumentType allowed, found %q", d.Meta.Type())
+		return errors.NewValidationError("only DocumentType allowed, found %q", d.Meta.Type())
 	}
 
 	err = d.content.Validate()
@@ -184,7 +185,7 @@ func (d *Document) Validate() error {
 
 	// len pagedata must match the number of pages
 	if len(d.pagedata) != d.PageCount() {
-		return NewValidationError("number of pagedata entries does not match page count: %v != %v", len(d.pagedata), d.PageCount())
+		return errors.NewValidationError("number of pagedata entries does not match page count: %v != %v", len(d.pagedata), d.PageCount())
 	}
 
 	switch d.FileType() {
@@ -207,14 +208,14 @@ func (d *Document) Validate() error {
 func (d *Document) validateNotebook() error {
 	// Notebook needs a drawing for each page and at least one page
 	if d.PageCount() < 1 {
-		return NewValidationError("notbeook must have at least one page")
+		return errors.NewValidationError("notbeook must have at least one page")
 	}
 	// TODO: checking only cached drawings means we can validate
 	// fully loaded or new notebooks only
 	for _, pageID := range d.Pages() {
 		dr := d.drawings[pageID]
 		if dr == nil {
-			return NewValidationError("page %q has no associated drawing", pageID)
+			return errors.NewValidationError("page %q has no associated drawing", pageID)
 		}
 		err := dr.Validate()
 		if err != nil {
@@ -230,7 +231,7 @@ func (d *Document) validateNotebook() error {
 // for PDF or EPUB
 func (d *Document) validateAttachment() error {
 	if d.attachmentReader == nil {
-		return NewValidationError("missing attachment reader")
+		return errors.NewValidationError("missing attachment reader")
 	}
 	// TODO - do we need more validation?
 
@@ -343,7 +344,7 @@ func (d *Document) writePages(repo Repository, w WriterFunc) error {
 func (d *Document) writeAttachment(w WriterFunc) error {
 	logging.Debug("Write attachment (type=%v)", d.FileType())
 	if d.attachmentReader == nil {
-		return NewValidationError("missing attachment reader")
+		return fmt.Errorf("missing attachment reader")
 	}
 
 	path := d.ID() + d.FileType().Ext()
@@ -733,11 +734,11 @@ func (d *docMeta) Validate() error {
 	case DocumentType, CollectionType:
 		// ok
 	default:
-		return NewValidationError("invalid type %v", d.Type())
+		return errors.NewValidationError("invalid type %v", d.Type())
 	}
 
 	if d.Name() == "" {
-		return NewValidationError("name must not be empty")
+		return errors.NewValidationError("name must not be empty")
 	}
 
 	return nil

@@ -8,6 +8,8 @@ import (
 	"io"
 	"strconv"
 	"strings"
+
+	"akeil.net/akeil/rm/internal/errors"
 )
 
 // NotebookType is used to distinguish betweeen documents and folders.
@@ -122,24 +124,24 @@ func (c *Content) Validate() error {
 	case Notebook, Pdf, Epub:
 		// ok
 	default:
-		return NewValidationError("invalid file type %v", c.FileType)
+		return errors.NewValidationError("invalid file type %v", c.FileType)
 	}
 
 	switch c.Orientation {
 	case Portrait, Landscape: // ok
 	default:
-		return NewValidationError("invalid orientation %v", c.Orientation)
+		return errors.NewValidationError("invalid orientation %v", c.Orientation)
 	}
 
 	if c.PageCount != len(c.Pages) {
-		return NewValidationError("pageCount does not match number of pages %v != %v", c.PageCount, len(c.Pages))
+		return errors.NewValidationError("pageCount does not match number of pages %v != %v", c.PageCount, len(c.Pages))
 	}
 
 	// Cover page may be -1 (=not set)
 	// or an existing page
 	if c.CoverPageNumber != defaultCoverPage {
 		if c.CoverPageNumber < 1 || c.CoverPageNumber > c.PageCount {
-			return NewValidationError("cover page %v is not an existing page", c.CoverPageNumber)
+			return errors.NewValidationError("cover page %v is not an existing page", c.CoverPageNumber)
 		}
 	}
 
@@ -151,7 +153,7 @@ func (c *Content) Validate() error {
 	case AlignLeft, AlignJustify:
 		// ok
 	default:
-		return NewValidationError("invalid text align %v", c.TextAlignment)
+		return errors.NewValidationError("invalid text align %v", c.TextAlignment)
 	}
 
 	return nil
@@ -187,13 +189,13 @@ type PageMetadata struct {
 
 func (p PageMetadata) Validate() error {
 	if p.Layers == nil {
-		return NewValidationError("no layers defined")
+		return errors.NewValidationError("no layers defined")
 	}
 	if len(p.Layers) == 0 {
-		return NewValidationError("no layers defined")
+		return errors.NewValidationError("no layers defined")
 	}
 	if len(p.Layers) > maxLayers {
-		return NewValidationError("maximum number of layers exceeded")
+		return errors.NewValidationError("maximum number of layers exceeded")
 	}
 
 	for _, l := range p.Layers {
@@ -215,7 +217,7 @@ type LayerMetadata struct {
 
 func (l LayerMetadata) Validate() error {
 	if l.Name == "" {
-		return NewValidationError("layer name must not be empty")
+		return errors.NewValidationError("layer name must not be empty")
 	}
 
 	return nil
