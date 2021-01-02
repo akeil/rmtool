@@ -1,5 +1,23 @@
 # reMarkable Tools
-Tools for working with the [reMarkable](https://remarkable.com/) notes format.
+Tools for working with the [reMarkable](https://remarkable.com/) notes format and API.
+
+**Status:** This is very much *work in progress*.
+The basic functionality should work but there will be some bugs
+and missing features.
+Use at your own risk ;-)
+
+This has been tested with the *reMarkable 2* on Linux.
+
+## CLI Tool
+A command line tool is included which serves as a example on how the API works.
+It should also be useful on its own:
+
+- `ls` lists the content from the device
+- `get` downloads notes as PDF files
+- `put` uploads PDF documents to the device
+- `pin` allows to set or remove bookmarks
+
+The CLI tool uses the reMarkable cloud API.
 
 ## Parser
 The parser supports the v3 format for reMarkable notes.
@@ -132,6 +150,14 @@ through that API and also upload or modify content.
 Changes made through the API will by synced to the tablet.
 
 ---
+
+# Disclaimer
+This is a personal project.
+It is **not** associated with the reMarkable company.
+
+---
+
+# Credits
 
 Sources:
 
