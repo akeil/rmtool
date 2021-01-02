@@ -4,3 +4,4 @@ testdata
 notes.md
 data/*
 out/*
+*.bak
