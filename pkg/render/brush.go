@@ -156,7 +156,7 @@ func (h *Highlighter) RenderStroke(dst draw.Image, s lines.Stroke) {
 
 	// ... then transfer the temp image with desired opacity onto the actual
 	// destination.
-	opacity := 0.4
+	opacity := 0.2
 	alpha := uint8(math.Round(255 * opacity))
 	mask := image.NewUniform(color.Alpha{alpha})
 
