@@ -83,7 +83,6 @@ func main() {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
-	os.Exit(0)
 }
 
 type settings struct {
