@@ -1,4 +1,4 @@
-NAMESPACE	:= akeil.net/akeil
+NAMESPACE	:= github.com/akeil
 NAME		:= rm
 QNAME		:= $(NAMESPACE)/$(NAME)
 BINDIR		:= ./bin

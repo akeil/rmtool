@@ -13,9 +13,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"akeil.net/akeil/rm"
-	"akeil.net/akeil/rm/internal/errors"
-	"akeil.net/akeil/rm/internal/logging"
+	"github.com/akeil/rm"
+	"github.com/akeil/rm/internal/errors"
+	"github.com/akeil/rm/internal/logging"
 )
 
 // Default URLs

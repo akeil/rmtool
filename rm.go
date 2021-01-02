@@ -1,7 +1,7 @@
 package rm
 
 import (
-	"akeil.net/akeil/rm/internal/logging"
+	"github.com/akeil/rm/internal/logging"
 	"strings"
 )
 

@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"akeil.net/akeil/rm/internal/errors"
+	"github.com/akeil/rm/internal/errors"
 )
 
 // NotebookType is used to distinguish betweeen documents and folders.

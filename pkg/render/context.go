@@ -11,10 +11,10 @@ import (
 	"path/filepath"
 	"sync"
 
-	"akeil.net/akeil/rm"
-	"akeil.net/akeil/rm/internal/imaging"
-	"akeil.net/akeil/rm/internal/logging"
-	"akeil.net/akeil/rm/pkg/lines"
+	"github.com/akeil/rm"
+	"github.com/akeil/rm/internal/imaging"
+	"github.com/akeil/rm/internal/logging"
+	"github.com/akeil/rm/pkg/lines"
 )
 
 var brushNames = map[lines.BrushType]string{

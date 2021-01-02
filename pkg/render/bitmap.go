@@ -7,9 +7,9 @@ import (
 	"io"
 	"math"
 
-	"akeil.net/akeil/rm"
-	"akeil.net/akeil/rm/internal/imaging"
-	"akeil.net/akeil/rm/pkg/lines"
+	"github.com/akeil/rm"
+	"github.com/akeil/rm/internal/imaging"
+	"github.com/akeil/rm/pkg/lines"
 )
 
 // Page renders the page from the given document and writes the

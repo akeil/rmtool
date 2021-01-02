@@ -9,9 +9,9 @@ import (
 	"github.com/jung-kurt/gofpdf"
 	"github.com/jung-kurt/gofpdf/contrib/gofpdi"
 
-	"akeil.net/akeil/rm"
-	"akeil.net/akeil/rm/internal/errors"
-	"akeil.net/akeil/rm/internal/logging"
+	"github.com/akeil/rm"
+	"github.com/akeil/rm/internal/errors"
+	"github.com/akeil/rm/internal/logging"
 )
 
 func overlayPdf(c *Context, doc *rm.Document, pdf *gofpdf.Fpdf) error {

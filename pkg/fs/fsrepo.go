@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"akeil.net/akeil/rm"
-	fsx "akeil.net/akeil/rm/internal/fs"
-	"akeil.net/akeil/rm/internal/logging"
+	"github.com/akeil/rm"
+	fsx "github.com/akeil/rm/internal/fs"
+	"github.com/akeil/rm/internal/logging"
 )
 
 type repo struct {

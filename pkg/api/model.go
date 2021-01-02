@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"akeil.net/akeil/rm"
-	"akeil.net/akeil/rm/internal/errors"
+	"github.com/akeil/rm"
+	"github.com/akeil/rm/internal/errors"
 )
 
 // Item holds the data for a single metadata entry from the API.

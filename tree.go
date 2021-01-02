@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"akeil.net/akeil/rm/internal/logging"
+	"github.com/akeil/rm/internal/logging"
 )
 
 // Node is the representation for an entry in the content tree.

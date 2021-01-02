@@ -8,9 +8,9 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"akeil.net/akeil/rm"
-	"akeil.net/akeil/rm/pkg/lines"
-	"akeil.net/akeil/rm/pkg/render"
+	"github.com/akeil/rm"
+	"github.com/akeil/rm/pkg/lines"
+	"github.com/akeil/rm/pkg/render"
 )
 
 func doGet(s settings, match, outDir string, mkDirs bool) error {
