@@ -59,7 +59,7 @@ type Context struct {
 // and a subdirectory 'templates' with page backgrounds.
 func NewContext(dataDir string, p *Palette) *Context {
 	return &Context{
-		DataDir: "data",
+		DataDir: dataDir,
 		palette: p,
 	}
 }
