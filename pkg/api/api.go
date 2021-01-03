@@ -512,7 +512,7 @@ func (c *Client) storageRequest(method, endpoint string, payload, dst interface{
 func (c *Client) Register(code string) (string, error) {
 	// Assumption: we do not have to remember our device ID.
 	deviceID := uuid.New().String()
-	reg := &Registration{
+	reg := &registration{
 		Code:        code,
 		Description: "desktop-windows",
 		DeviceID:    deviceID,
@@ -632,7 +632,7 @@ func (c *Client) discoverHost(url string) (string, error) {
 	}
 	defer res.Body.Close()
 
-	dis := &Discovery{}
+	dis := &discovery{}
 	dec := json.NewDecoder(res.Body)
 	err = dec.Decode(dis)
 	if err != nil {

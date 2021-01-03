@@ -111,15 +111,15 @@ func (i Item) toUpload() uploadItem {
 	}
 }
 
-// Registration is the data structure used to register a deivce.
-type Registration struct {
+// Registration is the data structure used to register a device.
+type registration struct {
 	Code        string `json:"code"`
 	Description string `json:"deviceDesc"`
 	DeviceID    string `json:"deviceID"`
 }
 
 // Discovery is the response data from the discovery service.
-type Discovery struct {
+type discovery struct {
 	Status string
 	Host   string
 }

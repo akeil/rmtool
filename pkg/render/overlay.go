@@ -33,7 +33,7 @@ func overlayPdf(c *Context, doc *rmtool.Document, pdf *gofpdf.Fpdf) error {
 	rs := io.ReadSeeker(bytes.NewReader(data))
 
 	im := gofpdi.NewImporter()
-	pdf.OpenLayerPane()  // controls behavior of the PDF viewer
+	pdf.OpenLayerPane() // controls behavior of the PDF viewer
 	docLayer := pdf.AddLayer("Document", true)
 	drawLayer := pdf.AddLayer("Drawing", true)
 
