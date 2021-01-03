@@ -27,6 +27,9 @@ The `rm` format is the proprietary format used by the
 [reMarkable](https://remarkable.com/) tablet. The format is used to store
 drawings made on the tablet.
 
+The format is documented in the unofficial
+[reMarkable Wiki](https://remarkablewiki.com/tech/filesystem#lines_file_format).
+
 In *version 5*, each `.rm` file contains one page.
 Each page consists of several layers which contain the *strokes* that make up
 the image.

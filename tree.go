@@ -104,7 +104,7 @@ func (n *Node) put(other *Node) bool {
 func BuildTree(items []Meta) *Node {
 	root := newNode(&nodeMeta{name: "root", nbType: CollectionType})
 	root.addChild(newNode(&nodeMeta{
-		id:     "trash",
+		id:     TrashFolder,
 		name:   "Trash",
 		nbType: CollectionType,
 	}))
@@ -165,9 +165,9 @@ func (n *Node) Sort(compare NodeComparator) {
 func DefaultSort(one, other *Node) bool {
 	// tell if  one <  other
 	// special case - Trash goes last
-	if one.ID() == "trash" {
+	if one.ID() == TrashFolder {
 		return false
-	} else if other.ID() == "trash" {
+	} else if other.ID() == TrashFolder {
 		return true
 	}
 

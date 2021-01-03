@@ -33,6 +33,9 @@ func overlayPdf(c *Context, doc *rmtool.Document, pdf *gofpdf.Fpdf) error {
 	rs := io.ReadSeeker(bytes.NewReader(data))
 
 	im := gofpdi.NewImporter()
+	pdf.OpenLayerPane() // controls behavior of the PDF viewer
+	docLayer := pdf.AddLayer("Document", true)
+	drawLayer := pdf.AddLayer("Drawing", true)
 
 	for i, pageID := range doc.Pages() {
 		pdf.AddPage()
@@ -46,7 +49,9 @@ func overlayPdf(c *Context, doc *rmtool.Document, pdf *gofpdf.Fpdf) error {
 			return err
 		}
 		// Setting h, w to 0 fills the page
+		pdf.BeginLayer(docLayer)
 		im.UseImportedTemplate(pdf, tplID, 0, 0, 0, 0)
+		pdf.EndLayer()
 
 		// Paint the drawing over the original
 		d, err := doc.Drawing(pageID)
@@ -59,7 +64,10 @@ func overlayPdf(c *Context, doc *rmtool.Document, pdf *gofpdf.Fpdf) error {
 		}
 
 		logging.Debug("overlay the drawing for page %v", i)
+
+		pdf.BeginLayer(drawLayer)
 		err = drawingToPdf(c, pdf, d)
+		pdf.EndLayer()
 		if err != nil {
 			return err
 		}

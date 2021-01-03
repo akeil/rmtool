@@ -21,7 +21,7 @@ import (
 type Document struct {
 	Meta
 	content          *Content
-	pagedata         []Pagedata
+	pagedata         []string
 	pages            map[string]*Page
 	pagesMx          sync.Mutex
 	drawings         map[string]*lines.Drawing
@@ -59,7 +59,7 @@ func newDocument(name, parentID string, ft FileType, r AttachmentReader) *Docume
 	return &Document{
 		Meta:             newDocMeta(DocumentType, name, parentID),
 		content:          NewContent(ft),
-		pagedata:         make([]Pagedata, 0),
+		pagedata:         make([]string, 0),
 		attachmentReader: r,
 	}
 }
@@ -77,13 +77,6 @@ func (d *Document) Validate() error {
 	err = d.content.Validate()
 	if err != nil {
 		return err
-	}
-
-	for _, pd := range d.pagedata {
-		err = pd.Validate()
-		if err != nil {
-			return err
-		}
 	}
 
 	// len pagedata must match the number of pages
@@ -322,14 +315,12 @@ func (d *Document) addPage(pgMeta *PageMetadata) string {
 
 	index := len(d.pagedata) // we'll append later, so index == size
 
-	// with default orientation and default template
-	pgData := newPagedata()
-	d.pagedata = append(d.pagedata, pgData)
+	d.pagedata = append(d.pagedata, blankTemplate)
 
 	p := &Page{
 		index:    index,
 		meta:     pgMeta,
-		pagedata: pgData,
+		pagedata: blankTemplate,
 	}
 
 	// page cache

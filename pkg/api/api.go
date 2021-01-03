@@ -52,6 +52,15 @@ type Client struct {
 }
 
 // NewClient sets up an API client with the given base URLs.
+//
+// The *three* URLs are the base URLs for the various services.
+//
+// Device token is the authentication token obtained from the API.
+// This is intended for setting up a client when the registration has already
+// been completed and a token can be loaded from storage.
+// If set to the empty string, Register can be used to obtain a token.
+//
+// Refer to DefaultClient for a more simple constructor.
 func NewClient(discoveryStorage, discoverNotif, authBase, deviceToken string) *Client {
 	return &Client{
 		discoverStorageURL: discoveryStorage,
@@ -60,6 +69,12 @@ func NewClient(discoveryStorage, discoverNotif, authBase, deviceToken string) *C
 		deviceToken:        deviceToken,
 		client:             &http.Client{},
 	}
+}
+
+// DefaultClient sets up an API client with default URLs.
+// See NewClient for details.
+func DefaultClient(deviceToken string) *Client {
+	return NewClient(StorageDiscoveryURL, NotificationsDiscoveryURL, AuthURL, deviceToken)
 }
 
 // NewNotifications sets up a client for the notifications service.
@@ -512,7 +527,7 @@ func (c *Client) storageRequest(method, endpoint string, payload, dst interface{
 func (c *Client) Register(code string) (string, error) {
 	// Assumption: we do not have to remember our device ID.
 	deviceID := uuid.New().String()
-	reg := &Registration{
+	reg := &registration{
 		Code:        code,
 		Description: "desktop-windows",
 		DeviceID:    deviceID,
@@ -632,7 +647,7 @@ func (c *Client) discoverHost(url string) (string, error) {
 	}
 	defer res.Body.Close()
 
-	dis := &Discovery{}
+	dis := &discovery{}
 	dec := json.NewDecoder(res.Body)
 	err = dec.Decode(dis)
 	if err != nil {
