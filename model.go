@@ -12,6 +12,10 @@ import (
 	"github.com/akeil/rmtool/internal/errors"
 )
 
+// TrashFolder is the ID whoch is used for the reMArkable trash folder.
+// Items that have been soft-deleted have their parent ID set to this value.
+const TrashFolder = "trash"
+
 // NotebookType is used to distinguish betweeen documents and folders.
 type NotebookType int
 
