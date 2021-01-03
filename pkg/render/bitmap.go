@@ -31,7 +31,7 @@ func renderPage(c *Context, doc *rmtool.Document, pageID string, w io.Writer) er
 	dst := image.NewRGBA(rect)
 
 	if pg.HasTemplate() {
-		err = renderTemplate(c, dst, pg.Template(), pg.Orientation())
+		err = renderTemplate(c, dst, pg.Template(), doc.Orientation())
 		if err != nil {
 			return err
 		}

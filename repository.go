@@ -113,7 +113,7 @@ func ReadDocument(r Repository, m Meta) (*Document, error) {
 type Page struct {
 	index    int
 	meta     *PageMetadata
-	pagedata Pagedata
+	pagedata string
 }
 
 // Number is the 1-based page number.
@@ -121,18 +121,10 @@ func (p *Page) Number() uint {
 	return uint(p.index + 1)
 }
 
-// Orientation is the layout orientation for this specific page.
-// It refers to the orientation of the background template.
-func (p *Page) Orientation() Orientation {
-	return p.pagedata.Orientation
-}
-
-// TODO: set orientation
-
 // Template is the name of the background template.
 // It can be used to look up a graphic file for this template.
 func (p *Page) Template() string {
-	return p.pagedata.Text
+	return p.pagedata
 }
 
 // TODO set template
@@ -140,7 +132,7 @@ func (p *Page) Template() string {
 // HasTemplate tells if this page is associated with a background template.
 // Returns false for the "Blank" template.
 func (p *Page) HasTemplate() bool {
-	return p.pagedata.HasTemplate()
+	return p.pagedata != "" && p.pagedata != blankTemplate
 }
 
 // Layers is the metadata for the layers in this page.
