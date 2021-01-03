@@ -527,17 +527,6 @@ func (o Orientation) fromString(s string) Orientation {
 	}
 }
 
-func (o Orientation) toString() string {
-	switch o {
-	case Portrait:
-		return "P"
-	case Landscape:
-		return "LS"
-	default:
-		return ""
-	}
-}
-
 type ExtraMetadata struct {
 	LastBallpointColor       string
 	LastBallpointSize        intStr
