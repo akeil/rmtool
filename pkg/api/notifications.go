@@ -171,8 +171,11 @@ func (n *Notifications) handleMessage(data []byte) {
 }
 
 // OnMessage registers a handler function for received messages.
+//
 // Setting a handler removes the current one; setting the handler to `nil`
 // is allowed to remove the current handler.
+//
+// The handler function will be called in a separate goroutine for each message.
 func (n *Notifications) OnMessage(f MessageHandler) {
 	n.hdlMx.Lock()
 	n.hdl = f

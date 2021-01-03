@@ -1,12 +1,21 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/akeil/rmtool"
+)
+
+// Event is the type for event types used in notification messages.
+type Event int
+
+const (
+	DocAdded Event = iota
+	DocDeleted
 )
 
 // Message contains the data from a notification message,
@@ -16,7 +25,7 @@ type Message struct {
 	PublishTime time.Time
 	SourceDesc  string
 	SourceID    string
-	Event       string
+	Event       Event
 	ItemID      string
 	Parent      string
 	Type        rmtool.NotebookType
@@ -57,7 +66,7 @@ type msg struct {
 type msgAttr struct {
 	AuthUserID       string              `json:"auth0UserID"`
 	Bookmarked       boolStr             `json:"bookmarked"`
-	Event            string              `json:"event"`
+	Event            Event               `json:"event"`
 	ID               string              `json:"id"`
 	Parent           string              `json:"parent"`
 	SourceDeviceDesc string              `json:"sourceDeviceDesc"`
@@ -65,6 +74,54 @@ type msgAttr struct {
 	Type             rmtool.NotebookType `json:"type"`
 	Version          intStr              `json:"version"`
 	VisibleName      string              `json:"vissibleName"`
+}
+
+// UnmarshalJSON unmarshals an Event from a JSON string value.
+func (e *Event) UnmarshalJSON(b []byte) error {
+	var s string
+	err := json.Unmarshal(b, &s)
+	if err != nil {
+		return err
+	}
+
+	var et Event
+	switch s {
+	case "DocAdded":
+		et = DocAdded
+	case "DocDeleted":
+		et = DocDeleted
+	default:
+		return fmt.Errorf("invalid event type %q", s)
+	}
+
+	*e = et
+	return nil
+}
+
+// MarshalJSON marshals an Event to a JSON string value.
+func (e Event) MarshalJSON() ([]byte, error) {
+	s := e.String()
+
+	if s == "UNKNOWN" {
+		return nil, fmt.Errorf("invalid notebook type %v", e)
+	}
+
+	buf := bytes.NewBufferString(`"`)
+	buf.WriteString(s)
+	buf.WriteString(`"`)
+
+	return buf.Bytes(), nil
+}
+
+func (e Event) String() string {
+	switch e {
+	case DocAdded:
+		return "DocAdded"
+	case DocDeleted:
+		return "DocDeleted"
+	default:
+		return "UNKNOWN"
+	}
 }
 
 type boolStr bool
