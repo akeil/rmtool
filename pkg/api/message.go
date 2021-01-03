@@ -55,16 +55,16 @@ type msg struct {
 }
 
 type msgAttr struct {
-	AuthUserID       string  `json:"auth0UserID"`
-	Bookmarked       boolStr `json:"bookmarked"`
-	Event            string  `json:"event"`
-	ID               string  `json:"id"`
-	Parent           string  `json:"parent"`
-	SourceDeviceDesc string  `json:"sourceDeviceDesc"`
-	SourceDeviceID   string  `json:"sourceDeviceID"`
-	Type             rmtool.NotebookType  `json:"type"`
-	Version          intStr  `json:"version"`
-	VisibleName      string  `json:"vissibleName"`
+	AuthUserID       string              `json:"auth0UserID"`
+	Bookmarked       boolStr             `json:"bookmarked"`
+	Event            string              `json:"event"`
+	ID               string              `json:"id"`
+	Parent           string              `json:"parent"`
+	SourceDeviceDesc string              `json:"sourceDeviceDesc"`
+	SourceDeviceID   string              `json:"sourceDeviceID"`
+	Type             rmtool.NotebookType `json:"type"`
+	Version          intStr              `json:"version"`
+	VisibleName      string              `json:"vissibleName"`
 }
 
 type boolStr bool
