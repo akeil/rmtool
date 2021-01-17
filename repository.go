@@ -81,6 +81,12 @@ type Meta interface {
 	Validate() error
 }
 
+type Cache interface {
+	Put(key string, r io.Reader) error
+	Get(key string) (io.ReadCloser, error)
+	Delete(key string) error
+}
+
 // ReadDocument is a helper function to read a full Document from a repository entry.
 // TODO make this a method of the repository, transfer implementation to internal/
 func ReadDocument(r Repository, m Meta) (*Document, error) {

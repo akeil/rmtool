@@ -6,34 +6,27 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
-	"path/filepath"
-	"sort"
-	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/akeil/rmtool"
 	"github.com/akeil/rmtool/internal/errors"
-	"github.com/akeil/rmtool/internal/fs"
 	"github.com/akeil/rmtool/internal/logging"
 )
 
 type repo struct {
-	client  *Client
-	dataDir string
-	mx      sync.RWMutex
+	client *Client
+	cache  rmtool.Cache
 }
 
 // NewRepository creates a Repository with the reMarkable cloud service as
 // backend.
 //
 // The supplied dataDir is used to cache downloaded content.
-func NewRepository(c *Client, dataDir string) rmtool.Repository {
+func NewRepository(c *Client, cache rmtool.Cache) rmtool.Repository {
 	return &repo{
-		client:  c,
-		dataDir: dataDir,
+		client: c,
+		cache:  cache,
 	}
 }
 
@@ -69,30 +62,20 @@ func (r *repo) PagePrefix(id string, index int) string {
 }
 
 func (r *repo) Reader(id string, version uint, path ...string) (io.ReadCloser, error) {
-
-	// Attempt to read from cache, download if not exists or corrupt
-	p := r.cachePath(id, version)
-
-	r.mx.RLock()
-	defer r.mx.RUnlock()
-	zr, err := zip.OpenReader(p)
-
-	// If the file does not exist or is otherwise unusable,
-	// download new and try again.
+	// Data from cache or fresh download
+	var data []byte
+	data, err := r.fromCache(id, version)
 	if err != nil {
-		// CAREFUL: we need a write lock when we downloading,
-		// so we release our read lock for a moment.
-		//
-		// This relies on the RLock being acquired before
-		// AND relies on the (defer) RUnlock being called before.
-		r.mx.RUnlock()
-		r.downloadToCache(id, version)
-		r.mx.RLock()
-
-		zr, err = zip.OpenReader(p)
+		data, err = r.downloadAndCache(id, version)
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	br := bytes.NewReader(data)
+	zr, err := zip.NewReader(br, int64(br.Len()))
+	if err != nil {
+		return nil, err
 	}
 
 	// Read the desired entry from the zip file
@@ -108,12 +91,50 @@ func (r *repo) Reader(id string, version uint, path ...string) (io.ReadCloser, e
 		return nil, errors.NewNotFound("no zip entry found with name %q", match)
 	}
 
-	// return a reader for the file entry
-	// closing the reader should close the zip reader
+	// Return a reader for the file entry
 	return entry.Open()
 }
 
-// TODO implement
+func (r *repo) fromCache(id string, version uint) ([]byte, error) {
+	cr, err := r.cache.Get(cacheKey(id, version))
+	if err != nil {
+		return nil, err
+	}
+	defer cr.Close()
+
+	data, err := ioutil.ReadAll(cr)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+func (r *repo) downloadAndCache(id string, version uint) ([]byte, error) {
+	i, err := r.client.fetchItem(id)
+	if err != nil {
+		return nil, err
+	}
+
+	logging.Debug("Download blob for %v.%v", id, version)
+
+	var buf bytes.Buffer
+	err = r.client.fetchBlob(i.BlobURLGet, &buf)
+	if err != nil {
+		return nil, err
+	}
+
+	// ignores cache errors
+	r.cache.Put(cacheKey(id, version), bytes.NewReader(buf.Bytes()))
+
+	// This should presumably remove the one outdated entry (if any).
+	go r.cleanCache(id, version)
+
+	logging.Debug("Buffer.Len() -> %v", buf.Len())
+	logging.Debug("len(Buffer.Bytes()) -> %v", len(buf.Bytes()))
+
+	return buf.Bytes(), nil
+}
+
 func (r *repo) Upload(d *rmtool.Document) error {
 	err := d.Validate()
 	if err != nil {
@@ -159,127 +180,17 @@ func (r *repo) Upload(d *rmtool.Document) error {
 	return err
 }
 
-func (r *repo) downloadToCache(id string, version uint) error {
-	// Retreive the BlobURLGet
-	i, err := r.client.fetchItem(id)
-	if err != nil {
-		return err
-	}
-
-	// Download to temp
-	f, err := ioutil.TempFile("", "rm_"+id+"_*.zip")
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	// cleanup: delete the tempfile (errors ignored)
-	defer func() {
-		_, err := os.Stat(f.Name())
-		if err != nil {
-			if os.IsNotExist(err) {
-				return
-			}
-			logging.Warning("Unexpected error: %v\n", err)
-			return
-		}
-		err = os.Remove(f.Name())
-		if err != nil {
-			logging.Warning("Unexpected error: %v\n", err)
-		}
-	}()
-
-	logging.Debug("Download blob to %q\n", f.Name())
-	err = r.client.fetchBlob(i.BlobURLGet, f)
-	if err != nil {
-		return err
-	}
-
-	// Lock for writing.
-	r.mx.Lock()
-	defer r.mx.Unlock()
-
-	// Prepare the destination directory
-	err = os.MkdirAll(r.dataDir, 0755)
-	if err != nil {
-		return fmt.Errorf("could not create cache dir: %v", err)
-	}
-
-	// Move to destination dir
-	p := r.cachePath(id, version)
-	logging.Debug("Move archive blob to %q\n", p)
-	err = fs.Move(f.Name(), p)
-	if err != nil {
-		return err
-	}
-
-	// This should presumably remove the one outdated entry (if any).
-	go r.cleanCache()
-
-	return nil
-}
-
-func (r *repo) cachePath(id string, version uint) string {
-	return filepath.Join(r.dataDir, fmt.Sprintf("%v_%v.zip", id, version))
-}
-
 // cleanCache removes outdated versions from the cache.
-func (r *repo) cleanCache() {
-	// Filenames look like this:
-	//
-	//   <ID>_<Version>.zip
-	//
-	// We want to keep only the highest version for each ID.
-
-	// Hold the write lock the whole time as we read and change the directory..
-	r.mx.Lock()
-	defer r.mx.Unlock()
-
-	// List all cached files.
-	files, err := ioutil.ReadDir(r.dataDir)
-	if err != nil {
-		logging.Warning("Could not list cache directory: %v", err)
-		return
+func (r *repo) cleanCache(id string, version uint) {
+	// TODO: not ideal, especially for high vversion numbers.
+	// we'll blindly try to delete every entry except the current one,
+	for i := uint(0); i < version; i++ {
+		r.cache.Delete(cacheKey(id, i))
 	}
+}
 
-	// Determine which versions we have for each id.
-	versions := make(map[string][]int)
-	for _, f := range files {
-		base := filepath.Base(f.Name())
-		parts := strings.Split(base, "_")
-		if len(parts) != 2 {
-			logging.Warning("Clean cache: encountered unexpected filename %q", base)
-			continue
-		}
-		id := parts[0]
-		// "123.zip" => 123
-		v, err := strconv.Atoi(strings.TrimSuffix(parts[1], ".zip"))
-		if err != nil {
-			logging.Warning("Clean cache: error retrieving version from filename %q, %v", base, err)
-			continue
-		}
-
-		if versions[id] == nil {
-			versions[id] = make([]int, 0)
-		}
-		versions[id] = append(versions[id], v)
-	}
-
-	// Delete all versions except the highest
-	for id, v := range versions {
-		if len(v) < 2 {
-			continue
-		}
-		sort.Ints(v)
-		for i := 0; i < len(v)-1; i++ {
-			p := r.cachePath(id, uint(v[i]))
-			logging.Info("Remove outdated version from cache: %q", p)
-			err = os.Remove(p)
-			if err != nil {
-				logging.Warning("Unexpected error removing old cache entry: %v", err)
-				continue
-			}
-		}
-	}
+func cacheKey(id string, version uint) string {
+	return fmt.Sprintf("%v.%v.zip", id, version)
 }
 
 // implement the Meta interface for an Item
