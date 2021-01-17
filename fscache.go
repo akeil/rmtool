@@ -15,6 +15,8 @@ type fsCache struct {
 	mx  sync.RWMutex
 }
 
+// NewFilesystemCache returns a Cache implementation that stores cached data
+// in the fiven directory.
 func NewFilesystemCache(dir string) Cache {
 	return &fsCache{dir: dir}
 }

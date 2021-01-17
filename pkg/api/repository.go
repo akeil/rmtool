@@ -22,7 +22,7 @@ type repo struct {
 // NewRepository creates a Repository with the reMarkable cloud service as
 // backend.
 //
-// The supplied dataDir is used to cache downloaded content.
+// The supplied cache is used to store downloaded content (notebooks).
 func NewRepository(c *Client, cache rmtool.Cache) rmtool.Repository {
 	return &repo{
 		client: c,

@@ -81,9 +81,18 @@ type Meta interface {
 	Validate() error
 }
 
+// Cache is the interface for a cache storage backend.
+//
+// A cache implementation must be safe for access by multiple goroutines.
 type Cache interface {
+	// Put adds an entry with the given key.
+	//
+	// If Put(key) is successful, is is expected that Get(key) returns the same data.
 	Put(key string, r io.Reader) error
+	// Get retrieves an item from the cache.
+	// An error is returned if the item is not cached.
 	Get(key string) (io.ReadCloser, error)
+	// Delete removes an item from the cache.
 	Delete(key string) error
 }
 
