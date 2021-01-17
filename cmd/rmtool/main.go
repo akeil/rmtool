@@ -119,7 +119,8 @@ func setupRepo(s settings) (rmtool.Repository, error) {
 		return nil, err
 	}
 
-	repo := api.NewRepository(client, s.cacheDir)
+	cache := rmtool.NewFilesystemCache(s.cacheDir)
+	repo := api.NewRepository(client, cache)
 	return repo, nil
 }
 
