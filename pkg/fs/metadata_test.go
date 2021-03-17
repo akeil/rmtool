@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/akeil/rmtool"
+	rm "github.com/akeil/rmtool"
 )
 
 func TestReadMetadata(t *testing.T) {

@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 	"time"
 
@@ -102,7 +101,7 @@ func (r *repo) fromCache(id string, version uint) ([]byte, error) {
 	}
 	defer cr.Close()
 
-	data, err := ioutil.ReadAll(cr)
+	data, err := io.ReadAll(cr)
 	if err != nil {
 		return nil, err
 	}

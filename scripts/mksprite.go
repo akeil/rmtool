@@ -6,7 +6,6 @@ import (
 	"image"
 	"image/draw"
 	"image/png"
-	"io/ioutil"
 	"log"
 	"math"
 	"os"
@@ -34,7 +33,7 @@ func mksprites(srcDir, dstBase string) error {
 	indexPath := dstBase + ".json"
 	brushSize := 16 // width and height of individual brush images
 
-	files, err := ioutil.ReadDir(srcDir)
+	files, err := os.ReadDir(srcDir)
 	if err != nil {
 		return err
 	}

@@ -1,7 +1,7 @@
 package logging
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 )
@@ -31,10 +31,10 @@ var (
 
 func init() {
 	flags := log.Ldate | log.Ltime | log.LUTC
-	debug = log.New(ioutil.Discard, "D ", flags)
-	info = log.New(ioutil.Discard, "I ", flags)
-	warning = log.New(ioutil.Discard, "W ", flags)
-	error = log.New(ioutil.Discard, "E ", flags)
+	debug = log.New(io.Discard, "D ", flags)
+	info = log.New(io.Discard, "I ", flags)
+	warning = log.New(io.Discard, "W ", flags)
+	error = log.New(io.Discard, "E ", flags)
 
 	SetLevel(LevelWarning)
 }
@@ -48,25 +48,25 @@ func SetLevel(l Level) {
 		warning.SetOutput(os.Stderr)
 		error.SetOutput(os.Stderr)
 	case LevelInfo:
-		debug.SetOutput(ioutil.Discard)
+		debug.SetOutput(io.Discard)
 		info.SetOutput(os.Stderr)
 		warning.SetOutput(os.Stderr)
 		error.SetOutput(os.Stderr)
 	case LevelWarning:
-		debug.SetOutput(ioutil.Discard)
-		info.SetOutput(ioutil.Discard)
+		debug.SetOutput(io.Discard)
+		info.SetOutput(io.Discard)
 		warning.SetOutput(os.Stderr)
 		error.SetOutput(os.Stderr)
 	case LevelError:
-		debug.SetOutput(ioutil.Discard)
-		info.SetOutput(ioutil.Discard)
-		warning.SetOutput(ioutil.Discard)
+		debug.SetOutput(io.Discard)
+		info.SetOutput(io.Discard)
+		warning.SetOutput(io.Discard)
 		error.SetOutput(os.Stderr)
 	case LevelNone:
-		debug.SetOutput(ioutil.Discard)
-		info.SetOutput(ioutil.Discard)
-		warning.SetOutput(ioutil.Discard)
-		error.SetOutput(ioutil.Discard)
+		debug.SetOutput(io.Discard)
+		info.SetOutput(io.Discard)
+		warning.SetOutput(io.Discard)
+		error.SetOutput(io.Discard)
 	}
 }
 

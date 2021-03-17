@@ -7,7 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/akeil/rmtool"
+	rm "github.com/akeil/rmtool"
+	"github.com/akeil/rmtool/internal/errors"
 )
 
 // Timestamp is the datatype for a UNIX timestamp in string format.
@@ -50,11 +51,11 @@ func (m *Metadata) Validate() error {
 	case rm.DocumentType, rm.CollectionType:
 		// ok
 	default:
-		return rm.NewValidationError("invalid type %v", m.Type)
+		return errors.NewValidationError("invalid type %v", m.Type)
 	}
 
 	if m.VisibleName == "" {
-		return rm.NewValidationError("visible name must not be emtpty")
+		return errors.NewValidationError("visible name must not be emtpty")
 	}
 
 	return nil
