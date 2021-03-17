@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"time"
 
 	"github.com/google/uuid"
@@ -241,7 +240,7 @@ func (d *docMeta) Validate() error {
 // PDF Helper -----------------------------------------------------------------
 
 func countPdfPages(rc io.ReadCloser) (int, error) {
-	data, err := ioutil.ReadAll(rc)
+	data, err := io.ReadAll(rc)
 	if err != nil {
 		return 0, err
 	}

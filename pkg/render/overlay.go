@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 
 	"github.com/jung-kurt/gofpdf"
 	"github.com/jung-kurt/gofpdf/contrib/gofpdi"
@@ -26,7 +25,7 @@ func overlayPdf(c *Context, doc *rmtool.Document, pdf *gofpdf.Fpdf) error {
 
 	// We need a ReadSeeker, so we load the full PDF into memory
 	// and create one from the buffer.
-	data, err := ioutil.ReadAll(r)
+	data, err := io.ReadAll(r)
 	if err != nil {
 		return err
 	}

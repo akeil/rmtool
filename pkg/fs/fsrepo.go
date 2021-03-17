@@ -4,14 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/akeil/rmtool"
-	fsx "github.com/akeil/rmtool/internal/errors"
+	"github.com/akeil/rmtool/internal/errors"
 	fsx "github.com/akeil/rmtool/internal/fs"
 	"github.com/akeil/rmtool/internal/logging"
 )
@@ -33,7 +32,7 @@ func NewRepository(path string) rmtool.Repository {
 func (r *repo) List() ([]rmtool.Meta, error) {
 	logging.Debug("List files from %q", r.base)
 
-	files, err := ioutil.ReadDir(r.base)
+	files, err := os.ReadDir(r.base)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +97,7 @@ func (r *repo) Update(m rmtool.Meta) error {
 	o.Type = m.Type()
 
 	// to tempfile
-	f, err := ioutil.TempFile("", "rm-*.json")
+	f, err := os.CreateTemp("", "rm-*.json")
 	if err != nil {
 		return err
 	}
@@ -127,7 +126,7 @@ func (r *repo) Upload(d *rmtool.Document) error {
 
 	// We will write everything to a temporary directory,
 	// then move to the target dir
-	tmp, err := ioutil.TempDir("", "rm-upload-*")
+	tmp, err := os.MkdirTemp("", "rm-upload-*")
 	if err != nil {
 		return err
 	}

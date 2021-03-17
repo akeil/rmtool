@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -165,7 +165,7 @@ func readToken(s settings) (string, error) {
 		return "", err
 	}
 	defer f.Close()
-	d, err := ioutil.ReadAll(f)
+	d, err := io.ReadAll(f)
 	if err != nil {
 		return "", err
 	}

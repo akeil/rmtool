@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -479,10 +478,10 @@ func (c *Client) storageRequest(method, endpoint string, payload, dst interface{
 
 	// log the request body
 	if req.Body != nil {
-		data, err := ioutil.ReadAll(req.Body)
+		data, err := io.ReadAll(req.Body)
 		if err == nil {
 			logging.Debug("Request body: %v", string(data))
-			req.Body = ioutil.NopCloser(bytes.NewBuffer(data))
+			req.Body = io.NopCloser(bytes.NewBuffer(data))
 		}
 	}
 
@@ -493,7 +492,7 @@ func (c *Client) storageRequest(method, endpoint string, payload, dst interface{
 	defer res.Body.Close()
 	// must read body to end
 	// https://golang.org/pkg/net/http/#Client.Do
-	resData, err := ioutil.ReadAll(res.Body)
+	resData, err := io.ReadAll(res.Body)
 	if err != nil {
 		return err
 	}
@@ -598,7 +597,7 @@ func (c *Client) requestToken(endpoint, token string, payload interface{}) (stri
 	err = errors.ExpectOK(res, "token request failed")
 	if err != nil {
 		var msg string
-		d, xerr := ioutil.ReadAll(res.Body)
+		d, xerr := io.ReadAll(res.Body)
 		if xerr == nil {
 			msg = string(d)
 			msg = strings.TrimSpace(msg)
@@ -607,7 +606,7 @@ func (c *Client) requestToken(endpoint, token string, payload interface{}) (stri
 	}
 
 	// The token is returned as a plain string
-	data, err := ioutil.ReadAll(res.Body)
+	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return "", err
 	}

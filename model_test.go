@@ -2,7 +2,7 @@ package rmtool
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 )
@@ -10,7 +10,7 @@ import (
 func TestReadContent(t *testing.T) {
 	path := "./testdata/25e3a0ce-080a-4389-be2a-f6aa45ce0207.content"
 	var c Content
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Error(err)
 	}
@@ -84,7 +84,7 @@ func TestValidateContent(t *testing.T) {
 func TestReadPageMetadata(t *testing.T) {
 	path := "./testdata/25e3a0ce-080a-4389-be2a-f6aa45ce0207/0408f802-a07c-45c7-8382-7f8a36645fda-metadata.json"
 	var p PageMetadata
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Error(err)
 	}
