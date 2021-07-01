@@ -193,6 +193,8 @@ func readToken(s settings) (string, error) {
 }
 
 func saveToken(s settings, token string) {
+	// ignoring error b/c we have error handling for the case of unable to write the token
+	_ = os.MkdirAll(s.dataDir, 0755)
 	tokenfile := filepath.Join(s.dataDir, "device-token")
 	f, err := os.Create(tokenfile)
 	if err != nil {
