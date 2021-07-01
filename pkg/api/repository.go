@@ -20,6 +20,7 @@ import (
 	"github.com/akeil/rmtool/internal/logging"
 )
 
+// Implements the Repository interface
 type repo struct {
 	client  *Client
 	dataDir string

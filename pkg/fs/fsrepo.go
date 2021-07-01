@@ -11,11 +11,12 @@ import (
 	"time"
 
 	"github.com/akeil/rmtool"
-	fsx "github.com/akeil/rmtool/internal/errors"
+	"github.com/akeil/rmtool/internal/errors"
 	fsx "github.com/akeil/rmtool/internal/fs"
 	"github.com/akeil/rmtool/internal/logging"
 )
 
+// Implements the Repository interface
 type repo struct {
 	base string
 }

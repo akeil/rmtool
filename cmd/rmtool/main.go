@@ -143,10 +143,30 @@ func setupClient(s settings) (*api.Client, error) {
 	return client, nil
 }
 
+func promptUserForRegCode() (string, error) {
+	fmt.Print("Enter one-time code (go to https://my.remarkable.com/device/connect/desktop): ")
+	var code string
+
+	// Taking input from user
+	_, err := fmt.Scanln(&code)
+	if err != nil {
+		return "", err
+	}
+
+	if len(code) != 8 {
+		fmt.Printf("Code has the wrong length, it should be 8, but got %d '%s'\n", len(code), code)
+		return promptUserForRegCode()
+	}
+
+	return code, nil
+}
+
 func register(s settings, client *api.Client) error {
-	fmt.Printf("Register rmtool with remarkable\n")
-	// TODO: prompt user
-	code := ""
+
+	code, err := promptUserForRegCode()
+	if err != nil {
+		return err
+	}
 	token, err := client.Register(code)
 	if err != nil {
 		return err
@@ -173,6 +193,8 @@ func readToken(s settings) (string, error) {
 }
 
 func saveToken(s settings, token string) {
+	// ignoring error b/c we have error handling for the case of unable to write the token
+	_ = os.MkdirAll(s.dataDir, 0755)
 	tokenfile := filepath.Join(s.dataDir, "device-token")
 	f, err := os.Create(tokenfile)
 	if err != nil {
