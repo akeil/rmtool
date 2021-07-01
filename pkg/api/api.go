@@ -539,6 +539,10 @@ func (c *Client) Register(code string) (string, error) {
 		return "", err
 	}
 
+	_, err = parseTokenExpiration(token)
+	if err != nil {
+		return "", fmt.Errorf("unable to parse provided token - %w", err)
+	}
 	c.deviceToken = token
 	c.userToken = ""
 
