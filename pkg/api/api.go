@@ -20,7 +20,8 @@ import (
 
 // Default URLs
 const (
-	AuthURL                   = "https://my.remarkable.com"
+	//
+	AuthURL                   = "https://webapp-production-dot-remarkable-production.appspot.com"
 	StorageDiscoveryURL       = "https://service-manager-production-dot-remarkable-production.appspot.com/service/json/1/document-storage?environment=production&group=auth0%7C5a68dc51cb30df3877a1d7c4&apiVer=2"
 	NotificationsDiscoveryURL = "https://service-manager-production-dot-remarkable-production.appspot.com/service/json/1/notifications?environment=production&group=auth0%7C5a68dc51cb30df3877a1d7c4&apiVer=1"
 )
